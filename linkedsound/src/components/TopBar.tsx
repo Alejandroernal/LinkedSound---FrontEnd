@@ -1,27 +1,35 @@
 import Brand from './Brand'
+import { PiCompassBold, PiMagnifyingGlassBold, PiChatCircleBold, PiUserBold } from 'react-icons/pi'
 import { navItems } from '../data/mockData'
-import type { AppPage } from '../types'
+import type { AppPage, Profile } from '../types'
 
 type TopBarProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
-  userName?: string
-  userCategory?: string
-  userProfileImage?: string
+  profile?: Profile
 }
 
-export default function TopBar({ activePage = 'Discovery', onNavigate, userName = 'Kaelen', userCategory = 'Producer', userProfileImage = '' }: TopBarProps) {
+const navIcons: Record<string, React.ReactNode> = {
+  Discovery: <PiCompassBold />,
+  Explorer: <PiMagnifyingGlassBold />,
+  Messages: <PiChatCircleBold />,
+  Profile: <PiUserBold />,
+}
+
+export default function TopBar({
+  activePage = 'Discovery',
+  onNavigate,
+  profile,
+}: TopBarProps) {
+  const userName = profile?.nickname ?? 'Kaelen'
+  const userCategory = profile?.category ?? 'Producer'
+  const userProfileImage = profile?.profileImage ?? ''
+
   return (
     <header className="ls-header">
       <Brand />
 
       <nav className="ls-main-nav" aria-label="Main navigation">
-        {activePage === 'Explorer' && (
-          <button className="ls-nav-search" type="button">
-            Search tracks,
-            <span> producers, systems...</span>
-          </button>
-        )}
         {navItems.map((item) => (
           <button
             key={item.label}
@@ -29,7 +37,8 @@ export default function TopBar({ activePage = 'Discovery', onNavigate, userName 
             className={`ls-nav-item ${activePage === item.label ? 'is-active' : ''}`}
             onClick={() => onNavigate?.(item.label)}
           >
-            {item.label}
+            <span className="ls-nav-icon">{navIcons[item.label] ?? '•'}</span>
+            <span className="ls-nav-label">{item.label}</span>
           </button>
         ))}
       </nav>
@@ -39,7 +48,14 @@ export default function TopBar({ activePage = 'Discovery', onNavigate, userName 
           <span className="ls-mini-name">{userName}</span>
           <span className="ls-mini-role">{userCategory}</span>
         </div>
-        <div className="ls-avatar small" style={{ backgroundImage: userProfileImage ? `url(${userProfileImage})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+        <div
+          className="ls-avatar small"
+          style={{
+            backgroundImage: userProfileImage ? `url(${userProfileImage})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
           {!userProfileImage && 'KV'}
         </div>
       </div>

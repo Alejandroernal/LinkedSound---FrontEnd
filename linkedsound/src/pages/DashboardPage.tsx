@@ -3,16 +3,22 @@ import TopBar from '../components/TopBar'
 import StatusBar from '../components/StatusBar'
 import { RadarFilters, MatchesPanel, LivePanel } from '../components/SidebarPanels'
 import Footer from '../components/Footer'
-import { recommendations } from '../data/mockData'
-import type { AppPage } from '../types'
+import ReportModal from '../components/ReportModal'
+import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
+import { PiFlagBold } from 'react-icons/pi'
+import { recommendations, type ProfileCard } from '../data/mockData'
+import type { AppPage, Profile } from '../types'
 
 type DashboardPageProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
+  profile: Profile
 }
 
-export default function DashboardPage({ activePage, onNavigate }: DashboardPageProps) {
+export default function DashboardPage({ activePage, onNavigate, profile }: DashboardPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [reportingTarget, setReportingTarget] = useState<string | null>(null)
+  const [previewProfile, setPreviewProfile] = useState<ProfileCard | null>(null)
   const currentProfile = recommendations[currentIndex] ?? recommendations[0]
 
   const handleDecision = (liked: boolean) => {
@@ -25,13 +31,17 @@ export default function DashboardPage({ activePage, onNavigate }: DashboardPageP
 
   return (
     <div className="ls-app-shell">
-      <TopBar activePage={activePage} onNavigate={onNavigate} />
+      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} />
       <StatusBar />
 
       <main className="ls-layout ls-discovery-swipe-layout">
         <section className="ls-discovery-panel">
           <div className="ls-swipe-stage">
-            <div className="ls-swipe-card">
+            <div
+              className="ls-swipe-card ls-clickable-card"
+              onClick={() => setPreviewProfile(currentProfile)}
+              title={`Ver trabajos en SoundCloud de ${currentProfile.name}`}
+            >
               <div className="ls-swipe-image-wrap">
                 <img src={currentProfile.image} alt={currentProfile.name} />
                 <span className="ls-card-badge">{currentProfile.match}</span>
@@ -42,12 +52,49 @@ export default function DashboardPage({ activePage, onNavigate }: DashboardPageP
                   </div>
                   <span>{currentProfile.location}</span>
                 </div>
+
+                <div className="ls-swipe-actions">
+                  <button
+                    type="button"
+                    className="ls-swipe-pass"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDecision(false)
+                    }}
+                    title="Descartar"
+                  >
+                    ✕
+                  </button>
+                  <button
+                    type="button"
+                    className="ls-swipe-like"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDecision(true)
+                    }}
+                    title="Conectar"
+                  >
+                    ✓
+                  </button>
+                </div>
               </div>
 
               <div className="ls-swipe-body">
                 <div className="ls-swipe-head">
                   <span className="ls-tag">{currentProfile.badge}</span>
-                  <span className="ls-swipe-score">{currentProfile.match}</span>
+                  <div className="ls-swipe-head-right">
+                    <button
+                      type="button"
+                      className="ls-report-text-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setReportingTarget(currentProfile.name)
+                      }}
+                    >
+                      <PiFlagBold /> Reporte
+                    </button>
+                    <span className="ls-swipe-score">{currentProfile.match}</span>
+                  </div>
                 </div>
 
                 <p className="ls-card-desc">{currentProfile.description}</p>
@@ -62,26 +109,31 @@ export default function DashboardPage({ activePage, onNavigate }: DashboardPageP
                 </div>
               </div>
             </div>
-
-            <div className="ls-swipe-actions">
-              <button type="button" className="ls-swipe-pass" onClick={() => handleDecision(false)}>
-                No thanks
-              </button>
-              <button type="button" className="ls-swipe-like" onClick={() => handleDecision(true)}>
-                Like
-              </button>
-            </div>
           </div>
         </section>
 
         <aside className="ls-sidebar">
           <RadarFilters />
-          <MatchesPanel />
+          <MatchesPanel onSelectMatch={(matchedProfile) => setPreviewProfile(matchedProfile)} />
           <LivePanel />
         </aside>
       </main>
+
+      <SoundCloudPreviewModal
+        isOpen={Boolean(previewProfile)}
+        card={previewProfile}
+        onClose={() => setPreviewProfile(null)}
+      />
+
+      <ReportModal
+        isOpen={Boolean(reportingTarget)}
+        targetName={reportingTarget ?? ''}
+        targetType="Perfil de Discovery"
+        onClose={() => setReportingTarget(null)}
+      />
 
       <Footer />
     </div>
   )
 }
+

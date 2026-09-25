@@ -1,12 +1,31 @@
+import { useState, useRef, useEffect } from 'react'
 import type { Message, Conversation } from '../data/mockData'
+
+type ChatThreadProps = {
+  conversation: Conversation
+  messages: Message[]
+  onSendMessage?: (text: string) => void
+}
 
 export default function ChatThread({
   conversation,
   messages,
-}: {
-  conversation: Conversation
-  messages: Message[]
-}) {
+  onSendMessage,
+}: ChatThreadProps) {
+  const [text, setText] = useState('')
+  const threadEndRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const handleSend = () => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    onSendMessage?.(trimmed)
+    setText('')
+  }
+
   return (
     <section className="ls-chat-panel">
       <header className="ls-chat-header">
@@ -20,8 +39,6 @@ export default function ChatThread({
 
         <div className="ls-chat-actions">
           <span className="ls-status-pill">{conversation.status}</span>
-          <button type="button">Call</button>
-          <button type="button">Video</button>
         </div>
       </header>
 
@@ -41,17 +58,29 @@ export default function ChatThread({
             </div>
           </div>
         ))}
+        <div ref={threadEndRef} />
       </div>
 
-      <div className="ls-chat-composer">
-        <button type="button" className="ls-composer-attach">
+      <form
+        className="ls-chat-composer"
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleSend()
+        }}
+      >
+        <button type="button" className="ls-composer-attach" title="Attach stems or audio file">
           +
         </button>
-        <input type="text" placeholder="Message Metro Boomin or drag-and-drop.wav" />
-        <button type="button" className="ls-send-btn">
+        <input
+          type="text"
+          placeholder={`Message ${conversation.name} or drag-and-drop .wav`}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button type="submit" className="ls-send-btn" disabled={!text.trim()}>
           Send
         </button>
-      </div>
+      </form>
     </section>
   )
 }

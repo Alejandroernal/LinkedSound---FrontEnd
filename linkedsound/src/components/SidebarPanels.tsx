@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { queueItems, recentMatches, soundFilters } from '../data/mockData'
+import { queueItems, recentMatches, recentMatchesProfiles, soundFilters, type ProfileCard } from '../data/mockData'
 
 const collaboratorOptions = ['Productor', 'Artista', 'Productor/Artista'] as const
 
@@ -101,7 +101,11 @@ export function QueuePanel() {
   )
 }
 
-export function MatchesPanel() {
+type MatchesPanelProps = {
+  onSelectMatch?: (profile: ProfileCard) => void
+}
+
+export function MatchesPanel({ onSelectMatch }: MatchesPanelProps) {
   return (
     <div className="ls-panel matches-panel">
       <div className="ls-panel-header compact">
@@ -109,12 +113,43 @@ export function MatchesPanel() {
         <span>4 new</span>
       </div>
       <div className="ls-match-list">
-        {recentMatches.map((match) => (
-          <div key={match.name} className="ls-match-bubble">
-            <img src={match.image} alt={match.name} />
-            <span>{match.name}</span>
-          </div>
-        ))}
+        {recentMatches.map((match) => {
+          const matchProfile = recentMatchesProfiles[match.name] ?? {
+            name: match.name,
+            role: 'Producer & Vocalist',
+            location: 'Global',
+            tags: ['Electronic', 'Vocal'],
+            image: match.image,
+            match: '90%',
+            description: 'Collaborator and producer profile.',
+            badge: 'Artist',
+            isProfile: true,
+            soundcloudHandle: match.name.toLowerCase().replace(/\s+/g, ''),
+            soundcloudUrl: `https://soundcloud.com/search?q=${encodeURIComponent(match.name)}`,
+            tracks: [
+              {
+                id: `m_${match.name}_1`,
+                title: `${match.name} - Demo Track #1`,
+                plays: '14.2k',
+                duration: '3:45',
+                genre: 'Electronic',
+              },
+            ],
+          }
+
+          return (
+            <div
+              key={match.name}
+              className="ls-match-bubble ls-clickable-match"
+              onClick={() => onSelectMatch?.(matchProfile)}
+              title={`Ver trabajos en SoundCloud de ${match.name}`}
+              style={{ cursor: 'pointer' }}
+            >
+              <img src={match.image} alt={match.name} />
+              <span>{match.name}</span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
