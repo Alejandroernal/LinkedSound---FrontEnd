@@ -8,6 +8,7 @@ import {
   PiInfoBold,
   PiSpeakerHighBold,
 } from 'react-icons/pi'
+import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
 
 type SoundCloudPreviewModalProps = {
@@ -26,8 +27,8 @@ export default function SoundCloudPreviewModal({
   const [shouldAutoplay, setShouldAutoplay] = useState<boolean>(false)
 
   useEffect(() => {
-    if (card?.soundcloudUrl) {
-      setActiveEmbedUrl(card.soundcloudUrl)
+    if (card?.soundcloudUrl ?? card?.soundcloud) {
+      setActiveEmbedUrl(card.soundcloudUrl ?? card.soundcloud ?? null)
       setActiveTrackId(null)
       setShouldAutoplay(false) // User decision: do not autoplay on modal open
     }
@@ -35,20 +36,24 @@ export default function SoundCloudPreviewModal({
 
   if (!isOpen || !card) return null
 
+  const profileName = card.nickname ?? card.nickname ?? 'Usuario'
   const isProfile = card.isProfile !== false
   const tracks: SoundCloudTrack[] = card.tracks ?? []
-  const visibleTracks = tracks.slice(0, 3) // Max 3 samples per profile
-  const handleUrl = card.soundcloudUrl ?? `https://soundcloud.com/search?q=${encodeURIComponent(card.name)}`
-  const handleName = card.soundcloudUrl
-    ? card.soundcloudUrl.replace(/^https?:\/\/(www\.)?soundcloud\.com\//, '')
-    : (card.soundcloudHandle ?? card.name.toLowerCase().replace(/\s+/g, ''))
+  const visibleTracks = tracks.slice(0, 2) // Muestra el último tema subido + 1 opcional subido por el usuario
+  const handleUrl = card.soundcloudUrl ?? card.soundcloud ?? `https://soundcloud.com/search?q=${encodeURIComponent(profileName)}`
+  const handleName = (card.soundcloudUrl ?? card.soundcloud)
+    ? (card.soundcloudUrl ?? card.soundcloud ?? '').replace(/^https?:\/\/(www\.)?soundcloud\.com\//, '')
+    : (card.soundcloudHandle ?? profileName.toLowerCase().replace(/\s+/g, ''))
+
+  const spotifyUrl = card.spotifyUrl ?? card.spotify
+  const instagramUrl = card.instagramUrl ?? card.instagram
 
   // Effective embed URL: user selected track or profile URL
   const embedTargetUrl = activeEmbedUrl ?? handleUrl
 
   const handleSelectTrack = (track: SoundCloudTrack) => {
     setActiveTrackId(track.id)
-    setActiveEmbedUrl(track.soundcloudLink ?? card.soundcloudUrl ?? null)
+    setActiveEmbedUrl(track.soundcloudLink ?? card.soundcloudUrl ?? card.soundcloud ?? null)
     setShouldAutoplay(true) // Start playback on explicit user action
   }
 
@@ -81,11 +86,11 @@ export default function SoundCloudPreviewModal({
             </div>
             <h3>Evento / Sesión en Vivo</h3>
             <p className="ls-notice-text">
-              <strong>{card.name}</strong> es {card.role.toLowerCase()} ({card.location}).
+              <strong>{profileName}</strong> es {card.role.toLowerCase()} ({card.location}).
               Al tratarse de una sesión o evento en vivo y no un perfil de creador individual, no posee catálogo de producciones vinculadas en SoundCloud.
             </p>
             <div className="ls-notice-tags">
-              {card.tags?.map((tag) => (
+              {(card.interestGenres ?? card.tags ?? []).map((tag) => (
                 <span key={tag}>{tag}</span>
               ))}
             </div>
@@ -98,34 +103,65 @@ export default function SoundCloudPreviewModal({
             {/* Header / Profile info */}
             <div className="ls-sc-header">
               <div className="ls-sc-avatar-wrap">
-                <img src={card.image} alt={card.name} className="ls-sc-avatar" />
-                <span className="ls-sc-badge">{card.badge}</span>
+                <img src={card.image || card.profileImage} alt={profileName} className="ls-sc-avatar" />
               </div>
               <div className="ls-sc-user-info">
                 <div className="ls-sc-title-row">
-                  <h2>{card.name}</h2>
+                  <h2>{profileName}</h2>
                   <span className="ls-sc-match">{card.match} match</span>
                 </div>
                 <p className="ls-sc-role">
                   {card.role} {card.location && `• ${card.location}`}
                 </p>
-                <div className="ls-sc-handle-pill">
-                  <PiSoundcloudLogoFill className="ls-sc-orange-icon" />
-                  <span>soundcloud.com/{handleName}</span>
-                  <a
-                    href={handleUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ls-sc-external-link"
-                    title="Abrir perfil en SoundCloud"
-                  >
-                    <PiArrowSquareOutBold />
-                  </a>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '6px' }}>
+                  <div className="ls-sc-handle-pill">
+                    <PiSoundcloudLogoFill className="ls-sc-orange-icon" />
+                    <span>soundcloud.com/{handleName}</span>
+                    <a
+                      href={handleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ls-sc-external-link"
+                      title="Abrir perfil en SoundCloud"
+                    >
+                      <PiArrowSquareOutBold />
+                    </a>
+                  </div>
+
+                  {spotifyUrl && (
+                    <a
+                      href={spotifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ls-sc-handle-pill"
+                      style={{ color: '#1DB954', textDecoration: 'none' }}
+                      title="Abrir Spotify"
+                    >
+                      <FaSpotify style={{ color: '#1DB954' }} />
+                      <span>Spotify</span>
+                      <PiArrowSquareOutBold />
+                    </a>
+                  )}
+
+                  {instagramUrl && (
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ls-sc-handle-pill"
+                      style={{ color: '#E1306C', textDecoration: 'none' }}
+                      title="Abrir Instagram"
+                    >
+                      <FaInstagram style={{ color: '#E1306C' }} />
+                      <span>Instagram</span>
+                      <PiArrowSquareOutBold />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
 
-            <p className="ls-sc-bio">{card.description}</p>
+            <p className="ls-sc-bio">{card.descript ?? card.bio ?? card.description}</p>
 
             {/* Official SoundCloud Embedded Player Widget */}
             <div className="ls-sc-embed-widget">

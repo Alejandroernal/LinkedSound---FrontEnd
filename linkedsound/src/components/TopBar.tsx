@@ -22,7 +22,7 @@ export default function TopBar({
   profile,
 }: TopBarProps) {
   const userName = profile?.nickname ?? 'Kaelen'
-  const userCategory = profile?.category ?? 'Producer'
+  const userRole = profile?.role ?? 'Productor/Artista'
   const userProfileImage = profile?.profileImage ?? ''
 
   return (
@@ -46,7 +46,7 @@ export default function TopBar({
       <div className="ls-profile-mini">
         <div className="ls-mini-meta">
           <span className="ls-mini-name">{userName}</span>
-          <span className="ls-mini-role">{userCategory}</span>
+          <span className="ls-mini-role">{userRole}</span>
         </div>
         <div
           className="ls-avatar small"

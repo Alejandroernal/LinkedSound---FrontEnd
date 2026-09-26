@@ -1,4 +1,6 @@
-import type { AppPage } from '../types'
+import type { AppPage, UserProfile, SoundCloudTrack } from '../types'
+
+export type { SoundCloudTrack }
 
 export type NavItem = {
   label: AppPage
@@ -10,30 +12,8 @@ export type FilterOption = {
   checked?: boolean
 }
 
-export type SoundCloudTrack = {
-  id: string
-  title: string
-  plays: string
-  duration: string
-  genre: string
-  audioUrl?: string
-  soundcloudLink?: string
-}
+export type ProfileCard = UserProfile
 
-export type ProfileCard = {
-  name: string
-  role: string
-  location: string
-  tags: string[]
-  image: string
-  match: string
-  description: string
-  badge: string
-  isProfile?: boolean
-  soundcloudHandle?: string
-  soundcloudUrl?: string
-  tracks?: SoundCloudTrack[]
-}
 
 export type Conversation = {
   id: string
@@ -62,6 +42,28 @@ export const navItems: NavItem[] = [
   { label: 'Profile' },
 ]
 
+export const defaultUserProfile: UserProfile = {
+  profileImage: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+  firstName: 'Kaelen',
+  lastName: 'Voss',
+  nickname: 'Kaelen Voss',
+  email: 'kaelen@linkedsound.app',
+  password: 'password123',
+  role: 'Productor/Artista',
+  interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
+  soundcloudUrl: 'https://soundcloud.com/kaelen-voss',
+  spotifyUrl: 'https://open.spotify.com/artist/kaelenvoss',
+  instagramUrl: 'https://instagram.com/kaelenvoss',
+  location: 'Berlin, Germany',
+  descript: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
+  allowEdit: true,
+  allowPostRegister: true,
+  teamDecision: 'Permitir cambiar el rol (Productor/Artista) después del alta, y si eso recalcula los matches generados por afinidad. -> Sí, permite cambiar el rol y recalcularía matches.',
+  validationRule: 'Definir el formato de validación de la URL de SoundCloud cargada manualmente (ej. exigir dominio soundcloud.com) antes de aceptarla como válida. -> Sí, que cargue manualmente y después que sea verificado ese link.',
+  eliminationPolicy: 'Definir si "eliminar perfil" implica baja total de la cuenta o una desactivación temporal reversible. -> Baja total de la cuenta.',
+  finalAction: 'Navegación tras confirmar la eliminación → pantalla de Login. -> Correcto, cuando se elimina el perfil que te direccione al login.',
+}
+
 export const tags = ['Synthwave', 'DarkElectro', 'Cyberpunk', 'IndustrialVocals', 'AnalogMod']
 
 export const formFilters: FilterOption[] = [
@@ -78,123 +80,24 @@ export const queueItems = [
   { name: 'Kira M.', percent: '78%', color: 'gold', avatar: 'K' },
 ]
 
-export const recentMatchesProfiles: Record<string, ProfileCard> = {
-  Nomi: {
-    name: 'Nomi',
-    role: 'Cyberpunk Vocalist & Producer',
-    location: 'Tokyo, Japan',
-    tags: ['Vocal', 'Cyberpunk', 'Hyperpop', 'Synthwave'],
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80',
-    match: '87%',
-    description: 'Futuristic vocal chops, glitched synth hooks, and dark tape delays.',
-    badge: 'Artist',
-    isProfile: true,
-    soundcloudHandle: 'nomi_sound',
-    soundcloudUrl: 'https://soundcloud.com/nomi_sound',
-    tracks: [
-      {
-        id: 'nm1',
-        title: 'Neon Dreams (Vocal Chops Mix)',
-        plays: '48.2k',
-        duration: '3:50',
-        genre: 'Cyberpunk',
-        soundcloudLink: 'https://soundcloud.com/search?q=nomi',
-      },
-      {
-        id: 'nm2',
-        title: 'Shinjuku Underground Stems',
-        plays: '29.4k',
-        duration: '4:15',
-        genre: 'Synthwave',
-        soundcloudLink: 'https://soundcloud.com/search?q=nomi',
-      },
-    ],
-  },
-  Soren: {
-    name: 'Soren',
-    role: 'Industrial Techno Specialist',
-    location: 'Berlin, Germany',
-    tags: ['Industrial', 'Techno', 'Eurorack', 'Darkwave'],
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
-    match: '81%',
-    description: 'Heavy basslines, analog distortion, and hypnotic warehouse grooves.',
-    badge: 'Producer',
-    isProfile: true,
-    soundcloudHandle: 'soren_techno',
-    soundcloudUrl: 'https://soundcloud.com/soren_techno',
-    tracks: [
-      {
-        id: 'sr1',
-        title: 'Berghain Basement Live Cut',
-        plays: '61.0k',
-        duration: '6:40',
-        genre: 'Techno',
-        soundcloudLink: 'https://soundcloud.com/search?q=soren',
-      },
-      {
-        id: 'sr2',
-        title: 'Dark Frequency Modulation #09',
-        plays: '37.8k',
-        duration: '5:10',
-        genre: 'Industrial',
-        soundcloudLink: 'https://soundcloud.com/search?q=soren',
-      },
-    ],
-  },
-  'Kira M.': {
-    name: 'Kira M.',
-    role: 'Hyperpop & Spatial Audio',
-    location: 'London, United Kingdom',
-    tags: ['Hyperpop', 'Spatial Audio', 'Vocal', 'Trap Metal'],
-    image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
-    match: '78%',
-    description: 'Aggressive pitch-bent vocals, distorted 808s, and immersive spatial mixes.',
-    badge: 'Artist',
-    isProfile: true,
-    soundcloudHandle: 'kiram_beats',
-    soundcloudUrl: 'https://soundcloud.com/kiram_beats',
-    tracks: [
-      {
-        id: 'km1',
-        title: 'Glitch Core Vocals (Acapella)',
-        plays: '74.5k',
-        duration: '3:20',
-        genre: 'Hyperpop',
-        soundcloudLink: 'https://soundcloud.com/search?q=kira',
-      },
-      {
-        id: 'km2',
-        title: 'Hyper-Bass Overdrive (808 Stems)',
-        plays: '53.1k',
-        duration: '2:55',
-        genre: 'Trap Metal',
-        soundcloudLink: 'https://soundcloud.com/search?q=kira',
-      },
-    ],
-  },
-}
 
-export const recentMatches = [
-  { name: 'Nomi', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80' },
-  { name: 'Soren', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80' },
-  { name: 'Kira M.', image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80' },
-  { name: 'Inbox', image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=900&q=80' },
-]
 
 export const recommendations: ProfileCard[] = [
   {
-    name: 'Kylian Dictador',
-    role: 'Modular hardware specialist',
+    nickname: 'Kylian Dictador',
+    role: 'Productor/Artista',
     location: 'Francia, paris',
-    tags: ['ModularSynth', 'Live', 'Drone'],
+    interestGenres: ['ModularSynth', 'Live', 'Drone'],
+    soundcloudUrl: 'https://soundcloud.com/jesus-922347355',
+    spotifyUrl: 'https://open.spotify.com/artist/kylian',
+    instagramUrl: 'https://instagram.com/kyliandictador',
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk3D-J2lE2LLanWoFeEkrMec5OB_tRjxzqgg_Y9w7iNXOUAjPCWDTrICZ8&s=10',
     match: '22%',
-    description: 'Analog textures and harsh synth design.',
+    bio: 'Analog textures and harsh synth design.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'jesus-922347355',
-    soundcloudUrl: 'https://soundcloud.com/jesus-922347355',
     tracks: [
       {
         id: 'kd0_rec',
@@ -215,18 +118,20 @@ export const recommendations: ProfileCard[] = [
     ],
   },
   {
-    name: 'Luna Sol',
-    role: 'Synth-pop vocalist',
+    nickname: 'Luna Sol',
+    role: 'Artista',
     location: 'New York, NY',
-    tags: ['Vocal', 'Alt Pop', 'Analog'],
+    interestGenres: ['Vocal', 'Alt Pop', 'Analog'],
+    soundcloudUrl: 'https://soundcloud.com/lunasol_official',
+    spotifyUrl: 'https://open.spotify.com/artist/lunasol',
+    instagramUrl: 'https://instagram.com/lunasol',
     image:
       'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    description: 'Warm vocals with cinematic melodic hooks.',
+    bio: 'Warm vocals with cinematic melodic hooks.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'lunasol_official',
-    soundcloudUrl: 'https://soundcloud.com/lunasol_official',
     tracks: [
       {
         id: 'ls1',
@@ -248,18 +153,20 @@ export const recommendations: ProfileCard[] = [
   },
 
   {
-    name: 'Golden Boy',
-    role: 'HardTrap Specialist',
+    nickname: 'Golden Boy',
+    role: 'Productor/Artista',
     location: 'Entre Rios, Argentina',
-    tags: ['HardTrap', 'Producer', 'Artist'],
+    interestGenres: ['HardTrap', 'Producer', 'Artist'],
+    soundcloudUrl: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
+    spotifyUrl: 'https://open.spotify.com/artist/goldenboy',
+    instagramUrl: 'https://instagram.com/goldenboy',
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
     match: '100%',
-    description: 'HardTrap Specialist, Producer, Artist.',
+    bio: 'HardTrap Specialist, Producer, Artist.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'goldennnnnnnnnnnnnnn',
-    soundcloudUrl: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
     tracks: [
       {
         id: 'kd0_rec',
@@ -283,30 +190,38 @@ export const recommendations: ProfileCard[] = [
 
 export const exploreCards: ProfileCard[] = [
   {
-    name: 'Circuito Nocturno',
+    nickname: 'Circuito Nocturno',
     role: 'Berlin live session',
     location: 'Berlin, Germany',
-    tags: ['Live', 'Techno', 'Cinematic', 'Experimental'],
+    interestGenres: ['Live', 'Techno', 'Cinematic', 'Experimental'],
     image:
       'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80',
+    // Required social media URLs (empty for now)
+    soundcloudUrl: '',
+    spotifyUrl: '',
+    instagramUrl: '',
     match: '96%',
-    description: 'A dark, rhythmic fusion of techno textures and gritty vocal layers.',
+    bio: 'A dark, rhythmic fusion of techno textures and gritty vocal layers.',
     badge: 'Featured',
+    itemRole: 'Evento',
     isProfile: false, // Event / Jam session, no SoundCloud profile linked
   },
   {
-    name: 'Kylian Dictador',
-    role: 'Modular hardware specialist',
+    nickname: 'Kylian Dictador',
+    role: 'Productor/Artista',
     location: 'Francia, paris',
-    tags: ['ModularSynth', 'Live', 'Drone'],
+    interestGenres: ['ModularSynth', 'Live', 'Drone'],
+    soundcloudUrl: 'https://soundcloud.com/jesus-922347355',
+    spotifyUrl: 'https://open.spotify.com/artist/kylian',
+    instagramUrl: 'https://instagram.com/kyliandictador',
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk3D-J2lE2LLanWoFeEkrMec5OB_tRjxzqgg_Y9w7iNXOUAjPCWDTrICZ8&s=10',
     match: '22%',
-    description: 'Analog textures and harsh synth design.',
+    bio: 'Analog textures and harsh synth design.',
     badge: 'Producer',
+    itemRole: 'Perfil',
     isProfile: true,
     soundcloudHandle: 'jesus-922347355',
-    soundcloudUrl: 'https://soundcloud.com/jesus-922347355',
     tracks: [
       {
         id: 'kd0_exp',
@@ -327,18 +242,21 @@ export const exploreCards: ProfileCard[] = [
     ],
   },
   {
-    name: 'Luna Sol',
-    role: 'Synth-pop vocalist',
+    nickname: 'Luna Sol',
+    role: 'Artista',
     location: 'New York, NY',
-    tags: ['Vocal', 'Alt Pop', 'Analog'],
+    interestGenres: ['Vocal', 'Alt Pop', 'Analog'],
+    soundcloudUrl: 'https://soundcloud.com/lunasol_official',
+    spotifyUrl: 'https://open.spotify.com/artist/lunasol',
+    instagramUrl: 'https://instagram.com/lunasol',
     image:
       'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    description: 'Warm vocals with cinematic melodic hooks.',
+    bio: 'Warm vocals with cinematic melodic hooks.',
     badge: 'Artist',
+    itemRole: 'Perfil',
     isProfile: true,
     soundcloudHandle: 'lunasol_official',
-    soundcloudUrl: 'https://soundcloud.com/lunasol_official',
     tracks: [
       {
         id: 'ls1_exp',
@@ -359,18 +277,21 @@ export const exploreCards: ProfileCard[] = [
     ],
   },
   {
-    name: 'Golden Boy',
-    role: 'HardTrap Specialist',
+    nickname: 'Golden Boy',
+    role: 'Productor/Artista',
     location: 'Entre Rios, Argentina',
-    tags: ['HardTrap', 'Producer', 'Artist'],
+    interestGenres: ['HardTrap', 'Producer', 'Artist'],
+    soundcloudUrl: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
+    spotifyUrl: 'https://open.spotify.com/artist/goldenboy',
+    instagramUrl: 'https://instagram.com/goldenboy',
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
     match: '100%',
-    description: 'HardTrap Specialist, Producer, Artist.',
+    bio: 'HardTrap Specialist, Producer, Artist.',
     badge: 'Producer',
+    itemRole: 'Perfil',
     isProfile: true,
     soundcloudHandle: 'goldennnnnnnnnnnnnnn',
-    soundcloudUrl: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
     tracks: [
       {
         id: 'gb0_exp',

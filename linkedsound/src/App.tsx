@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ValidationPage from './pages/ValidationPage'
 import type { AppPage, Profile } from './types'
+import { defaultUserProfile } from './data/mockData'
 
 const pagePaths: Record<AppPage, string> = {
   Login: '/login',
@@ -23,28 +24,9 @@ const pagePaths: Record<AppPage, string> = {
 function App() {
   const navigate = useNavigate()
 
-  const [profile, setProfile] = useState<Profile>({
-    nickname: 'Kaelen Voss',
-    category: 'Productor',
-    role: 'Producer',
-    location: 'Berlin, Germany',
-    bio: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
-    genres: 'Electronic, Dark Pop, Live Performance',
-    interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
-    tags: 'Synthwave, Analog, Live, Night Drive',
-    spotify: 'https://open.spotify.com/artist/kaelenvoss',
-    instagram: 'https://instagram.com/kaelenvoss',
-    soundcloud: 'https://soundcloud.com/kaelen-voss',
-    profileImage: '',
-    allowEdit: true,
-    allowPostRegister: true,
-    teamDecision: 'Permitir cambiar la categoría (Productor/Artista) después del alta, y si eso recalcula los matches generados por afinidad. -> Sí, permite cambiar la categoría y recalcularía matches.',
-    validationRule: 'Definir el formato de validación de la URL de SoundCloud cargada manualmente (ej. exigir dominio soundcloud.com) antes de aceptarla como válida. -> Sí, que cargue manualmente y después que sea verificado ese link.',
-    eliminationPolicy: 'Definir si "eliminar perfil" implica baja total de la cuenta o una desactivación temporal reversible. -> Baja total de la cuenta.',
-    finalAction: 'Navegación tras confirmar la eliminación → pantalla de Login. -> Correcto, cuando se elimina el perfil que te direccione al login.',
-  })
+  const [profile, setProfile] = useState<Profile>(defaultUserProfile)
 
-  const handleProfileChange = (field: keyof Profile, value: string | boolean | string[]) => {
+  const handleProfileChange = <K extends keyof Profile>(field: K, value: Profile[K]) => {
     setProfile((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -56,7 +38,16 @@ function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage onNavigate={handleNavigate} />} />
-      <Route path="/register" element={<RegisterPage onNavigate={handleNavigate} />} />
+      <Route
+        path="/register"
+        element={
+          <RegisterPage
+            onNavigate={handleNavigate}
+            profile={profile}
+            onProfileChange={handleProfileChange}
+          />
+        }
+      />
       <Route
         path="/validation"
         element={

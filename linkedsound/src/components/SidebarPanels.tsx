@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { queueItems, recentMatches, recentMatchesProfiles, soundFilters, type ProfileCard } from '../data/mockData'
+import { soundFilters } from '../data/mockData'
 
 const collaboratorOptions = ['Productor', 'Artista', 'Productor/Artista'] as const
 
@@ -74,94 +74,6 @@ export function RadarFilters() {
         <label>Verified Crete Only</label>
         <button type="button" className="ls-switch on" aria-label="Verified creators only" />
       </div>
-    </div>
-  )
-}
-
-export function QueuePanel() {
-  return (
-    <div className="ls-panel queue-panel">
-      <div className="ls-panel-header compact">
-        <h3>Up Next in Queue</h3>
-        <span>1/24</span>
-      </div>
-      <div className="ls-queue-list">
-        {queueItems.map((item) => (
-          <div key={item.name} className="ls-queue-item">
-            <div className={`ls-avatar ${item.color}`}>{item.avatar}</div>
-            <div className="ls-queue-copy">
-              <strong>{item.name}</strong>
-              <small>Beatmaker • Hyperpop / D...</small>
-            </div>
-            <span className="ls-percent">{item.percent}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-type MatchesPanelProps = {
-  onSelectMatch?: (profile: ProfileCard) => void
-}
-
-export function MatchesPanel({ onSelectMatch }: MatchesPanelProps) {
-  return (
-    <div className="ls-panel matches-panel">
-      <div className="ls-panel-header compact">
-        <h3>Recent Mutual Matches</h3>
-        <span>4 new</span>
-      </div>
-      <div className="ls-match-list">
-        {recentMatches.map((match) => {
-          const matchProfile = recentMatchesProfiles[match.name] ?? {
-            name: match.name,
-            role: 'Producer & Vocalist',
-            location: 'Global',
-            tags: ['Electronic', 'Vocal'],
-            image: match.image,
-            match: '90%',
-            description: 'Collaborator and producer profile.',
-            badge: 'Artist',
-            isProfile: true,
-            soundcloudHandle: match.name.toLowerCase().replace(/\s+/g, ''),
-            soundcloudUrl: `https://soundcloud.com/search?q=${encodeURIComponent(match.name)}`,
-            tracks: [
-              {
-                id: `m_${match.name}_1`,
-                title: `${match.name} - Demo Track #1`,
-                plays: '14.2k',
-                duration: '3:45',
-                genre: 'Electronic',
-              },
-            ],
-          }
-
-          return (
-            <div
-              key={match.name}
-              className="ls-match-bubble ls-clickable-match"
-              onClick={() => onSelectMatch?.(matchProfile)}
-              title={`Ver trabajos en SoundCloud de ${match.name}`}
-              style={{ cursor: 'pointer' }}
-            >
-              <img src={match.image} alt={match.name} />
-              <span>{match.name}</span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-export function LivePanel() {
-  return (
-    <div className="ls-panel live-panel">
-      <div className="ls-panel-header compact">
-        <h3>Live Jam Session</h3>
-      </div>
-      <p>Join the Los Angeles Late Night DAW jam with live synth layers and sample swaps.</p>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import TopBar from '../components/TopBar'
 import StatusBar from '../components/StatusBar'
-import { RadarFilters, MatchesPanel, LivePanel } from '../components/SidebarPanels'
+import { RadarFilters } from '../components/SidebarPanels'
 import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
@@ -23,7 +23,7 @@ export default function DashboardPage({ activePage, onNavigate, profile }: Dashb
 
   const handleDecision = (liked: boolean) => {
     if (liked) {
-      console.log(`Liked ${currentProfile.name}`)
+      console.log(`Liked ${currentProfile.nickname ?? currentProfile.nickname}`)
     }
 
     setCurrentIndex((prev) => (prev + 1) % recommendations.length)
@@ -40,14 +40,14 @@ export default function DashboardPage({ activePage, onNavigate, profile }: Dashb
             <div
               className="ls-swipe-card ls-clickable-card"
               onClick={() => setPreviewProfile(currentProfile)}
-              title={`Ver trabajos en SoundCloud de ${currentProfile.name}`}
+              title={`Ver trabajos en SoundCloud de ${currentProfile.nickname ?? currentProfile.nickname ?? ''}`}
             >
               <div className="ls-swipe-image-wrap">
-                <img src={currentProfile.image} alt={currentProfile.name} />
+                <img src={currentProfile.image || currentProfile.profileImage} alt={currentProfile.nickname ?? currentProfile.nickname ?? ''} />
                 <span className="ls-card-badge">{currentProfile.match}</span>
                 <div className="ls-swipe-overlay">
                   <div>
-                    <h2>{currentProfile.name}</h2>
+                    <h2>{currentProfile.nickname ?? currentProfile.nickname ?? ''}</h2>
                     <p>{currentProfile.role}</p>
                   </div>
                   <span>{currentProfile.location}</span>
@@ -81,14 +81,13 @@ export default function DashboardPage({ activePage, onNavigate, profile }: Dashb
 
               <div className="ls-swipe-body">
                 <div className="ls-swipe-head">
-                  <span className="ls-tag">{currentProfile.badge}</span>
-                  <div className="ls-swipe-head-right">
+                  <div className="ls-swipe-head-right" style={{ marginLeft: 'auto' }}>
                     <button
                       type="button"
                       className="ls-report-text-btn"
                       onClick={(e) => {
                         e.stopPropagation()
-                        setReportingTarget(currentProfile.name)
+                        setReportingTarget(currentProfile.nickname ?? currentProfile.firstName ?? '')
                       }}
                     >
                       <PiFlagBold /> Reporte
@@ -97,13 +96,13 @@ export default function DashboardPage({ activePage, onNavigate, profile }: Dashb
                   </div>
                 </div>
 
-                <p className="ls-card-desc">{currentProfile.description}</p>
+                <p className="ls-card-desc">{currentProfile.descript ?? currentProfile.bio ?? currentProfile.description}</p>
 
                 <div className="ls-profile-interest-block">
                   <span className="ls-interest-label">Intereses de género</span>
                   <div className="ls-mini-tags">
-                    {currentProfile.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
+                    {(currentProfile.interestGenres ?? currentProfile.tags ?? []).map((genre) => (
+                      <span key={genre}>{genre}</span>
                     ))}
                   </div>
                 </div>
@@ -114,8 +113,6 @@ export default function DashboardPage({ activePage, onNavigate, profile }: Dashb
 
         <aside className="ls-sidebar">
           <RadarFilters />
-          <MatchesPanel onSelectMatch={(matchedProfile) => setPreviewProfile(matchedProfile)} />
-          <LivePanel />
         </aside>
       </main>
 

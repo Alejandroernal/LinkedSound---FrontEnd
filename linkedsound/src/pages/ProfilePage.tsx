@@ -276,9 +276,9 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                 </div>
               )}
               <div>
-                <span className="ls-studio-tag">{profile.category}</span>
+                <span className="ls-studio-tag">{profile.role}</span>
                 <h2>{profile.nickname}</h2>
-                <p>{profile.location} Â· {profile.genres}</p>
+                <p>{profile.location}</p>
               </div>
             </div>
 
@@ -289,19 +289,40 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
 
           <div className="ls-profile-grid">
             <div className="ls-studio-card" style={{ gridColumn: '1 / -1' }}>
-              <span className="ls-studio-tag">Biography</span>
+              <span className="ls-studio-tag">Descript</span>
               {isEditing ? (
                 <textarea
-                  value={profile.bio}
-                  onChange={(event) => onProfileChange('bio', event.target.value)}
+                  value={profile.descript ?? profile.bio ?? profile.description ?? ''}
+                  onChange={(event) => {
+                    onProfileChange('descript', event.target.value)
+                    onProfileChange('bio', event.target.value)
+                  }}
                 />
               ) : (
-                <p>{profile.bio}</p>
+                <p>{profile.descript ?? profile.bio ?? profile.description}</p>
               )}
             </div>
           </div>
 
           <div className="ls-profile-form-grid">
+            <div className="ls-profile-field">
+              <label>First Name</label>
+              {isEditing ? (
+                <input value={profile.firstName ?? ''} onChange={(event) => onProfileChange('firstName', event.target.value)} />
+              ) : (
+                <span>{profile.firstName ?? ''}</span>
+              )}
+            </div>
+
+            <div className="ls-profile-field">
+              <label>Last Name</label>
+              {isEditing ? (
+                <input value={profile.lastName ?? ''} onChange={(event) => onProfileChange('lastName', event.target.value)} />
+              ) : (
+                <span>{profile.lastName ?? ''}</span>
+              )}
+            </div>
+
             <div className="ls-profile-field">
               <label>Nickname / Artistic name</label>
               {isEditing ? (
@@ -312,24 +333,15 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
             </div>
 
             <div className="ls-profile-field">
-              <label>Role / Title</label>
+              <label>Role</label>
               {isEditing ? (
-                <input value={profile.role} onChange={(event) => onProfileChange('role', event.target.value)} />
-              ) : (
-                <span>{profile.role}</span>
-              )}
-            </div>
-
-            <div className="ls-profile-field">
-              <label>CategorÃ­a</label>
-              {isEditing ? (
-                <select value={profile.category} onChange={(event) => onProfileChange('category', event.target.value)}>
+                <select value={profile.role} onChange={(event) => onProfileChange('role', event.target.value)}>
                   <option value="Productor">Productor</option>
                   <option value="Artista">Artista</option>
                   <option value="Productor/Artista">Productor/Artista</option>
                 </select>
               ) : (
-                <span>{profile.category}</span>
+                <span>{profile.role}</span>
               )}
             </div>
 
@@ -437,20 +449,48 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
             </div>
 
             <div className="ls-profile-field">
-              <label><FaSpotify className="ls-field-icon" />Spotify</label>
+              <label><FaSpotify className="ls-field-icon" />Spotify URL</label>
               {isEditing ? (
-                <input value={profile.spotify} onChange={(event) => onProfileChange('spotify', event.target.value)} />
+                <input
+                  type="url"
+                  placeholder="https://open.spotify.com/..."
+                  value={profile.spotifyUrl ?? profile.spotify ?? ''}
+                  onChange={(event) => {
+                    const val = event.target.value
+                    onProfileChange('spotifyUrl', val)
+                    onProfileChange('spotify', val)
+                    if (val && !/^https?:\/\/.+/i.test(val)) {
+                      event.target.setCustomValidity('Por favor ingresa una URL válida (ej. https://open.spotify.com/...)')
+                    } else {
+                      event.target.setCustomValidity('')
+                    }
+                  }}
+                />
               ) : (
-                <a href={profile.spotify} target="_blank" rel="noreferrer">{profile.spotify}</a>
+                <a href={profile.spotifyUrl ?? profile.spotify} target="_blank" rel="noreferrer">{profile.spotifyUrl ?? profile.spotify}</a>
               )}
             </div>
 
             <div className="ls-profile-field">
-              <label> <FaInstagram className="ls-field-icon" />Instagram</label>
+              <label><FaInstagram className="ls-field-icon" />Instagram URL</label>
               {isEditing ? (
-                <input value={profile.instagram} onChange={(event) => onProfileChange('instagram', event.target.value)} />
+                <input
+                  type="url"
+                  placeholder="https://instagram.com/..."
+                  value={profile.instagramUrl ?? profile.instagram ?? ''}
+                  onChange={(event) => {
+                    const val = event.target.value
+                    onProfileChange('instagramUrl', val)
+                    onProfileChange('instagram', val)
+                    if (val && !/^https?:\/\/.+/i.test(val)) {
+                      event.target.setCustomValidity('Por favor ingresa una URL válida (ej. https://instagram.com/...)')
+                    } else {
+                      event.target.setCustomValidity('')
+                    }
+                  }}
+                />
               ) : (
-                <a href={profile.instagram} target="_blank" rel="noreferrer">{profile.instagram}</a>
+                <a href={profile.instagramUrl ?? profile.instagram} target="_blank" rel="noreferrer">{profile.instagramUrl ?? profile.instagram}</a>
               )}
             </div>
 
@@ -459,9 +499,23 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                 <FaSoundcloud className="ls-field-icon" /> SoundCloud URL
               </label>
               {isEditing ? (
-                <input value={profile.soundcloud} onChange={(event) => onProfileChange('soundcloud', event.target.value)} />
+                <input
+                  type="url"
+                  placeholder="https://soundcloud.com/..."
+                  value={profile.soundcloudUrl ?? profile.soundcloud ?? ''}
+                  onChange={(event) => {
+                    const val = event.target.value
+                    onProfileChange('soundcloudUrl', val)
+                    onProfileChange('soundcloud', val)
+                    if (val && !/^https?:\/\/(www\.)?soundcloud\.com\/.+/i.test(val)) {
+                      event.target.setCustomValidity('Debe ser una URL válida de SoundCloud (ej. https://soundcloud.com/tu-usuario)')
+                    } else {
+                      event.target.setCustomValidity('')
+                    }
+                  }}
+                />
               ) : (
-                <a href={profile.soundcloud} target="_blank" rel="noreferrer">{profile.soundcloud}</a>
+                <a href={profile.soundcloudUrl ?? profile.soundcloud} target="_blank" rel="noreferrer">{profile.soundcloudUrl ?? profile.soundcloud}</a>
               )}
             </div>
           </div>
