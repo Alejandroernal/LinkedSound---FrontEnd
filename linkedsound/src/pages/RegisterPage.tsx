@@ -7,14 +7,14 @@ const AVAILABLE_GENRES = [
   'Lo-Fi', 'Cyberpunk', 'Industrial', 'Hyperpop', 'Techno', 'Trap Metal',
 ]
 
-// ── Avatar editor modal ────────────────────────────────────────────────────
+// ── Avatar editor modal (reutilizable) ──────────────────────────────────────
 const CANVAS_W = 360
 const CANVAS_H = 300
 const CX = CANVAS_W / 2
 const CY = CANVAS_H / 2
 const RADIUS = 120
 
-function AvatarEditorModal({
+export function AvatarEditorModal({
   rawImage,
   onApply,
   onCancel,
@@ -24,28 +24,28 @@ function AvatarEditorModal({
   onCancel: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const imgRef    = useRef<HTMLImageElement | null>(null)
-  const panRef    = useRef({ x: 0, y: 0 })
-  const zoomRef   = useRef(1)
-  const dragging  = useRef(false)
+  const imgRef = useRef<HTMLImageElement | null>(null)
+  const panRef = useRef({ x: 0, y: 0 })
+  const zoomRef = useRef(1)
+  const dragging = useRef(false)
   const lastMouse = useRef({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
-    const img    = imgRef.current
+    const img = imgRef.current
     if (!canvas || !img) return
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
 
-    const z     = zoomRef.current
-    const pan   = panRef.current
-    const base  = Math.max((RADIUS * 2) / img.naturalWidth, (RADIUS * 2) / img.naturalHeight)
+    const z = zoomRef.current
+    const pan = panRef.current
+    const base = Math.max((RADIUS * 2) / img.naturalWidth, (RADIUS * 2) / img.naturalHeight)
     const scale = base * z
-    const dw    = img.naturalWidth  * scale
-    const dh    = img.naturalHeight * scale
-    const dx    = CX + pan.x - dw / 2
-    const dy    = CY + pan.y - dh / 2
+    const dw = img.naturalWidth * scale
+    const dh = img.naturalHeight * scale
+    const dx = CX + pan.x - dw / 2
+    const dy = CY + pan.y - dh / 2
 
     // 1. Image
     ctx.drawImage(img, dx, dy, dw, dh)
@@ -61,7 +61,7 @@ function AvatarEditorModal({
     ctx.beginPath()
     ctx.arc(CX, CY, RADIUS, 0, Math.PI * 2)
     ctx.strokeStyle = 'rgba(255,255,255,0.92)'
-    ctx.lineWidth   = 3
+    ctx.lineWidth = 3
     ctx.stroke()
   }, [])
 
@@ -74,7 +74,7 @@ function AvatarEditorModal({
   useEffect(() => { if (imgRef.current) draw() }, [zoom, draw])
 
   const onMouseDown = (e: React.MouseEvent) => {
-    dragging.current  = true
+    dragging.current = true
     lastMouse.current = { x: e.clientX, y: e.clientY }
   }
   const onMouseMove = (e: React.MouseEvent) => {
@@ -97,18 +97,18 @@ function AvatarEditorModal({
     const img = imgRef.current
     if (!img) return
     const SIZE = 240
-    const out  = document.createElement('canvas')
-    out.width  = SIZE
+    const out = document.createElement('canvas')
+    out.width = SIZE
     out.height = SIZE
-    const ctx  = out.getContext('2d')!
-    const z    = zoomRef.current
-    const pan  = panRef.current
+    const ctx = out.getContext('2d')!
+    const z = zoomRef.current
+    const pan = panRef.current
     const base = Math.max(SIZE / img.naturalWidth, SIZE / img.naturalHeight)
-    const s    = base * z
-    const dw   = img.naturalWidth  * s
-    const dh   = img.naturalHeight * s
-    const dx   = SIZE / 2 + pan.x - dw / 2
-    const dy   = SIZE / 2 + pan.y - dh / 2
+    const s = base * z
+    const dw = img.naturalWidth * s
+    const dh = img.naturalHeight * s
+    const dx = SIZE / 2 + pan.x - dw / 2
+    const dy = SIZE / 2 + pan.y - dh / 2
     ctx.save()
     ctx.beginPath()
     ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2)
@@ -139,19 +139,19 @@ function AvatarEditorModal({
         />
 
         <div className="ls-av-modal__zoom-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="22" y2="22" /></svg>
           <input
             type="range" min="0.5" max="4" step="0.02"
             value={zoom}
             onChange={e => handleZoom(Number(e.target.value))}
             className="ls-av-zoom-slider"
           />
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="22" y2="22" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
         </div>
 
         <div className="ls-av-modal__actions">
           <button className="ls-av-btn ls-av-btn--cancel" onClick={onCancel}>Cancel</button>
-          <button className="ls-av-btn ls-av-btn--apply"  onClick={handleApply}>Apply</button>
+          <button className="ls-av-btn ls-av-btn--apply" onClick={handleApply}>Apply</button>
         </div>
       </div>
     </div>
@@ -166,9 +166,10 @@ type RegisterPageProps = {
 }
 
 export default function RegisterPage({ onNavigate, profile, onProfileChange }: RegisterPageProps) {
-  const [genreSearch,  setGenreSearch]  = useState('')
-  const [rawImage,     setRawImage]     = useState<string | null>(null)
-  const [showEditor,   setShowEditor]   = useState(false)
+  const [genreSearch, setGenreSearch] = useState('')
+  const [rawImage, setRawImage] = useState<string | null>(null)
+  const [showEditor, setShowEditor] = useState(false)
+  const [showPhotoActions, setShowPhotoActions] = useState(false)
   const selectedGenres = profile?.interestGenres ?? ['Synthwave', 'Electronic', 'Dark Pop']
 
   const handleFieldChange = (field: keyof Profile, value: string | string[]) => {
@@ -178,7 +179,8 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
   const handleFileInput = (file: File) => {
     const reader = new FileReader()
     reader.onload = () => {
-      setRawImage(reader.result as string)
+      const res = reader.result as string
+      setRawImage(res)
       setShowEditor(true)
     }
     reader.readAsDataURL(file)
@@ -188,6 +190,8 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
     handleFieldChange('profileImage', cropped)
     setShowEditor(false)
   }
+
+  const currentAvatar = profile?.profileImage ?? rawImage
 
   return (
     <>
@@ -213,71 +217,69 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
           <p className="ls-auth-subtitle">Start matching with artists and producers.</p>
 
           <form className="ls-auth-form">
-            <div className="ls-two-col">
-              <label>
-                First Name
-                <input type="text" value={profile?.firstName ?? 'Kaelen'}
-                  onChange={e => handleFieldChange('firstName', e.target.value)} />
-              </label>
-              <label>
-                Last Name
-                <input type="text" value={profile?.lastName ?? 'Voss'}
-                  onChange={e => handleFieldChange('lastName', e.target.value)} />
-              </label>
+            {/* ── Top Row: Foto de perfil + Inputs First Name & Last Name ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
+              
+              {/* Circle preview */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="ls-av-circle"
+                  onClick={() => setShowPhotoActions(prev => !prev)}
+                  title="Haz clic para desplegar opciones de foto"
+                >
+                  {currentAvatar ? (
+                    <img src={currentAvatar} alt="Avatar" className="ls-av-circle__img" />
+                  ) : (
+                    <div className="ls-av-circle__empty">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+                <input id="av-file-input" type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFileInput(f) }} />
+              </div>
+
+              {/* Inputs First Name & Last Name al lado */}
+              <div className="ls-two-col" style={{ gap: '10px' }}>
+                <label>
+                  First Name
+                  <input type="text" value={profile?.firstName ?? 'Kaelen'}
+                    onChange={e => handleFieldChange('firstName', e.target.value)} />
+                </label>
+                <label>
+                  Last Name
+                  <input type="text" value={profile?.lastName ?? 'Voss'}
+                    onChange={e => handleFieldChange('lastName', e.target.value)} />
+                </label>
+              </div>
             </div>
+
+            {/* Opciones desplegables de foto al hacer clic sobre el círculo */}
+            {showPhotoActions && (
+              <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '10px 14px', borderRadius: '12px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <label className="ls-av-upload-btn" htmlFor="av-file-input" style={{ cursor: 'pointer', margin: 0 }}>
+                  Choose photo
+                </label>
+                {currentAvatar && rawImage && (
+                  <button type="button" className="ls-av-edit-btn" onClick={() => setShowEditor(true)}>
+                    Edit crop
+                  </button>
+                )}
+                <span className="ls-av-hint" style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                  Formato JPG, PNG o WEBP
+                </span>
+              </div>
+            )}
 
             <label>
               NickName / Artistic name
               <input type="text" value={profile?.nickname ?? 'Kaelen Voss'}
                 onChange={e => handleFieldChange('nickname', e.target.value)} />
             </label>
-
-            {/* ── Profile photo ── */}
-            <div className="ls-av-picker">
-              <span className="ls-av-picker__label">Profile Photo</span>
-              <div className="ls-av-picker__row">
-
-                {/* Circle preview */}
-                <button
-                  type="button"
-                  className="ls-av-circle"
-                  onClick={() => document.getElementById('av-file-input')?.click()}
-                  title="Click to change photo"
-                >
-                  {profile?.profileImage ? (
-                    <img src={profile.profileImage} alt="Avatar" className="ls-av-circle__img" />
-                  ) : (
-                    <div className="ls-av-circle__empty">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                      </svg>
-                    </div>
-                  )}
-                </button>
-
-                <input id="av-file-input" type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFileInput(f) }} />
-
-                {/* Aside */}
-                <div className="ls-av-picker__aside">
-                  <label className="ls-av-upload-btn" htmlFor="av-file-input">
-                    📷 Choose photo
-                  </label>
-                  {profile?.profileImage ? (
-                    <>
-                      <button type="button" className="ls-av-edit-btn"
-                        onClick={() => rawImage && setShowEditor(true)}>
-                        ✏️ Edit crop
-                      </button>
-                      <p className="ls-av-hint">Click the circle to change · Edit to reframe</p>
-                    </>
-                  ) : (
-                    <p className="ls-av-hint">JPG, PNG or WEBP · Max 10 MB</p>
-                  )}
-                </div>
-              </div>
-            </div>
 
             <label>
               Email

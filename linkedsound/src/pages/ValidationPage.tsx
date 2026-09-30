@@ -31,9 +31,9 @@ const PRESET_LOCATIONS: LocationSuggestion[] = [
 ]
 
 export default function ValidationPage({ onNavigate, profile, onProfileChange }: ValidationPageProps) {
-  const [soundcloud, setSoundcloud] = useState(profile?.soundcloud || '')
-  const [instagram, setInstagram] = useState(profile?.instagram || '')
-  const [spotify, setSpotify] = useState(profile?.spotify || '')
+  const [soundcloud, setSoundcloud] = useState(profile?.soundcloudUrl || profile?.soundcloud || '')
+  const [instagram, setInstagram] = useState(profile?.instagramUrl || profile?.instagram || '')
+  const [spotify, setSpotify] = useState(profile?.spotifyUrl || profile?.spotify || '')
   const [location, setLocation] = useState(profile?.location || 'Berlin, Germany')
 
   const [showMap, setShowMap] = useState(true)
@@ -178,14 +178,40 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
         applySelectedLocation(target)
       } else if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setHighlightedIndex((prev) => (prev + 1) % suggestions.length)
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setHighlightedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
       } else if (e.key === 'Escape') {
         setShowSuggestions(false)
       }
     }
+  }
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) return
+    setIsLocating(true)
+    if (!showMap) {
+      setShowMap(true)
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords
+        reverseGeocode(latitude, longitude)
+
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.flyTo({ center: [longitude, latitude], zoom: 12, essential: true })
+            if (markerRef.current) {
+              markerRef.current.setLngLat([longitude, latitude])
+            } else {
+              markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+                .setLngLat([longitude, latitude])
+                .addTo(mapRef.current)
+            }
+          }
+        }, 100)
+      },
+      () => {
+        setIsLocating(false)
+      }
+    )
   }
 
   useEffect(() => {
@@ -197,14 +223,15 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: 'https://tiles.openfreemap.org/styles/bright',
+      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
       center: [centerLon, centerLat],
-      zoom: 4,
+      zoom: 10,
     })
 
     map.addControl(new maplibregl.FullscreenControl())
+    setTimeout(() => map.resize(), 100)
 
-    markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+    markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
       .setLngLat([centerLon, centerLat])
       .addTo(map)
 
@@ -232,9 +259,18 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
   }, [showMap])
 
   const handleValidate = () => {
-    if (soundcloud) onProfileChange?.('soundcloud', soundcloud)
-    if (instagram) onProfileChange?.('instagram', instagram)
-    if (spotify) onProfileChange?.('spotify', spotify)
+    if (soundcloud) {
+      onProfileChange?.('soundcloudUrl', soundcloud)
+      onProfileChange?.('soundcloud', soundcloud)
+    }
+    if (instagram) {
+      onProfileChange?.('instagramUrl', instagram)
+      onProfileChange?.('instagram', instagram)
+    }
+    if (spotify) {
+      onProfileChange?.('spotifyUrl', spotify)
+      onProfileChange?.('spotify', spotify)
+    }
     if (location) onProfileChange?.('location', location)
     onNavigate?.('Discovery')
   }
@@ -257,17 +293,52 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
           <label>
             <span>
               <FaSoundcloud className="ls-field-icon" />
-              SoundCloud URL (optional)
+              SoundCloud Perfil URL
             </span>
             <input
               type="url"
-              placeholder="https://soundcloud.com/your-profile"
+              placeholder="https://soundcloud.com/tu-usuario"
               value={soundcloud}
               onChange={(e) => {
-                setSoundcloud(e.target.value)
-                onProfileChange?.('soundcloud', e.target.value)
+                const val = e.target.value
+                setSoundcloud(val)
+                onProfileChange?.('soundcloudUrl', val)
+                onProfileChange?.('soundcloud', val)
               }}
             />
+          </label>
+
+          <label>
+            <span>
+              <FaSoundcloud className="ls-field-icon" style={{ color: '#ff7700' }} />
+              Track o Muestra Destacada (URL opcional de SoundCloud)
+            </span>
+            <input
+              type="url"
+              placeholder="https://soundcloud.com/tu-usuario/tu-cancion-destacada"
+              value={(profile?.tracks && profile.tracks[1]?.soundcloudLink) || ''}
+              onChange={(e) => {
+                const val = e.target.value
+                const currentTracks = profile?.tracks || [
+                  { id: 't0', title: 'Último tema subido', plays: '0', duration: '--:--', genre: 'Principal' }
+                ]
+                const updatedTracks = [
+                  currentTracks[0],
+                  {
+                    id: 't_custom',
+                    title: 'Track Destacado',
+                    plays: 'Muestra',
+                    duration: 'SoundCloud',
+                    genre: 'Destacado',
+                    soundcloudLink: val
+                  }
+                ]
+                onProfileChange?.('tracks', updatedTracks)
+              }}
+            />
+            <small style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: '2px', display: 'block' }}>
+              * Se mostrará automáticamente tu último tema de SoundCloud y opcionalmente este track destacado en tu modal.
+            </small>
           </label>
 
           <label>
@@ -280,8 +351,10 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
               placeholder="instagram.com/your-handle"
               value={instagram}
               onChange={(e) => {
-                setInstagram(e.target.value)
-                onProfileChange?.('instagram', e.target.value)
+                const val = e.target.value
+                setInstagram(val)
+                onProfileChange?.('instagramUrl', val)
+                onProfileChange?.('instagram', val)
               }}
             />
           </label>
@@ -296,8 +369,10 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
               placeholder="open.spotify.com/artist/your-profile"
               value={spotify}
               onChange={(e) => {
-                setSpotify(e.target.value)
-                onProfileChange?.('spotify', e.target.value)
+                const val = e.target.value
+                setSpotify(val)
+                onProfileChange?.('spotifyUrl', val)
+                onProfileChange?.('spotify', val)
               }}
             />
           </label>
@@ -346,7 +421,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
             </label>
 
             <div className="ls-tab-hint">
-              <span>💡 Tip:</span>
+              <span>Tip:</span>
               <span>
                 Presiona <kbd>Tab</kbd> o <kbd>Enter</kbd> para autocompletar sugerencias o haz clic en el mapa.
               </span>
@@ -358,7 +433,15 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
                 className="ls-map-toggle-btn"
                 onClick={() => setShowMap((prev) => !prev)}
               >
-                {showMap ? 'Ocultar mapa' : '📍 Elegir en mapa'}
+                {showMap ? 'Ocultar mapa' : 'Elegir en mapa'}
+              </button>
+              <button
+                type="button"
+                className="ls-map-toggle-btn"
+                style={{ background: 'rgba(0, 229, 255, 0.12)', borderColor: 'rgba(0, 229, 255, 0.3)', color: '#00e5ff' }}
+                onClick={handleUseCurrentLocation}
+              >
+                Usar mi ubicación actual
               </button>
               {isLocating && <span className="ls-map-status">Buscando dirección...</span>}
               {isSearching && <span className="ls-map-status">Buscando ciudades...</span>}

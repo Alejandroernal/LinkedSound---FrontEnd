@@ -11,11 +11,12 @@ type ExplorePageProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
   profile: Profile
+  isAdminSession?: boolean
 }
 
 
 
-export default function ExplorePage({ activePage, onNavigate, profile }: ExplorePageProps) {
+export default function ExplorePage({ activePage, onNavigate, profile, isAdminSession }: ExplorePageProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeGenre, setActiveGenre] = useState('')
   const [itemRoleFilter, setItemRoleFilter] = useState<'Todos' | 'Perfil' | 'Evento'>('Todos')
@@ -63,6 +64,7 @@ export default function ExplorePage({ activePage, onNavigate, profile }: Explore
         activePage={activePage}
         onNavigate={onNavigate}
         profile={profile}
+        isAdminSession={isAdminSession}
       />
 
       <main className="ls-page-content">
@@ -87,7 +89,7 @@ export default function ExplorePage({ activePage, onNavigate, profile }: Explore
                     style={{ fontWeight: itemRoleFilter === r ? 'bold' : 'normal' }}
                     onClick={() => setItemRoleFilter(r)}
                   >
-                    {r === 'Todos' ? 'Todos' : r === 'Perfil' ? '👤 Perfiles' : '🎪 Eventos'}
+                    {r === 'Todos' ? 'Todos' : r === 'Perfil' ? 'Perfiles' : 'Eventos'}
                   </button>
                 ))}
               </div>
@@ -141,32 +143,91 @@ export default function ExplorePage({ activePage, onNavigate, profile }: Explore
                   >
                     <div className="ls-card-visual">
                       <img src={card.image || card.profileImage} alt={card.nickname ?? card.nickname} />
-                      <span className="ls-card-badge" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                        <span style={{
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          background: isProfile ? 'rgba(168, 85, 247, 0.4)' : 'rgba(234, 179, 8, 0.4)',
-                          fontWeight: 'bold',
-                          fontSize: '0.65rem'
-                        }}>
-                          {itemRole}
-                        </span>
-                        {card.badge || card.role}
+                      <span className="ls-card-badge">
+                        {itemRole.toUpperCase()}
                       </span>
-                      {isProfile && (
+                      {isProfile ? (
                         <span className="ls-sc-card-indicator" title="SoundCloud vinculado">
                           <PiSoundcloudLogoFill /> SoundCloud
+                        </span>
+                      ) : (
+                        <span
+                          className="ls-sc-card-indicator"
+                          style={{
+                            background: card.isFinished
+                              ? 'rgba(239, 68, 68, 0.9)'
+                              : 'rgba(34, 197, 94, 0.9)',
+                            color: '#ffffff',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {card.isFinished ? 'Finalizado' : 'Vigente'}
                         </span>
                       )}
                     </div>
                     <div className="ls-card-body">
                       <div className="ls-card-head">
                         <h3>{card.nickname ?? card.nickname}</h3>
-                        <span>{card.match} match</span>
+                        <span className="ls-match-tag">{card.match} match</span>
                       </div>
                       <p className="ls-card-role">
                         {card.role} {card.location && `• ${card.location}`}
                       </p>
+
+                      {/* En perfiles: Caja de Track / Muestra destacada */}
+                      {isProfile && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'rgba(255, 85, 0, 0.08)',
+                            border: '1px solid rgba(255, 85, 0, 0.25)',
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            margin: '8px 0',
+                          }}
+                        >
+                          <PiSoundcloudLogoFill style={{ color: '#ff5500', fontSize: '1.2rem', flexShrink: 0 }} />
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <span style={{ display: 'block', fontSize: '0.68rem', color: '#ffaa71', fontWeight: 700, textTransform: 'uppercase' }}>
+                              Track / Muestra SoundCloud
+                            </span>
+                            <span style={{ display: 'block', fontSize: '0.78rem', color: '#ffffff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {card.tracks && card.tracks[0]?.title ? card.tracks[0].title : 'Última producción de catálogo'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* En eventos: Caja de Fecha, Hora y Venue */}
+                      {!isProfile && card.eventDate && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            background: 'rgba(168, 85, 247, 0.08)',
+                            border: '1px solid rgba(168, 85, 247, 0.22)',
+                            borderRadius: '10px',
+                            padding: '8px 10px',
+                            margin: '8px 0',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#e9d5ff', fontWeight: 600 }}>
+                            <span>📅</span>
+                            <span>{card.eventDate}</span>
+                            {card.eventTime && <span style={{ color: '#c084fc' }}>• {card.eventTime} hs</span>}
+                          </div>
+                          {card.venue && (
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.7)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>📍</span>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.venue}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <p className="ls-card-desc">{card.bio ?? card.description}</p>
                       {(card.interestGenres ?? card.tags ?? []).length > 0 && (
                         <div className="ls-mini-tags">

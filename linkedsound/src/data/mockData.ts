@@ -151,7 +151,6 @@ export const recommendations: ProfileCard[] = [
       },
     ],
   },
-
   {
     nickname: 'Golden Boy',
     role: 'Productor/Artista',
@@ -169,7 +168,7 @@ export const recommendations: ProfileCard[] = [
     soundcloudHandle: 'goldennnnnnnnnnnnnnn',
     tracks: [
       {
-        id: 'kd0_rec',
+        id: 'gb0_rec',
         title: 'Step back - !Deoro',
         plays: '158',
         duration: '2:22',
@@ -177,7 +176,7 @@ export const recommendations: ProfileCard[] = [
         soundcloudLink: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
       },
       {
-        id: 'kd1_rec',
+        id: 'gb1_rec',
         title: '0ffl1n3 - !Deoro',
         plays: '156',
         duration: '2:43',
@@ -186,6 +185,110 @@ export const recommendations: ProfileCard[] = [
       },
     ],
   },
+  {
+    nickname: 'Elena Rostova',
+    role: 'Artista',
+    location: 'Berlin, Germany',
+    interestGenres: ['Darkwave', 'Synthwave', 'Vocal'],
+    soundcloudUrl: 'https://soundcloud.com/elena-rostova',
+    spotifyUrl: 'https://open.spotify.com/artist/elenarostova',
+    instagramUrl: 'https://instagram.com/elenarostova',
+    image:
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+    match: '91%',
+    bio: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
+    badge: 'Artist',
+    isProfile: true,
+    soundcloudHandle: 'elena-rostova',
+    tracks: [
+      {
+        id: 'er1',
+        title: 'Neon Shadows (Vocal Cut)',
+        plays: '18.3k',
+        duration: '3:45',
+        genre: 'Darkwave',
+        soundcloudLink: 'https://soundcloud.com/search?q=elena-rostova',
+      },
+    ],
+  },
+  {
+    nickname: 'Marcus Cyber',
+    role: 'Productor',
+    location: 'Tokyo, Japan',
+    interestGenres: ['Cyberpunk', 'Industrial', 'EBM'],
+    soundcloudUrl: 'https://soundcloud.com/marcus-cyber',
+    spotifyUrl: 'https://open.spotify.com/artist/marcuscyber',
+    instagramUrl: 'https://instagram.com/marcuscyber',
+    image:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
+    match: '88%',
+    bio: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
+    badge: 'Producer',
+    isProfile: true,
+    soundcloudHandle: 'marcus-cyber',
+    tracks: [
+      {
+        id: 'mc1',
+        title: 'Neo Tokyo 2099',
+        plays: '42.1k',
+        duration: '5:12',
+        genre: 'Cyberpunk',
+        soundcloudLink: 'https://soundcloud.com/search?q=marcus-cyber',
+      },
+    ],
+  },
+  {
+    nickname: 'Mateo Sound',
+    role: 'Productor',
+    location: 'Buenos Aires, Argentina',
+    interestGenres: ['Tech House', 'Electronic', 'Minimal'],
+    soundcloudUrl: 'https://soundcloud.com/mateosound',
+    spotifyUrl: 'https://open.spotify.com/artist/mateosound',
+    instagramUrl: 'https://instagram.com/mateosound',
+    image:
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
+    match: '84%',
+    bio: 'Groovy underground minimal & tech house producer based in BA.',
+    badge: 'Producer',
+    isProfile: true,
+    soundcloudHandle: 'mateosound',
+    tracks: [
+      {
+        id: 'ms1',
+        title: 'Subterranean Groove',
+        plays: '12.4k',
+        duration: '6:02',
+        genre: 'Tech House',
+        soundcloudLink: 'https://soundcloud.com/search?q=mateosound',
+      },
+    ],
+  },
+  {
+    nickname: 'Aria Vibe',
+    role: 'Artista',
+    location: 'London, UK',
+    interestGenres: ['Ambient', 'Lo-Fi', 'Vocal'],
+    soundcloudUrl: 'https://soundcloud.com/ariavibe',
+    spotifyUrl: 'https://open.spotify.com/artist/ariavibe',
+    instagramUrl: 'https://instagram.com/ariavibe',
+    image:
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
+    match: '79%',
+    bio: 'Atmospheric ambient textures and dream-pop vocal loops.',
+    badge: 'Artist',
+    isProfile: true,
+    soundcloudHandle: 'ariavibe',
+    tracks: [
+      {
+        id: 'av1',
+        title: 'Midnight Rain Echoes',
+        plays: '8.9k',
+        duration: '2:50',
+        genre: 'Ambient',
+        soundcloudLink: 'https://soundcloud.com/search?q=ariavibe',
+      },
+    ],
+  }
 ]
 
 export const exploreCards: ProfileCard[] = [
@@ -196,15 +299,24 @@ export const exploreCards: ProfileCard[] = [
     interestGenres: ['Live', 'Techno', 'Cinematic', 'Experimental'],
     image:
       'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80',
-    // Required social media URLs (empty for now)
-    soundcloudUrl: '',
-    spotifyUrl: '',
-    instagramUrl: '',
     match: '96%',
     bio: 'A dark, rhythmic fusion of techno textures and gritty vocal layers.',
     badge: 'Featured',
     itemRole: 'Evento',
-    isProfile: false, // Event / Jam session, no SoundCloud profile linked
+    isProfile: false,
+
+    // Atributos específicos de Evento (Campos de Perfil son undefined / null)
+    eventDate: '2026-10-15',
+    eventTime: '23:00',
+    venue: 'Watergate Club Berlin',
+    ticketUrl: 'https://ra.co/events/berlin-circuito-nocturno',
+    isFinished: false,
+
+    // Atributos de Perfil (nulos en eventos)
+    soundcloudUrl: '',
+    spotifyUrl: '',
+    instagramUrl: '',
+    tracks: undefined,
   },
   {
     nickname: 'Kylian Dictador',
@@ -222,6 +334,14 @@ export const exploreCards: ProfileCard[] = [
     itemRole: 'Perfil',
     isProfile: true,
     soundcloudHandle: 'jesus-922347355',
+
+    // Atributos de Evento (nulos en perfiles)
+    eventDate: undefined,
+    eventTime: undefined,
+    venue: undefined,
+    ticketUrl: undefined,
+    isFinished: undefined,
+
     tracks: [
       {
         id: 'kd0_exp',
@@ -257,6 +377,13 @@ export const exploreCards: ProfileCard[] = [
     itemRole: 'Perfil',
     isProfile: true,
     soundcloudHandle: 'lunasol_official',
+
+    // Atributos de Evento
+    eventDate: undefined,
+    eventTime: undefined,
+    venue: undefined,
+    ticketUrl: undefined,
+
     tracks: [
       {
         id: 'ls1_exp',
@@ -292,6 +419,7 @@ export const exploreCards: ProfileCard[] = [
     itemRole: 'Perfil',
     isProfile: true,
     soundcloudHandle: 'goldennnnnnnnnnnnnnn',
+
     tracks: [
       {
         id: 'gb0_exp',
@@ -311,6 +439,105 @@ export const exploreCards: ProfileCard[] = [
       },
     ],
   },
+  {
+    nickname: 'Elena Rostova',
+    role: 'Artista',
+    location: 'Berlin, Germany',
+    interestGenres: ['Darkwave', 'Synthwave', 'Vocal'],
+    soundcloudUrl: 'https://soundcloud.com/elena-rostova',
+    spotifyUrl: 'https://open.spotify.com/artist/elenarostova',
+    instagramUrl: 'https://instagram.com/elenarostova',
+    image:
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+    match: '91%',
+    bio: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
+    badge: 'Artist',
+    itemRole: 'Perfil',
+    isProfile: true,
+    soundcloudHandle: 'elena-rostova',
+  },
+  {
+    nickname: 'Marcus Cyber',
+    role: 'Productor',
+    location: 'Tokyo, Japan',
+    interestGenres: ['Cyberpunk', 'Industrial', 'EBM'],
+    soundcloudUrl: 'https://soundcloud.com/marcus-cyber',
+    spotifyUrl: 'https://open.spotify.com/artist/marcuscyber',
+    instagramUrl: 'https://instagram.com/marcuscyber',
+    image:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
+    match: '88%',
+    bio: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
+    badge: 'Producer',
+    itemRole: 'Perfil',
+    isProfile: true,
+    soundcloudHandle: 'marcus-cyber',
+  },
+  {
+    nickname: 'Cyberpunk Sound Expo 2026',
+    role: 'Festival & Workshop',
+    location: 'Tokyo, Japan',
+    interestGenres: ['Cyberpunk', 'Industrial', 'Synthwave'],
+    image:
+      'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
+    match: '92%',
+    bio: 'Un encuentro masivo de música electrónica industrial, sintetizadores analógicos e instalaciones audiovisuales.',
+    badge: 'Evento',
+    itemRole: 'Evento',
+    isProfile: false,
+
+    // Atributos de Evento Activo
+    eventDate: '2026-11-20',
+    eventTime: '18:00',
+    venue: 'AGEHA Tokyo Dome Arena',
+    ticketUrl: 'https://eventbrite.com/e/cyberpunk-sound-expo-2026',
+    isFinished: false,
+
+    soundcloudUrl: '',
+    spotifyUrl: '',
+    instagramUrl: '',
+  },
+  {
+    nickname: 'Buenos Aires Underground Jam',
+    role: 'Jam Session Live',
+    location: 'Buenos Aires, Argentina',
+    interestGenres: ['Tech House', 'Minimal', 'Electronic'],
+    image:
+      'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&q=80',
+    match: '85%',
+    bio: 'Jam libre para productores y DJs locales de minimal y tech house en Palermo.',
+    badge: 'Evento',
+    itemRole: 'Evento',
+    isProfile: false,
+
+    // Atributos de Evento Expirado / Finalizado (Fecha pasada en 2026)
+    eventDate: '2026-09-15',
+    eventTime: '22:00',
+    venue: 'Niceto Club Palermo',
+    ticketUrl: 'https://passline.com/eventos/buenos-aires-underground-jam',
+    isFinished: true,
+
+    soundcloudUrl: '',
+    spotifyUrl: '',
+    instagramUrl: '',
+  },
+  {
+    nickname: 'Aria Vibe',
+    role: 'Artista',
+    location: 'London, UK',
+    interestGenres: ['Ambient', 'Lo-Fi', 'Vocal'],
+    soundcloudUrl: 'https://soundcloud.com/ariavibe',
+    spotifyUrl: 'https://open.spotify.com/artist/ariavibe',
+    instagramUrl: 'https://instagram.com/ariavibe',
+    image:
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
+    match: '79%',
+    bio: 'Atmospheric ambient textures and dream-pop vocal loops.',
+    badge: 'Artist',
+    itemRole: 'Perfil',
+    isProfile: true,
+    soundcloudHandle: 'ariavibe',
+  }
 ]
 
 export const conversations: Conversation[] = [
@@ -382,3 +609,199 @@ export const messagesByConversation: Record<string, Message[]> = {
     { id: 'f1', sender: 'them', text: 'Could you share a rough vocal pass?', time: 'May 10' },
   ],
 }
+
+// ── Admin Mock Data ──────────────────────────────────────────────────────────
+
+export const mockReports: import('../types').UserReport[] = [
+  {
+    id: 'REP-101',
+    reportedUser: 'Alex Vibe',
+    reporterUser: 'Kaelen Voss',
+    reason: 'Spam / Mensajes no solicitados',
+    details: 'Envía enlaces sospechosos por mensajes privados ofreciendo seguidores falsos.',
+    date: '2026-09-29 18:40',
+    status: 'Pending',
+    severity: 'High',
+    origin: 'Discovery',
+    targetType: 'Perfil',
+  },
+  {
+    id: 'REP-102',
+    reportedUser: 'Circuito Nocturno (Berlin Session)',
+    reporterUser: 'CyberPulse',
+    reason: 'Derechos de autor / Audio no autorizado en evento',
+    details: 'Subió un evento promocionando música que no cuenta con licencias para su emisión.',
+    date: '2026-09-28 14:15',
+    status: 'Reviewed',
+    severity: 'Medium',
+    origin: 'Explorer',
+    targetType: 'Evento',
+  },
+  {
+    id: 'REP-103',
+    reportedUser: 'Mark Studio',
+    reporterUser: 'Elena Rostova',
+    reason: 'Comportamiento Inapropiado en perfil público',
+    details: 'Uso de lenguaje ofensivo en la descripción del perfil y comentarios de proyectos.',
+    date: '2026-09-27 09:30',
+    status: 'Resolved',
+    severity: 'Low',
+    origin: 'Discovery',
+    targetType: 'Perfil',
+    adminComment: 'Se advirtió al usuario sobre las normas comunitarias y modificó los comentarios inapropiados.',
+  },
+  {
+    id: 'REP-104',
+    reportedUser: 'Synthwave Night Festival',
+    reporterUser: 'Kylian Dictador',
+    reason: 'Información Falsa de Ubicación',
+    details: 'El evento figura en Buenos Aires pero el organizador cobra entradas para un show virtual cancelado.',
+    date: '2026-09-26 21:10',
+    status: 'Pending',
+    severity: 'High',
+    origin: 'Explorer',
+    targetType: 'Evento',
+  },
+  {
+    id: 'REP-105',
+    reportedUser: 'Mark Studio',
+    reporterUser: 'Kaelen Voss',
+    reason: 'Derechos de autor / Contenido copiado',
+    details: 'Ha publicado como propio un proyecto de sonido registrado por otro usuario.',
+    date: '2026-09-25 11:20',
+    status: 'Pending',
+    severity: 'High',
+    origin: 'Discovery',
+    targetType: 'Perfil',
+  }
+]
+
+export const mockActivity: import('../types').UserActivityLog[] = [
+  { id: 'ACT-01', user: 'Kaelen Voss', action: 'Inicio de sesión exitoso', timestamp: 'Hace 5 minutos', ip: '192.168.1.45', device: 'Chrome / Windows', module: 'Sistema' },
+  { id: 'ACT-02', user: 'Alex Vibe', action: 'Actualizó su foto de perfil y SoundCloud link', timestamp: 'Hace 12 minutos', ip: '185.220.101.4', device: 'Firefox / MacOS', module: 'Perfil' },
+  { id: 'ACT-03', user: 'Circuito Nocturno', action: 'Creó nuevo artículo de evento en Explorer', timestamp: 'Hace 30 minutos', ip: '190.45.12.88', device: 'Safari / iOS', module: 'Explorer' },
+  { id: 'ACT-04', user: 'Luna Beats', action: 'Modificó biografía e interés de géneros', timestamp: 'Hace 45 minutos', ip: '200.89.44.12', device: 'Chrome / Android', module: 'Perfil' },
+  { id: 'ACT-05', user: 'CyberPulse', action: 'Publicó artículo "Synth Lab Sessions" en Explorer', timestamp: 'Hace 2 horas', ip: '181.12.90.11', device: 'Edge / Windows', module: 'Explorer' },
+]
+
+export const mockUsers: import('../types').UserProfile[] = [
+  {
+    id: 'USR-01',
+    nickname: 'Kaelen Voss',
+    firstName: 'Kaelen',
+    lastName: 'Voss',
+    email: 'kaelen@linkedsound.app',
+    role: 'Productor',
+    location: 'Berlin, Germany',
+    status: 'Active',
+    joinedDate: '2026-01-15',
+    reportsCount: 0,
+    interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
+    spotifyUrl: 'https://spotify.com/artist/kaelen',
+    instagramUrl: 'https://instagram.com/kaelen',
+    soundcloudUrl: 'https://soundcloud.com/kaelen',
+    bio: 'Building cinematic soundscapes with modular synths.'
+  },
+  {
+    id: 'USR-02',
+    nickname: 'Alex Vibe',
+    firstName: 'Alex',
+    lastName: 'Vibe',
+    email: 'alex.vibe@music.io',
+    role: 'Artista',
+    location: 'Madrid, España',
+    status: 'Pending Approval',
+    joinedDate: '2026-09-20',
+    reportsCount: 1,
+    interestGenres: ['Tech House', 'Techno'],
+    spotifyUrl: 'https://spotify.com/artist/alexvibe',
+    instagramUrl: 'https://instagram.com/alexvibe',
+    soundcloudUrl: 'https://soundcloud.com/alexvibe',
+    bio: 'Tech house & minimal DJ.'
+  },
+  {
+    id: 'USR-03',
+    nickname: 'Luna Beats',
+    firstName: 'Luna',
+    lastName: 'Rios',
+    email: 'luna.beats@sound.com',
+    role: 'Productor/Artista',
+    location: 'Buenos Aires, Argentina',
+    status: 'Active',
+    joinedDate: '2026-05-10',
+    reportsCount: 1,
+    interestGenres: ['Ambient', 'Lo-Fi'],
+    spotifyUrl: 'https://spotify.com/artist/lunabeats',
+    instagramUrl: 'https://instagram.com/lunabeats',
+    soundcloudUrl: 'https://soundcloud.com/lunabeats',
+    bio: 'Chilled beats & atmospheric sounds.'
+  },
+  {
+    id: 'USR-04',
+    nickname: 'Mark Studio',
+    firstName: 'Mark',
+    lastName: 'Taylor',
+    email: 'mark@studio.org',
+    role: 'Productor',
+    location: 'London, UK',
+    status: 'Suspended',
+    joinedDate: '2026-03-04',
+    reportsCount: 2,
+    interestGenres: ['Rock', 'Industrial'],
+    spotifyUrl: 'https://spotify.com/artist/markstudio',
+    instagramUrl: 'https://instagram.com/markstudio',
+    soundcloudUrl: 'https://soundcloud.com/markstudio',
+    bio: 'Audio engineer & mixing master.'
+  },
+]
+
+export const mockExplorerItems: import('../types').ExplorerItem[] = [
+  {
+    id: 'EXP-01',
+    title: 'Circuito Nocturno Live Session',
+    type: 'Evento',
+    owner: 'Circuito Nocturno',
+    location: 'Berlin, Germany',
+    genres: ['Live', 'Techno', 'Experimental'],
+    status: 'Active',
+    createdDate: '2026-09-25',
+    views: 1420,
+    description: 'Sesión en vivo de sintetizadores analógicos y techno experimental en club subterráneo.'
+  },
+  {
+    id: 'EXP-02',
+    title: 'LunaSol Acoustic Duo',
+    type: 'Perfil',
+    owner: 'Luna Beats',
+    location: 'Buenos Aires, Argentina',
+    genres: ['Acoustic', 'Vocal', 'Alt Pop'],
+    status: 'Active',
+    createdDate: '2026-09-20',
+    views: 890,
+    description: 'Proyecto duo de música acústica con paisajes sonoros de lo-fi.'
+  },
+  {
+    id: 'EXP-03',
+    title: 'Synthwave Night Showcase',
+    type: 'Evento',
+    owner: 'Golden Boy',
+    location: 'Entre Ríos, Argentina',
+    genres: ['Synthwave', 'HardTrap'],
+    status: 'Under Review',
+    createdDate: '2026-09-18',
+    views: 350,
+    description: 'Encuentro nacional de productores de synthwave y sintetizadores vintage.'
+  },
+  {
+    id: 'EXP-04',
+    title: 'Industrial Noise Workshop',
+    type: 'Evento',
+    owner: 'Mark Studio',
+    location: 'London, UK',
+    genres: ['Industrial', 'Noise'],
+    status: 'Hidden',
+    createdDate: '2026-09-10',
+    views: 120,
+    description: 'Taller de producción e ingeniería de sonido industrial pesado.'
+  }
+]

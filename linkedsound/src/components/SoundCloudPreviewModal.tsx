@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import * as maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   PiXBold,
   PiPlayFill,
@@ -7,6 +9,7 @@ import {
   PiMusicNotesFill,
   PiInfoBold,
   PiSpeakerHighBold,
+  PiMapPinBold,
 } from 'react-icons/pi'
 import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
@@ -17,6 +20,15 @@ type SoundCloudPreviewModalProps = {
   onClose: () => void
 }
 
+const PRESET_COORDINATES: Record<string, [number, number]> = {
+  'berlin': [13.405, 52.520],
+  'tokyo': [139.6917, 35.6895],
+  'buenos aires': [-58.3816, -34.6037],
+  'new york': [-74.0060, 40.7128],
+  'london': [-0.1278, 51.5074],
+  'madrid': [-3.7038, 40.4168],
+}
+
 export default function SoundCloudPreviewModal({
   isOpen,
   card,
@@ -25,6 +37,8 @@ export default function SoundCloudPreviewModal({
   const [activeEmbedUrl, setActiveEmbedUrl] = useState<string | null>(null)
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null)
   const [shouldAutoplay, setShouldAutoplay] = useState<boolean>(false)
+  const mapContainerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
 
   useEffect(() => {
     if (card?.soundcloudUrl ?? card?.soundcloud) {
@@ -33,6 +47,51 @@ export default function SoundCloudPreviewModal({
       setShouldAutoplay(false) // User decision: do not autoplay on modal open
     }
   }, [card, isOpen])
+
+  // Inicializar mapa de localización para Eventos
+  useEffect(() => {
+    if (!isOpen || !card || card.isProfile !== false || !mapContainerRef.current) return
+
+    // Evitar reinicialización repetida
+    if (mapRef.current) {
+      mapRef.current.remove()
+      mapRef.current = null
+    }
+
+    const locLower = (card.location ?? '').toLowerCase()
+    let coords: [number, number] = [13.405, 52.520] // Default Berlin
+
+    for (const [city, c] of Object.entries(PRESET_COORDINATES)) {
+      if (locLower.includes(city)) {
+        coords = c
+        break
+      }
+    }
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      center: coords,
+      zoom: 12,
+    })
+
+    new maplibregl.Marker({ color: '#a855f7' })
+      .setLngLat(coords)
+      .addTo(map)
+
+    setTimeout(() => {
+      map.resize()
+    }, 200)
+
+    mapRef.current = map
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+  }, [isOpen, card])
 
   if (!isOpen || !card) return null
 
@@ -81,20 +140,93 @@ export default function SoundCloudPreviewModal({
 
         {!isProfile ? (
           <div className="ls-non-profile-notice">
-            <div className="ls-notice-icon">
-              <PiInfoBold />
+            {(card.image || card.profileImage) && (
+              <div className="ls-notice-image-wrap" style={{ width: '100%', maxHeight: '130px', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
+                <img
+                  src={card.image || card.profileImage}
+                  alt={profileName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+            )}
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{profileName}</h3>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', margin: '4px 0 8px 0' }}>
+              <span
+                style={{
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  fontSize: '0.72rem',
+                  fontWeight: 'bold',
+                  background: card.isFinished ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                  color: card.isFinished ? '#fca5a5' : '#86efac',
+                  border: `1px solid ${card.isFinished ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
+                }}
+              >
+                {card.isFinished ? '⚠️ Evento Finalizado' : '🔥 Evento Vigente'}
+              </span>
             </div>
-            <h3>Evento / Sesión en Vivo</h3>
-            <p className="ls-notice-text">
-              <strong>{profileName}</strong> es {card.role.toLowerCase()} ({card.location}).
-              Al tratarse de una sesión o evento en vivo y no un perfil de creador individual, no posee catálogo de producciones vinculadas en SoundCloud.
+
+            <p className="ls-notice-text" style={{ fontSize: '0.82rem', marginBottom: '8px' }}>
+              <strong>Evento / Sesión en Vivo</strong> • {card.role} ({card.location}).
             </p>
+
+            {card.eventDate && (
+              <div style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '8px 12px', borderRadius: '10px', margin: '8px 0', border: '1px solid rgba(168, 85, 247, 0.25)', fontSize: '0.8rem' }}>
+                <p style={{ margin: 0, fontWeight: 600, color: '#e9d5ff' }}>
+                  📅 Fecha: <span>{card.eventDate}</span> {card.eventTime && `| 🕒 ${card.eventTime} hs`}
+                </p>
+                {card.venue && <p style={{ margin: '3px 0 0 0', color: '#c084fc' }}>📍 Venue / Lugar: {card.venue}</p>}
+                {card.ticketUrl && !card.isFinished && (
+                  <a
+                    href={card.ticketUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      marginTop: '6px',
+                      color: '#a855f7',
+                      fontWeight: 'bold',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    🎟️ Adquirir Entradas <PiArrowSquareOutBold />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {card.bio && (
+              <p className="ls-notice-text" style={{ fontStyle: 'italic', opacity: 0.9, marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem' }}>
+                "{card.bio}"
+              </p>
+            )}
+
+            {/* Mapa de Localización del Evento */}
+            <div style={{ marginTop: '10px', marginBottom: '12px', textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: '#a855f7', fontWeight: 600, fontSize: '0.82rem' }}>
+                <PiMapPinBold />
+                <span>Ubicación en Mapa: {card.location}</span>
+              </div>
+              <div
+                ref={mapContainerRef}
+                style={{
+                  width: '100%',
+                  height: '150px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                }}
+              />
+            </div>
+
             <div className="ls-notice-tags">
               {(card.interestGenres ?? card.tags ?? []).map((tag) => (
                 <span key={tag}>{tag}</span>
               ))}
             </div>
-            <button type="button" className="ls-secondary-button" onClick={handleCloseModal}>
+            <button type="button" className="ls-secondary-button" onClick={handleCloseModal} style={{ marginTop: '16px' }}>
               Cerrar Vista Previa
             </button>
           </div>

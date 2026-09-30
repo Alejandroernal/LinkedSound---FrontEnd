@@ -4,6 +4,7 @@ import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
+import { AvatarEditorModal } from './RegisterPage'
 import type { AppPage, Profile } from '../types'
 
 type ProfilePageProps = {
@@ -11,6 +12,7 @@ type ProfilePageProps = {
   onNavigate?: (page: AppPage) => void
   profile: Profile
   onProfileChange: (field: keyof Profile, value: string | boolean | string[]) => void
+  isAdminSession?: boolean
 }
 
 type LocationSuggestion = {
@@ -33,35 +35,40 @@ const PRESET_LOCATIONS: LocationSuggestion[] = [
   { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico' },
 ]
 
-export default function ProfilePage({ activePage, onNavigate, profile, onProfileChange }: ProfilePageProps) {
+const genreOptions = [
+  'Synthwave',
+  'DarkElectro',
+  'Cyberpunk',
+  'Industrial',
+  'Electronic',
+  'Dark Pop',
+  'Hip Hop',
+  'Indie',
+  'Tech House',
+  'Ambient',
+  'Jazz',
+  'R&B',
+  'Rock',
+  'Drum & Bass',
+  'Lo-Fi',
+]
+
+export default function ProfilePage({ activePage, onNavigate, profile, onProfileChange, isAdminSession }: ProfilePageProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [showMap, setShowMap] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const [locationQuery, setLocationQuery] = useState('')
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [highlightedIndex, setHighlightedIndex] = useState(0)
+
+  // Editor modal recortador de imagen
+  const [rawImage, setRawImage] = useState<string | null>(null)
+  const [showEditor, setShowEditor] = useState(false)
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const genreOptions = [
-    'Synthwave',
-    'Electronic',
-    'Dark Pop',
-    'Hip Hop',
-    'Indie',
-    'Tech House',
-    'Ambient',
-    'Jazz',
-    'R&B',
-    'Rock',
-    'Drum & Bass',
-    'Lo-Fi',
-  ]
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -69,10 +76,20 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
       const reader = new FileReader()
       reader.onload = (e) => {
         const result = e.target?.result as string
-        onProfileChange('profileImage', result)
+        setRawImage(result)
+        setShowEditor(true)
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  const handleApplyCroppedImage = (cropped: string) => {
+    onProfileChange('profileImage', cropped)
+    setShowEditor(false)
+  }
+
+  const handleChange = (field: keyof Profile, value: any) => {
+    onProfileChange(field, value)
   }
 
   const reverseGeocode = async (lat: number, lon: number) => {
@@ -119,12 +136,10 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
             item.address?.town ||
             item.address?.village ||
             item.address?.municipality ||
-            item.name ||
-            ''
+            item.display_name.split(',')[0]
           const country = item.address?.country || ''
-          const label = [city, country].filter(Boolean).join(', ') || item.display_name.split(',').slice(0, 2).join(',')
           return {
-            label,
+            label: [city, country].filter(Boolean).join(', '),
             lat: parseFloat(item.lat),
             lon: parseFloat(item.lon),
             full: item.display_name,
@@ -132,114 +147,93 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
         })
         setSuggestions(results)
         setShowSuggestions(true)
-        setHighlightedIndex(0)
       } else {
-        const matched = PRESET_LOCATIONS.filter((p) => p.label.toLowerCase().includes(trimmed))
-        setSuggestions(matched)
-        setShowSuggestions(matched.length > 0)
-        setHighlightedIndex(0)
+        const matches = PRESET_LOCATIONS.filter((loc) =>
+          loc.label.toLowerCase().includes(trimmed)
+        )
+        setSuggestions(matches)
+        setShowSuggestions(matches.length > 0)
       }
     } catch {
-      const matched = PRESET_LOCATIONS.filter((p) => p.label.toLowerCase().includes(trimmed))
-      setSuggestions(matched)
-      setShowSuggestions(matched.length > 0)
-      setHighlightedIndex(0)
+      const matches = PRESET_LOCATIONS.filter((loc) =>
+        loc.label.toLowerCase().includes(trimmed)
+      )
+      setSuggestions(matches)
+      setShowSuggestions(matches.length > 0)
     } finally {
       setIsSearching(false)
     }
   }
 
-  const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    onProfileChange('location', val)
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      searchLocation(val)
-    }, 350)
-  }
-
-  const applySelectedLocation = (item: LocationSuggestion) => {
-    onProfileChange('location', item.label)
+  const handleSelectLocation = (loc: LocationSuggestion) => {
+    onProfileChange('location', loc.label)
+    setLocationQuery(loc.label)
     setShowSuggestions(false)
 
+    if (mapRef.current) {
+      mapRef.current.flyTo({ center: [loc.lon, loc.lat], zoom: 12 })
+      if (markerRef.current) {
+        markerRef.current.setLngLat([loc.lon, loc.lat])
+      } else {
+        markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+          .setLngLat([loc.lon, loc.lat])
+          .addTo(mapRef.current)
+      }
+    }
+  }
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) return
+    setIsLocating(true)
     if (!showMap) {
       setShowMap(true)
     }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords
+        reverseGeocode(latitude, longitude)
 
-    setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.flyTo({ center: [item.lon, item.lat], zoom: 11, essential: true })
-        if (markerRef.current) {
-          markerRef.current.setLngLat([item.lon, item.lat])
-        } else {
-          markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
-            .setLngLat([item.lon, item.lat])
-            .addTo(mapRef.current)
-        }
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.flyTo({ center: [longitude, latitude], zoom: 12, essential: true })
+            if (markerRef.current) {
+              markerRef.current.setLngLat([longitude, latitude])
+            } else {
+              markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+                .setLngLat([longitude, latitude])
+                .addTo(mapRef.current)
+            }
+          }
+        }, 100)
+      },
+      () => {
+        setIsLocating(false)
       }
-    }, 50)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (showSuggestions && suggestions.length > 0) {
-      if (e.key === 'Tab') {
-        // Seleccion mediante tabulacion
-        e.preventDefault()
-        const target = suggestions[highlightedIndex] || suggestions[0]
-        applySelectedLocation(target)
-      } else if (e.key === 'Enter') {
-        e.preventDefault()
-        const target = suggestions[highlightedIndex] || suggestions[0]
-        applySelectedLocation(target)
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setHighlightedIndex((prev) => (prev + 1) % suggestions.length)
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setHighlightedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
-      } else if (e.key === 'Escape') {
-        setShowSuggestions(false)
-      }
-    }
+    )
   }
 
   useEffect(() => {
     if (!showMap || !mapContainerRef.current || mapRef.current) return
 
-    const initialPreset = PRESET_LOCATIONS.find((p) => p.label.toLowerCase() === profile.location.toLowerCase())
-    const centerLon = initialPreset ? initialPreset.lon : 11.255
-    const centerLat = initialPreset ? initialPreset.lat : 43.77
-
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: 'https://tiles.openfreemap.org/styles/bright',
-      center: [centerLon, centerLat],
-      zoom: initialPreset ? 6 : 3,
+      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+      center: [13.405, 52.52],
+      zoom: 10,
     })
 
     map.addControl(new maplibregl.FullscreenControl())
+    setTimeout(() => map.resize(), 100)
 
-    if (initialPreset) {
-      markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
-        .setLngLat([centerLon, centerLat])
-        .addTo(map)
-    }
-
-    map.on('click', (event) => {
-      const { lng, lat } = event.lngLat
-
+    map.on('click', (e) => {
+      const { lng, lat } = e.lngLat
       if (markerRef.current) {
         markerRef.current.setLngLat([lng, lat])
       } else {
-        markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+        markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
           .setLngLat([lng, lat])
           .addTo(map)
       }
-
       reverseGeocode(lat, lng)
     })
 
@@ -254,7 +248,15 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
 
   return (
     <div className="ls-app-shell">
-      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} />
+      {showEditor && rawImage && (
+        <AvatarEditorModal
+          rawImage={rawImage}
+          onApply={handleApplyCroppedImage}
+          onCancel={() => setShowEditor(false)}
+        />
+      )}
+
+      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} isAdminSession={isAdminSession} />
 
       <main className="ls-page-content">
         <section className="ls-panel ls-page-panel">
@@ -262,23 +264,31 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
             <div className="ls-profile-spotlight">
               {isEditing ? (
                 <div className="ls-profile-upload-wrap">
-                  <div className="ls-avatar huge" style={{ backgroundImage: profile.profileImage ? `url(${profile.profileImage})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                    {!profile.profileImage && 'KV'}
-                  </div>
+                  {profile.profileImage ? (
+                    <img src={profile.profileImage} alt={profile.nickname} className="ls-avatar huge" style={{ objectFit: 'cover', borderRadius: '50%' }} />
+                  ) : (
+                    <div className="ls-avatar huge">
+                      {profile.nickname.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
                   <label className="ls-profile-upload-label">
                     <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                     Upload Photo
                   </label>
                 </div>
               ) : (
-                <div className="ls-avatar huge" style={{ backgroundImage: profile.profileImage ? `url(${profile.profileImage})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                  {!profile.profileImage && 'KV'}
-                </div>
+                profile.profileImage ? (
+                  <img src={profile.profileImage} alt={profile.nickname} className="ls-avatar huge" style={{ objectFit: 'cover', borderRadius: '50%' }} />
+                ) : (
+                  <div className="ls-avatar huge">
+                    {profile.nickname.slice(0, 2).toUpperCase()}
+                  </div>
+                )
               )}
               <div>
-                <span className="ls-studio-tag">{profile.category}</span>
+                <span className="ls-studio-tag">{profile.category ?? profile.role}</span>
                 <h2>{profile.nickname}</h2>
-                <p>{profile.location} Â· {profile.genres}</p>
+                <p>{profile.location}</p>
               </div>
             </div>
 
@@ -289,11 +299,11 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
 
           <div className="ls-profile-grid">
             <div className="ls-studio-card" style={{ gridColumn: '1 / -1' }}>
-              <span className="ls-studio-tag">Biography</span>
+              <span className="ls-studio-tag">Descripcion</span>
               {isEditing ? (
                 <textarea
-                  value={profile.bio}
-                  onChange={(event) => onProfileChange('bio', event.target.value)}
+                  value={profile.bio ?? ''}
+                  onChange={(event) => handleChange('bio', event.target.value)}
                 />
               ) : (
                 <p>{profile.bio}</p>
@@ -303,42 +313,85 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
 
           <div className="ls-profile-form-grid">
             <div className="ls-profile-field">
-              <label>Nickname / Artistic name</label>
+              <label>First Name</label>
               {isEditing ? (
-                <input maxLength={20} value={profile.nickname} onChange={(event) => onProfileChange('nickname', event.target.value)} />
+                <input value={profile.firstName ?? ''} onChange={(event) => handleChange('firstName', event.target.value)} />
+              ) : (
+                <span>{profile.firstName || 'Sin especificar'}</span>
+              )}
+            </div>
+
+            <div className="ls-profile-field">
+              <label>Last Name</label>
+              {isEditing ? (
+                <input value={profile.lastName ?? ''} onChange={(event) => handleChange('lastName', event.target.value)} />
+              ) : (
+                <span>{profile.lastName || 'Sin especificar'}</span>
+              )}
+            </div>
+
+            <div className="ls-profile-field">
+              <label>NickName / Artistic Name</label>
+              {isEditing ? (
+                <input value={profile.nickname ?? ''} onChange={(event) => handleChange('nickname', event.target.value)} />
               ) : (
                 <span>{profile.nickname}</span>
               )}
             </div>
 
             <div className="ls-profile-field">
-              <label>Role / Title</label>
+              <label>Email</label>
               {isEditing ? (
-                <input value={profile.role} onChange={(event) => onProfileChange('role', event.target.value)} />
+                <input type="email" value={profile.email ?? ''} onChange={(event) => handleChange('email', event.target.value)} />
               ) : (
-                <span>{profile.role}</span>
+                <span>{profile.email || 'kaelen@linkedsound.app'}</span>
               )}
             </div>
 
             <div className="ls-profile-field">
-              <label>CategorÃ­a</label>
+              <label>Password</label>
               {isEditing ? (
-                <select value={profile.category} onChange={(event) => onProfileChange('category', event.target.value)}>
+                <input type="password" value={profile.password ?? ''} onChange={(event) => handleChange('password', event.target.value)} />
+              ) : (
+                <span>••••••••</span>
+              )}
+            </div>
+
+            {isAdminSession && (
+              <div className="ls-profile-field">
+                <label>Role (Tipo de cuenta)</label>
+                {isEditing ? (
+                  <select value={profile.role ?? 'Usuario'} onChange={(event) => handleChange('role', event.target.value)}>
+                    <option value="Usuario">Usuario</option>
+                    <option value="Administrador">Administrador</option>
+                  </select>
+                ) : (
+                  <span className={`ls-role-pill-badge ${profile.role === 'Administrador' ? 'admin' : 'user'}`}>
+                    {profile.role || 'Usuario'}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="ls-profile-field">
+              <label>Categoría</label>
+              {isEditing ? (
+                <select value={profile.category ?? 'Productor'} onChange={(event) => handleChange('category', event.target.value)}>
                   <option value="Productor">Productor</option>
                   <option value="Artista">Artista</option>
                   <option value="Productor/Artista">Productor/Artista</option>
                 </select>
               ) : (
-                <span>{profile.category}</span>
+                <span>{profile.category ?? 'Productor/Artista'}</span>
               )}
             </div>
 
             <div className="ls-profile-field wide-field">
-              <label>Intereses de gÃ©nero</label>
+              <label>Intereses de género</label>
               {isEditing ? (
                 <div className="ls-genre-selector">
                   {genreOptions.map((genre) => {
-                    const checked = profile.interestGenres.includes(genre)
+                    const checked = (profile.interestGenres ?? []).includes(genre)
 
                     return (
                       <button
@@ -346,11 +399,12 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                         type="button"
                         className={`ls-genre-chip ${checked ? 'is-selected' : ''}`}
                         onClick={() => {
+                          const currentList = profile.interestGenres ?? []
                           const nextSelection = checked
-                            ? profile.interestGenres.filter((item) => item !== genre)
-                            : [...profile.interestGenres, genre]
+                            ? currentList.filter((item) => item !== genre)
+                            : [...currentList, genre]
 
-                          onProfileChange('interestGenres', nextSelection.slice(0, 6))
+                          handleChange('interestGenres', nextSelection.slice(0, 6))
                         }}
                       >
                         {genre}
@@ -360,7 +414,7 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                 </div>
               ) : (
                 <div className="ls-genre-selector read-only">
-                  {profile.interestGenres.map((genre) => (
+                  {(profile.interestGenres ?? []).map((genre) => (
                     <span key={genre} className="ls-genre-chip read-only-chip">
                       {genre}
                     </span>
@@ -369,17 +423,20 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
               )}
             </div>
 
-            <div className="ls-profile-field wide-field">
-              <label>Location</label>
+            <div className="ls-profile-field wide-field ls-location-group">
+              <label>Location / Ubicación</label>
               {isEditing ? (
-                <>
-                  <div className="ls-location-input-wrapper">
+                <div>
+                  <div className="ls-location-input-wrapper" style={{ position: 'relative' }}>
                     <input
-                      ref={inputRef}
-                      value={profile.location}
+                      type="text"
                       placeholder="Escribe tu ciudad (ej. Madrid, Berlín, Buenos Aires...)"
-                      onChange={handleLocationInputChange}
-                      onKeyDown={handleKeyDown}
+                      value={profile.location ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        handleChange('location', val)
+                        searchLocation(val)
+                      }}
                       onFocus={() => {
                         if (suggestions.length > 0) setShowSuggestions(true)
                       }}
@@ -393,80 +450,158 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                         {suggestions.map((item, idx) => (
                           <div
                             key={`${item.lat}-${item.lon}-${idx}`}
-                            className={`ls-autocomplete-item ${idx === highlightedIndex ? 'active' : ''}`}
+                            className="ls-autocomplete-item"
                             role="option"
-                            aria-selected={idx === highlightedIndex}
                             onMouseDown={(e) => {
                               e.preventDefault()
-                              applySelectedLocation(item)
+                              handleSelectLocation(item)
                             }}
                           >
                             <span className="ls-ac-text">{item.full}</span>
-                            <span className="ls-ac-badge">{idx === highlightedIndex ? 'Tab / Enter' : 'Elegir'}</span>
+                            <span className="ls-ac-badge">Elegir</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <div className="ls-tab-hint">
-                    <span>💡 Tip:</span>
-                    <span>
-                      Presiona <kbd>Tab</kbd> o <kbd>Enter</kbd> para autocompletar sugerencias o haz clic en el mapa.
-                    </span>
-                  </div>
-
-                  <div className="ls-map-actions-row">
+                  <div className="ls-map-actions-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
                     <button
                       type="button"
                       className="ls-map-toggle-btn"
                       onClick={() => setShowMap((prev) => !prev)}
                     >
-                      {showMap ? 'Ocultar mapa' : '📍 Elegir en mapa'}
+                      {showMap ? 'Ocultar mapa' : 'Elegir en mapa'}
+                    </button>
+                    <button
+                      type="button"
+                      className="ls-map-toggle-btn"
+                      style={{ background: 'rgba(0, 229, 255, 0.12)', borderColor: 'rgba(0, 229, 255, 0.3)', color: '#00e5ff' }}
+                      onClick={handleUseCurrentLocation}
+                    >
+                      Usar mi ubicación actual
                     </button>
                     {isLocating && <span className="ls-map-status">Buscando dirección...</span>}
                     {isSearching && <span className="ls-map-status">Buscando ciudades...</span>}
-                    {showMap && <span className="ls-map-hint">Haz clic en el mapa para marcar tu posición</span>}
                   </div>
 
-                  {showMap && <div ref={mapContainerRef} className="ls-map-container" />}
-                </>
+                  {showMap && (
+                    <div ref={mapContainerRef} className="ls-map-container" style={{ width: '100%', height: '280px', borderRadius: '12px', overflow: 'hidden', marginTop: '10px' }} />
+                  )}
+                </div>
               ) : (
                 <span>{profile.location}</span>
               )}
             </div>
 
             <div className="ls-profile-field">
-              <label><FaSpotify className="ls-field-icon" />Spotify</label>
-              {isEditing ? (
-                <input value={profile.spotify} onChange={(event) => onProfileChange('spotify', event.target.value)} />
-              ) : (
-                <a href={profile.spotify} target="_blank" rel="noreferrer">{profile.spotify}</a>
-              )}
-            </div>
-
-            <div className="ls-profile-field">
-              <label> <FaInstagram className="ls-field-icon" />Instagram</label>
-              {isEditing ? (
-                <input value={profile.instagram} onChange={(event) => onProfileChange('instagram', event.target.value)} />
-              ) : (
-                <a href={profile.instagram} target="_blank" rel="noreferrer">{profile.instagram}</a>
-              )}
-            </div>
-
-            <div className="ls-profile-field">
-              <label>
-                <FaSoundcloud className="ls-field-icon" /> SoundCloud URL
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaSpotify style={{ color: '#1DB954' }} /> Spotify
               </label>
               {isEditing ? (
-                <input value={profile.soundcloud} onChange={(event) => onProfileChange('soundcloud', event.target.value)} />
+                <input
+                  value={profile.spotifyUrl ?? profile.spotify ?? ''}
+                  onChange={(event) => {
+                    handleChange('spotifyUrl', event.target.value)
+                    handleChange('spotify', event.target.value)
+                  }}
+                />
               ) : (
-                <a href={profile.soundcloud} target="_blank" rel="noreferrer">{profile.soundcloud}</a>
+                <a
+                  href={profile.spotifyUrl || profile.spotify}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+
+                  {profile.spotifyUrl || profile.spotify || 'No vinculado'}
+                </a>
+              )}
+            </div>
+
+            <div className="ls-profile-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaInstagram style={{ color: '#E4405F' }} /> Instagram
+              </label>
+              {isEditing ? (
+                <input
+                  value={profile.instagramUrl ?? profile.instagram ?? ''}
+                  onChange={(event) => {
+                    handleChange('instagramUrl', event.target.value)
+                    handleChange('instagram', event.target.value)
+                  }}
+                />
+              ) : (
+                <a
+                  href={profile.instagramUrl || profile.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+
+                  {profile.instagramUrl || profile.instagram || 'No vinculado'}
+                </a>
+              )}
+            </div>
+
+            <div className="ls-profile-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaSoundcloud style={{ color: '#FF5500' }} /> SoundCloud URL
+              </label>
+              {isEditing ? (
+                <input
+                  value={profile.soundcloudUrl ?? profile.soundcloud ?? ''}
+                  onChange={(event) => {
+                    handleChange('soundcloudUrl', event.target.value)
+                    handleChange('soundcloud', event.target.value)
+                  }}
+                />
+              ) : (
+                <a
+                  href={profile.soundcloudUrl || profile.soundcloud}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {profile.soundcloudUrl || profile.soundcloud || 'No vinculado'}
+                </a>
+              )}
+            </div>
+
+            <div className="ls-profile-field wide-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaSoundcloud style={{ color: '#FF7700' }} /> Track o Muestra Destacada (URL de SoundCloud)
+              </label>
+              {isEditing ? (
+                <input
+                  placeholder="https://soundcloud.com/tu-usuario/tu-cancion-destacada"
+                  value={(profile.tracks && profile.tracks[1]?.soundcloudLink) || ''}
+                  onChange={(event) => {
+                    const val = event.target.value
+                    const currentTracks = profile.tracks || [
+                      { id: 't0', title: 'Último tema subido', plays: '0', duration: '--:--', genre: 'Principal' }
+                    ]
+                    const updatedTracks = [
+                      currentTracks[0],
+                      {
+                        id: 't_custom',
+                        title: 'Track Destacado',
+                        plays: 'Muestra',
+                        duration: 'SoundCloud',
+                        genre: 'Destacado',
+                        soundcloudLink: val
+                      }
+                    ]
+                    handleChange('tracks', updatedTracks)
+                  }}
+                />
+              ) : (
+                <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.7)' }}>
+                  {(profile.tracks && profile.tracks[1]?.soundcloudLink) || 'No se configuró una muestra adicional'}
+                </span>
               )}
             </div>
           </div>
-
-          <div className="ls-rules-grid" />
         </section>
       </main>
 

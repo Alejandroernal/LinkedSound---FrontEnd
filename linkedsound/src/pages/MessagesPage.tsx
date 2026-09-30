@@ -15,9 +15,10 @@ type MessagesPageProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
   profile: Profile
+  isAdminSession?: boolean
 }
 
-export default function MessagesPage({ activePage, onNavigate, profile }: MessagesPageProps) {
+export default function MessagesPage({ activePage, onNavigate, profile, isAdminSession }: MessagesPageProps) {
   const [conversationsList, setConversationsList] = useState<Conversation[]>(initialConversations)
   const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
   const [activeId, setActiveId] = useState('metro-boomin')
@@ -61,7 +62,7 @@ export default function MessagesPage({ activePage, onNavigate, profile }: Messag
     setTimeout(() => {
       const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       const replies = [
-        '¡Recibido! Le echo un ojo ahora mismo y te aviso 🔥',
+        '¡Recibido! Le echo un ojo ahora mismo y te aviso.',
         'Suena potente esa idea. Ajusto el máster y te paso el nuevo bounce.',
         'Totalmente de acuerdo, vamos a fijar esa sesión para esta semana.',
       ]
@@ -91,7 +92,7 @@ export default function MessagesPage({ activePage, onNavigate, profile }: Messag
 
   return (
     <div className="ls-app-shell ls-messages-shell">
-      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} />
+      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} isAdminSession={isAdminSession} />
 
       <div className="ls-messages-layout">
         <ConversationSidebar
