@@ -1649,10 +1649,38 @@ button {
 }
 
 .ls-studio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
   padding: 20px 18px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.ls-studio-card textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(7, 9, 15, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #f5ebff;
+  font: inherit;
+  resize: vertical;
+  outline: none;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ls-studio-card textarea:focus {
+  border-color: rgba(168, 85, 247, 0.7);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
 }
 
 .ls-studio-card.muted {
@@ -2347,14 +2375,11 @@ button {
   letter-spacing: -0.02em;
   flex: 1;
   min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
-.ls-card-head span,
 .ls-match-tag {
   font-size: 0.7rem;
   color: #c084fc;
@@ -2378,10 +2403,9 @@ button {
   font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.7);
   line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  max-height: 2.35em;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ls-mini-tags {

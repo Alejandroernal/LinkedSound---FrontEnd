@@ -298,10 +298,11 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
           </div>
 
           <div className="ls-profile-grid">
-            <div className="ls-studio-card" style={{ gridColumn: '1 / -1' }}>
-              <span className="ls-studio-tag">Descripcion</span>
+            <div className="ls-studio-card" style={{ gridColumn: '1 / -1', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+              <span className="ls-studio-tag" style={{ alignSelf: 'flex-start' }}>Descripcion</span>
               {isEditing ? (
                 <textarea
+                  style={{ width: '100%', minWidth: '100%', boxSizing: 'border-box', marginTop: '12px' }}
                   value={profile.bio ?? ''}
                   onChange={(event) => handleChange('bio', event.target.value)}
                 />
