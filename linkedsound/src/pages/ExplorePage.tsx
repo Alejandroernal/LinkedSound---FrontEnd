@@ -3,28 +3,54 @@ import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
-import { PiFlagBold, PiSoundcloudLogoFill } from 'react-icons/pi'
-import { exploreCards, type ProfileCard } from '../data/mockData'
-import type { AppPage, Profile } from '../types'
+import CreateEventModal from '../components/CreateEventModal'
+import RejectMatchModal from '../components/RejectMatchModal'
+import { PiFlagBold, PiSoundcloudLogoFill, PiCalendarPlusBold, PiMagnifyingGlassBold, PiArrowClockwiseBold } from 'react-icons/pi'
+import { exploreCards as initialExploreCards, type ProfileCard } from '../data/mockData'
+import type { AppPage, Profile, NotificationItem } from '../types'
 
 type ExplorePageProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
   profile: Profile
   isAdminSession?: boolean
+  notifications?: NotificationItem[]
+  onMarkNotificationAsRead?: (id: string) => void
+  onMarkAllNotificationsAsRead?: () => void
+  onClearNotifications?: () => void
+  onSignOut?: () => void
 }
 
-
-
-export default function ExplorePage({ activePage, onNavigate, profile, isAdminSession }: ExplorePageProps) {
+export default function ExplorePage({
+  activePage,
+  onNavigate,
+  profile,
+  isAdminSession,
+  notifications,
+  onMarkNotificationAsRead,
+  onMarkAllNotificationsAsRead,
+  onClearNotifications,
+  onSignOut,
+}: ExplorePageProps) {
+  const [cardsList, setCardsList] = useState<ProfileCard[]>(initialExploreCards)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeGenre, setActiveGenre] = useState('')
   const [itemRoleFilter, setItemRoleFilter] = useState<'Todos' | 'Perfil' | 'Evento'>('Todos')
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
+  const [rejectingTarget, setRejectingTarget] = useState<ProfileCard | null>(null)
   const [selectedPreviewCard, setSelectedPreviewCard] = useState<ProfileCard | null>(null)
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false)
+
+  const handleCreateEvent = (newEvent: ProfileCard) => {
+    setCardsList((prev) => [newEvent, ...prev])
+  }
+
+  const handleConfirmReject = (cardToReject: ProfileCard) => {
+    setCardsList((prev) => prev.filter((c) => (c.id ? c.id !== cardToReject.id : c.nickname !== cardToReject.nickname)))
+  }
 
   const filteredCards = useMemo(() => {
-    return exploreCards.filter((card) => {
+    return cardsList.filter((card) => {
       const cardItemRole = card.itemRole ?? (card.isProfile !== false ? 'Perfil' : 'Evento')
       if (itemRoleFilter !== 'Todos' && cardItemRole !== itemRoleFilter) {
         return false
@@ -56,7 +82,7 @@ export default function ExplorePage({ activePage, onNavigate, profile, isAdminSe
 
       return inName || inRole || inLocation || inDesc || inBadge || inTags
     })
-  }, [searchQuery, activeGenre, itemRoleFilter])
+  }, [cardsList, searchQuery, activeGenre, itemRoleFilter])
 
   return (
     <div className="ls-app-shell">
@@ -65,28 +91,44 @@ export default function ExplorePage({ activePage, onNavigate, profile, isAdminSe
         onNavigate={onNavigate}
         profile={profile}
         isAdminSession={isAdminSession}
+        notifications={notifications}
+        onMarkNotificationAsRead={onMarkNotificationAsRead}
+        onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
+        onClearNotifications={onClearNotifications}
+        onSignOut={onSignOut}
       />
 
       <main className="ls-page-content">
         <section className="ls-panel ls-page-panel">
-          <div className="ls-panel-header compact ls-explore-header">
-            <div>
-              <h3>Explore</h3>
-              <span>
-                Live network ({filteredCards.length}{' '}
-                {filteredCards.length === 1 ? 'objeto' : 'objetos'})
-              </span>
+          <div className="ls-panel-header compact ls-explore-header-redesigned">
+            <div className="ls-explore-title-row">
+              <div>
+                <h3 className="ls-explore-main-title">Explorer</h3>
+                <span className="ls-explore-subtitle">
+                  Red global activa ({filteredCards.length}{' '}
+                  {filteredCards.length === 1 ? 'publicación' : 'publicaciones'})
+                </span>
+              </div>
+
+              {/* Botón de Publicar Nuevo Evento */}
+              <button
+                type="button"
+                className="ls-primary-button ls-create-event-trigger"
+                onClick={() => setShowCreateEventModal(true)}
+              >
+                <PiCalendarPlusBold style={{ fontSize: '1.15rem' }} /> Publicar Evento
+              </button>
             </div>
 
-            <div className="ls-explore-filter-bar">
-              {/* Selector de Rol Artículo */}
-              <div style={{ display: 'flex', gap: '6px', marginRight: '8px' }}>
+            {/* Barra de Filtros Reestructurada y Limpia */}
+            <div className="ls-explore-toolbar-clean">
+              {/* Pestañas de categoría (Todos, Perfiles, Eventos) */}
+              <div className="ls-explore-category-tabs">
                 {(['Todos', 'Perfil', 'Evento'] as const).map((r) => (
                   <button
                     key={r}
                     type="button"
-                    className={`ls-genre-filter-pill ${itemRoleFilter === r ? 'active' : ''}`}
-                    style={{ fontWeight: itemRoleFilter === r ? 'bold' : 'normal' }}
+                    className={`ls-explore-tab-btn ${itemRoleFilter === r ? 'is-active' : ''}`}
                     onClick={() => setItemRoleFilter(r)}
                   >
                     {r === 'Todos' ? 'Todos' : r === 'Perfil' ? 'Perfiles' : 'Eventos'}
@@ -94,34 +136,45 @@ export default function ExplorePage({ activePage, onNavigate, profile, isAdminSe
                 ))}
               </div>
 
-              <input
-                type="text"
-                placeholder="Buscar por nombre, género, rol, ciudad..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="ls-explore-search-input"
-              />
-              
+              {/* Campo de búsqueda con icono estilizado */}
+              <div className="ls-explore-search-wrapper">
+                <PiMagnifyingGlassBold className="ls-explore-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, género, rol, club o ciudad..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="ls-explore-search-input-styled"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="ls-search-clear-btn"
+                    onClick={() => setSearchQuery('')}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Botón Reset */}
               {(searchQuery || activeGenre || itemRoleFilter !== 'Todos') && (
                 <button
                   type="button"
-                  className="ls-genre-filter-pill"
-                  style={{
-                    borderColor: 'rgba(239, 68, 68, 0.4)',
-                    color: '#fca5a5',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                  }}
+                  className="ls-explore-reset-btn"
                   onClick={() => {
                     setSearchQuery('')
                     setActiveGenre('')
                     setItemRoleFilter('Todos')
                   }}
+                  title="Restablecer todos los filtros"
                 >
-                  Reset
+                  <PiArrowClockwiseBold /> Limpiar
                 </button>
               )}
             </div>
           </div>
+
 
           <div className="ls-card-grid">
             {filteredCards.length > 0 ? (
@@ -246,9 +299,9 @@ export default function ExplorePage({ activePage, onNavigate, profile, isAdminSe
                               style={{ width: '36px', height: '36px', minHeight: '36px', flex: 'none', borderRadius: '8px', fontSize: '0.9rem' }}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                alert(`Descartado: ${card.nickname ?? card.nickname}`)
+                                setRejectingTarget(card)
                               }}
-                              title="Descartar"
+                              title="Descartar / Rechazar Match"
                             >
                               ✕
                             </button>
@@ -258,7 +311,6 @@ export default function ExplorePage({ activePage, onNavigate, profile, isAdminSe
                               style={{ width: '36px', height: '36px', minHeight: '36px', flex: 'none', borderRadius: '8px', fontSize: '0.9rem' }}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                alert(`¡Conectado con ${card.nickname ?? card.nickname}!`)
                               }}
                               title="Conectar / Match"
                             >
@@ -318,6 +370,27 @@ export default function ExplorePage({ activePage, onNavigate, profile, isAdminSe
         targetName={reportingTarget ?? ''}
         targetType="Objeto de Explorer"
         onClose={() => setReportingTarget(null)}
+      />
+
+      {/* Modal de Creación de Evento */}
+      <CreateEventModal
+        isOpen={showCreateEventModal}
+        onClose={() => setShowCreateEventModal(false)}
+        onCreateEvent={handleCreateEvent}
+        userNickname={profile?.nickname || profile?.firstName || 'Creador LinkedSound'}
+        userLocation={profile?.location || 'Berlin, Germany'}
+      />
+
+      {/* Reject / Pass Match Modal */}
+      <RejectMatchModal
+        isOpen={Boolean(rejectingTarget)}
+        targetName={rejectingTarget?.nickname ?? ''}
+        onClose={() => setRejectingTarget(null)}
+        onConfirmReject={() => {
+          if (rejectingTarget) {
+            handleConfirmReject(rejectingTarget)
+          }
+        }}
       />
 
       <Footer />

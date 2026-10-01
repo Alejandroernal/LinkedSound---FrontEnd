@@ -10,8 +10,7 @@ import {
   PiPulseBold,
   PiMagnifyingGlassBold,
   PiPencilBold,
-  PiTrashBold,
-  PiEyeBold
+  PiTrashBold
 } from 'react-icons/pi'
 
 type AdminPageProps = {

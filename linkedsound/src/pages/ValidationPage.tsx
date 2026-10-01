@@ -7,7 +7,7 @@ import type { AppPage, Profile } from '../types'
 type ValidationPageProps = {
   onNavigate?: (page: AppPage) => void
   profile?: Profile
-  onProfileChange?: (field: keyof Profile, value: string | boolean | string[]) => void
+  onProfileChange?: (field: keyof Profile, value: any) => void
 }
 
 type LocationSuggestion = {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PiPushPinFill, PiBellSimpleSlashBold, PiProhibitBold } from 'react-icons/pi'
 import type { Conversation, Message } from '../data/mockData'
 
 type ConversationSidebarProps = {
@@ -19,7 +20,14 @@ export default function ConversationSidebar({
 
   const newMatchesCount = conversations.filter((c) => c.unread > 0).length
 
-  const filteredConversations = conversations.filter((conv) => {
+  // Sort: Pinned conversations first
+  const sortedConversations = [...conversations].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    return 0
+  })
+
+  const filteredConversations = sortedConversations.filter((conv) => {
     // Tab filter
     if (filterTab === 'new' && conv.unread === 0) {
       return false
@@ -94,20 +102,45 @@ export default function ConversationSidebar({
               type="button"
               className={`ls-conversation-item ${activeId === conversation.id ? 'is-selected' : ''}`}
               onClick={() => onSelect(conversation.id)}
+              style={{
+                opacity: conversation.blocked ? 0.6 : 1,
+                position: 'relative',
+              }}
             >
-              <div className={`ls-avatar ${conversation.accent}`}>{conversation.avatar}</div>
+              {conversation.profileImage ? (
+                <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
+                  <img
+                    src={conversation.profileImage}
+                    alt={conversation.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  />
+                </div>
+              ) : (
+                <div className={`ls-avatar ${conversation.accent} small`}>{conversation.avatar}</div>
+              )}
               <div className="ls-conversation-copy">
                 <div className="ls-conversation-head">
-                  <strong>{conversation.name}</strong>
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    {conversation.pinned && <PiPushPinFill style={{ color: '#a855f7', fontSize: '0.8rem' }} title="Fijado" />}
+                    {conversation.name}
+                  </strong>
                   <span>{conversation.time}</span>
                 </div>
                 <div className="ls-conversation-meta">
                   <span>{conversation.type}</span>
                   <span className="ls-dot-inline">•</span>
-                  <span>{conversation.preview}</span>
+                  <span>{conversation.blocked ? '[Usuario bloqueado]' : conversation.preview}</span>
                 </div>
               </div>
-              {conversation.unread > 0 && <span className="ls-unread">{conversation.unread}</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                {conversation.muted && (
+                  <PiBellSimpleSlashBold style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.9rem' }} title="Silenciado" />
+                )}
+                {conversation.blocked && (
+                  <PiProhibitBold style={{ color: '#ef4444', fontSize: '0.9rem' }} title="Bloqueado" />
+                )}
+                {conversation.unread > 0 && <span className="ls-unread">{conversation.unread}</span>}
+              </div>
             </button>
           ))
         ) : (

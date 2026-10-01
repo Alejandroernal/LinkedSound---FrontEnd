@@ -106,3 +106,14 @@ export type UserProfile = {
 
 // Backward compatibility alias
 export type Profile = UserProfile
+
+export type NotificationItem = {
+  id: string
+  title: string
+  message: string
+  timestamp: string
+  read: boolean
+  type: 'match' | 'message' | 'system' | 'report' | 'like'
+  linkPage?: AppPage
+}
+

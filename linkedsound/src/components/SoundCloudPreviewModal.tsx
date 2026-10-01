@@ -7,7 +7,6 @@ import {
   PiArrowSquareOutBold,
   PiSoundcloudLogoFill,
   PiMusicNotesFill,
-  PiInfoBold,
   PiSpeakerHighBold,
   PiMapPinBold,
 } from 'react-icons/pi'

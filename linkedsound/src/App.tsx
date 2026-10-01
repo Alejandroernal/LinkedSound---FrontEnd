@@ -9,7 +9,8 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ValidationPage from './pages/ValidationPage'
 import AdminPage from './pages/AdminPage'
-import type { AppPage, Profile } from './types'
+import type { AppPage, Profile, NotificationItem } from './types'
+import { userNotifications as defaultUserNotifs, adminNotifications as defaultAdminNotifs } from './data/mockData'
 
 const pagePaths: Record<AppPage, string> = {
   Login: '/login',
@@ -25,6 +26,41 @@ const pagePaths: Record<AppPage, string> = {
 function App() {
   const navigate = useNavigate()
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
+
+  // Estado de notificaciones para usuario normal y administrador
+  const [userNotifs, setUserNotifs] = useState<NotificationItem[]>(defaultUserNotifs)
+  const [adminNotifs, setAdminNotifs] = useState<NotificationItem[]>(defaultAdminNotifs)
+
+  const activeNotifications = isAdminLoggedIn ? adminNotifs : userNotifs
+
+  const handleMarkNotificationAsRead = (id: string) => {
+    if (isAdminLoggedIn) {
+      setAdminNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+    } else {
+      setUserNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+    }
+  }
+
+  const handleMarkAllNotificationsAsRead = () => {
+    if (isAdminLoggedIn) {
+      setAdminNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
+    } else {
+      setUserNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
+    }
+  }
+
+  const handleClearNotifications = () => {
+    if (isAdminLoggedIn) {
+      setAdminNotifs([])
+    } else {
+      setUserNotifs([])
+    }
+  }
+
+  const handleSignOut = () => {
+    setIsAdminLoggedIn(false)
+    navigate('/login')
+  }
 
   const [profile, setProfile] = useState<Profile>({
     firstName: 'Kaelen',
@@ -64,7 +100,7 @@ function App() {
     tags: ['Admin', 'Mod', 'System'],
     spotifyUrl: 'https://spotify.com',
     instagramUrl: 'https://instagram.com',
-    soundcloudUrl: 'https://soundcloud.com',
+    soundcloudUrl: 'https://soundcloud',
     profileImage: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
     allowEdit: true,
     allowPostRegister: true,
@@ -72,7 +108,7 @@ function App() {
 
   const activeProfile = isAdminLoggedIn ? adminProfile : profile
 
-  const handleProfileChange = (field: keyof Profile, value: string | boolean | string[]) => {
+  const handleProfileChange = (field: keyof Profile, value: any) => {
     if (isAdminLoggedIn) {
       setAdminProfile((prev) => ({ ...prev, [field]: value }))
     } else {
@@ -80,8 +116,18 @@ function App() {
     }
   }
 
+
   const handleNavigate = (page: AppPage) => {
     navigate(pagePaths[page])
+  }
+
+  // Props comunes para la TopBar a través de páginas
+  const topBarProps = {
+    notifications: activeNotifications,
+    onMarkNotificationAsRead: handleMarkNotificationAsRead,
+    onMarkAllNotificationsAsRead: handleMarkAllNotificationsAsRead,
+    onClearNotifications: handleClearNotifications,
+    onSignOut: handleSignOut,
   }
 
   return (
@@ -120,15 +166,39 @@ function App() {
       {/* Rutas estándar con prop isAdminSession si la sesión de admin está activa */}
       <Route
         path="/discovery"
-        element={<DashboardPage activePage="Discovery" onNavigate={handleNavigate} profile={activeProfile} isAdminSession={isAdminLoggedIn} />}
+        element={
+          <DashboardPage
+            activePage="Discovery"
+            onNavigate={handleNavigate}
+            profile={activeProfile}
+            isAdminSession={isAdminLoggedIn}
+            {...topBarProps}
+          />
+        }
       />
       <Route
         path="/explorer"
-        element={<ExplorePage activePage="Explorer" onNavigate={handleNavigate} profile={activeProfile} isAdminSession={isAdminLoggedIn} />}
+        element={
+          <ExplorePage
+            activePage="Explorer"
+            onNavigate={handleNavigate}
+            profile={activeProfile}
+            isAdminSession={isAdminLoggedIn}
+            {...topBarProps}
+          />
+        }
       />
       <Route
         path="/messages"
-        element={<MessagesPage activePage="Messages" onNavigate={handleNavigate} profile={activeProfile} isAdminSession={isAdminLoggedIn} />}
+        element={
+          <MessagesPage
+            activePage="Messages"
+            onNavigate={handleNavigate}
+            profile={activeProfile}
+            isAdminSession={isAdminLoggedIn}
+            {...topBarProps}
+          />
+        }
       />
       <Route
         path="/profile"
@@ -139,6 +209,7 @@ function App() {
             profile={activeProfile}
             onProfileChange={handleProfileChange}
             isAdminSession={isAdminLoggedIn}
+            {...topBarProps}
           />
         }
       />
@@ -150,8 +221,9 @@ function App() {
           isAdminLoggedIn ? (
             <AdminPage
               onNavigate={handleNavigate}
-              onLogout={() => setIsAdminLoggedIn(false)}
+              onLogout={handleSignOut}
               profile={activeProfile}
+              {...topBarProps}
             />
           ) : (
             <Navigate to="/login" replace />
@@ -164,3 +236,4 @@ function App() {
 }
 
 export default App
+

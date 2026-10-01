@@ -26,6 +26,10 @@ export type Conversation = {
   preview: string
   time: string
   unread: number
+  pinned?: boolean
+  muted?: boolean
+  blocked?: boolean
+  profileImage?: string
 }
 
 export type Message = {
@@ -33,6 +37,13 @@ export type Message = {
   sender: 'me' | 'them'
   text: string
   time: string
+  attachment?: {
+    url: string
+    name: string
+    type: 'audio' | 'image'
+    size?: string
+    format?: string
+  }
 }
 
 export const navItems: NavItem[] = [
@@ -542,71 +553,76 @@ export const exploreCards: ProfileCard[] = [
 
 export const conversations: Conversation[] = [
   {
-    id: 'metro-boomin',
-    name: 'Metro Boomin',
-    role: 'Producer',
-    avatar: 'M',
+    id: 'luna-sol',
+    name: 'Luna Sol',
+    role: 'Artista',
+    avatar: 'LS',
     accent: 'purple',
     status: 'Online',
     type: 'Direct',
-    preview: 'I can get your mix ready by Friday.',
+    preview: '¡Recibido! Le echo un ojo a las maquetas de sintetizador.',
     time: '14:32',
     unread: 2,
+    profileImage: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
   },
   {
-    id: 'techno-collective',
-    name: 'Techno Collective',
-    role: 'Group',
-    avatar: 'T',
-    accent: 'cyan',
-    status: '2 online',
-    type: 'Group',
-    preview: 'Alex shared a beat for the Berlin EP.',
+    id: 'golden-boy',
+    name: 'Golden Boy',
+    role: 'Productor/Artista',
+    avatar: 'GB',
+    accent: 'gold',
+    status: 'Online',
+    type: 'Direct',
+    preview: 'Perfecto, te pasé los stems con el 808 ajustado.',
     time: '13:18',
     unread: 0,
+    profileImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
   },
   {
-    id: 'midnight-band',
-    name: 'The Midnight Band',
-    role: 'Band',
-    avatar: 'B',
+    id: 'elena-rostova',
+    name: 'Elena Rostova',
+    role: 'Artista',
+    avatar: 'ER',
     accent: 'pink',
-    status: 'Rehearsal',
-    type: 'Band',
-    preview: 'Let’s check the stems for track 3.',
-    time: 'Yesterday',
+    status: 'Offline',
+    type: 'Direct',
+    preview: 'Me encanta esa progresión de acordes. Grabando tomas de voz.',
+    time: 'Ayer',
     unread: 1,
+    profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
   },
   {
-    id: 'fka-twigs',
-    name: 'FKA Twigs',
-    role: 'Artist',
-    avatar: 'F',
-    accent: 'gold',
-    status: 'Inbox',
+    id: 'marcus-cyber',
+    name: 'Marcus Cyber',
+    role: 'Productor',
+    avatar: 'MC',
+    accent: 'cyan',
+    status: 'Offline',
     type: 'Direct',
-    preview: 'Need a vocal pass for the chorus.',
-    time: 'May 10',
+    preview: '¿Tuviste tiempo de escuchar el beat industrial?',
+    time: '10 May',
     unread: 0,
+    profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
   },
 ]
 
 export const messagesByConversation: Record<string, Message[]> = {
-  'metro-boomin': [
-    { id: 'm1', sender: 'them', text: 'Yo Kaelen! I tweaked the 808 distortion in the second verse like we talked about on yesterday’s call.', time: '14:15' },
-    { id: 'm2', sender: 'me', text: 'Massive! Did you keep the pitch glide at bar 36 or bounce it? I want to make sure the sidechain ducking on the lead synth doesn’t get masked.', time: '14:21' },
-    { id: 'm3', sender: 'them', text: 'I kept the glide but reduced the stereo width a little in bar 42. The low-end feels more clean.', time: '14:28' },
-    { id: 'm4', sender: 'me', text: 'Perfect. Send the updated stems and I’ll match the final master against the reference.', time: '14:31' },
+  'luna-sol': [
+    { id: 'm1', sender: 'them', text: '¡Hola Kaelen! Qué genial conectar. Me encantaron tus producciones de synthwave.', time: '14:15' },
+    { id: 'm2', sender: 'me', text: '¡Gracias Luna! Tu voz cinematográfica quedaría tremenda con unos sintetizadores analógicos.', time: '14:21' },
+    { id: 'm3', sender: 'them', text: 'Totalmente. Te pasé unas tomas acapella para que pruebes.', time: '14:28' },
+    { id: 'm4', sender: 'me', text: '¡Recibido! Le echo un ojo a las maquetas de sintetizador.', time: '14:31' },
   ],
-  'techno-collective': [
-    { id: 't1', sender: 'them', text: 'The new kick pattern is ready for review.', time: '13:10' },
-    { id: 't2', sender: 'me', text: 'Nice. I’ll check it tonight.', time: '13:12' },
+  'golden-boy': [
+    { id: 'g1', sender: 'them', text: 'Bro! Escuché tu último track. Ese 808 suena potentísimo.', time: '13:10' },
+    { id: 'g2', sender: 'me', text: '¡Mil gracias! Le bajé un poco al ancho estéreo para limpiar el sub-bass.', time: '13:12' },
+    { id: 'g3', sender: 'them', text: 'Perfecto, te pasé los stems con el 808 ajustado.', time: '13:18' },
   ],
-  'midnight-band': [
-    { id: 'b1', sender: 'them', text: 'Let’s plan the vocal stack for the bridge.', time: 'Yesterday' },
+  'elena-rostova': [
+    { id: 'e1', sender: 'them', text: 'Me encanta esa progresión de acordes. Grabando tomas de voz.', time: 'Ayer' },
   ],
-  'fka-twigs': [
-    { id: 'f1', sender: 'them', text: 'Could you share a rough vocal pass?', time: 'May 10' },
+  'marcus-cyber': [
+    { id: 'mc1', sender: 'them', text: '¿Tuviste tiempo de escuchar el beat industrial?', time: '10 May' },
   ],
 }
 
@@ -805,3 +821,64 @@ export const mockExplorerItems: import('../types').ExplorerItem[] = [
     description: 'Taller de producción e ingeniería de sonido industrial pesado.'
   }
 ]
+
+export const userNotifications: import('../types').NotificationItem[] = [
+  {
+    id: 'notif-1',
+    title: '¡Nuevo Match Musical! 🎵',
+    message: 'Has conectado con Luna Sol. Puedes enviarle un mensaje para iniciar una colaboración.',
+    timestamp: 'Hace 10 min',
+    read: false,
+    type: 'match',
+    linkPage: 'Messages',
+  },
+  {
+    id: 'notif-2',
+    title: 'Nuevo mensaje recibido 💬',
+    message: 'Metro Boomin: "I can get your mix ready by Friday."',
+    timestamp: 'Hace 25 min',
+    read: false,
+    type: 'message',
+    linkPage: 'Messages',
+  },
+  {
+    id: 'notif-3',
+    title: 'Bienvenido a LinkedSound ✨',
+    message: 'Tu perfil ha sido verificado con éxito. Comienza a descubrir productores cerca de ti.',
+    timestamp: 'Hace 2 horas',
+    read: true,
+    type: 'system',
+    linkPage: 'Profile',
+  },
+]
+
+export const adminNotifications: import('../types').NotificationItem[] = [
+  {
+    id: 'adm-notif-1',
+    title: '⚠️ Nuevo reporte pendiente',
+    message: 'Kaelen Voss reportó a Alex Vibe por "Spam / Mensajes no solicitados".',
+    timestamp: 'Hace 5 min',
+    read: false,
+    type: 'report',
+    linkPage: 'Admin',
+  },
+  {
+    id: 'adm-notif-2',
+    title: '⚠️ Reporte de derechos de autor',
+    message: 'Se ha registrado un reporte de severidad Alta sobre Synthwave Night Festival.',
+    timestamp: 'Hace 40 min',
+    read: false,
+    type: 'report',
+    linkPage: 'Admin',
+  },
+  {
+    id: 'adm-notif-3',
+    title: '🛡️ Estado del Sistema',
+    message: 'El sistema de moderación automática revisó 12 publicaciones recientes sin infracciones.',
+    timestamp: 'Hace 3 horas',
+    read: true,
+    type: 'system',
+    linkPage: 'Admin',
+  },
+]
+

@@ -3,6 +3,7 @@ import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import ConversationSidebar from '../components/ConversationSidebar'
 import ChatThread from '../components/ChatThread'
+import UnmatchModal from '../components/UnmatchModal'
 import {
   conversations as initialConversations,
   messagesByConversation as initialMessages,
@@ -21,7 +22,8 @@ type MessagesPageProps = {
 export default function MessagesPage({ activePage, onNavigate, profile, isAdminSession }: MessagesPageProps) {
   const [conversationsList, setConversationsList] = useState<Conversation[]>(initialConversations)
   const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
-  const [activeId, setActiveId] = useState('metro-boomin')
+  const [activeId, setActiveId] = useState('luna-sol')
+  const [unmatchingTarget, setUnmatchingTarget] = useState<Conversation | null>(null)
 
   const activeConversation =
     conversationsList.find((item) => item.id === activeId) ?? conversationsList[0]
@@ -34,7 +36,26 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
     )
   }
 
-  const handleSendMessage = (text: string) => {
+  const handleConfirmUnmatch = () => {
+    if (!unmatchingTarget) return
+    const targetId = unmatchingTarget.id
+
+    setConversationsList((prev) => {
+      const updated = prev.filter((c) => c.id !== targetId)
+      if (activeId === targetId && updated.length > 0) {
+        setActiveId(updated[0].id)
+      }
+      return updated
+    })
+
+    setMessagesMap((prev) => {
+      const copy = { ...prev }
+      delete copy[targetId]
+      return copy
+    })
+  }
+
+  const handleSendMessage = (text: string, attachment?: Message['attachment']) => {
     const now = new Date()
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     const newMessage: Message = {
@@ -42,7 +63,10 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
       sender: 'me',
       text,
       time: timeStr,
+      attachment,
     }
+
+    const previewText = text || (attachment ? `📎 ${attachment.name}` : '')
 
     setMessagesMap((prev) => ({
       ...prev,
@@ -53,7 +77,7 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
     setConversationsList((prev) =>
       prev.map((c) =>
         c.id === activeId
-          ? { ...c, preview: text, time: timeStr, unread: 0 }
+          ? { ...c, preview: previewText, time: timeStr, unread: 0 }
           : c
       )
     )
@@ -90,6 +114,35 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
     }, 1200)
   }
 
+  const handleClearChat = () => {
+    if (!activeId) return
+    setMessagesMap((prev) => ({ ...prev, [activeId]: [] }))
+    setConversationsList((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, preview: '[Chat vaciado]', unread: 0 } : c))
+    )
+  }
+
+  const handleToggleMute = () => {
+    if (!activeId) return
+    setConversationsList((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, muted: !c.muted } : c))
+    )
+  }
+
+  const handleTogglePin = () => {
+    if (!activeId) return
+    setConversationsList((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, pinned: !c.pinned } : c))
+    )
+  }
+
+  const handleToggleBlock = () => {
+    if (!activeId) return
+    setConversationsList((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, blocked: !c.blocked } : c))
+    )
+  }
+
   return (
     <div className="ls-app-shell ls-messages-shell">
       <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} isAdminSession={isAdminSession} />
@@ -102,12 +155,30 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
           messagesMap={messagesMap}
         />
 
-        <ChatThread
-          conversation={activeConversation}
-          messages={messagesMap[activeConversation.id] ?? []}
-          onSendMessage={handleSendMessage}
-        />
+        {activeConversation ? (
+          <ChatThread
+            conversation={activeConversation}
+            messages={messagesMap[activeConversation.id] ?? []}
+            onSendMessage={handleSendMessage}
+            onUnmatch={() => setUnmatchingTarget(activeConversation)}
+            onClearChat={handleClearChat}
+            onToggleMute={handleToggleMute}
+            onTogglePin={handleTogglePin}
+            onToggleBlock={handleToggleBlock}
+          />
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
+            No tienes matches o conversaciones activas.
+          </div>
+        )}
       </div>
+
+      <UnmatchModal
+        isOpen={Boolean(unmatchingTarget)}
+        targetName={unmatchingTarget?.name ?? ''}
+        onClose={() => setUnmatchingTarget(null)}
+        onConfirmUnmatch={handleConfirmUnmatch}
+      />
 
       <Footer />
     </div>

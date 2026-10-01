@@ -58,7 +58,6 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
   const [showMap, setShowMap] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
-  const [locationQuery, setLocationQuery] = useState('')
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
 
@@ -167,7 +166,6 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
 
   const handleSelectLocation = (loc: LocationSuggestion) => {
     onProfileChange('location', loc.label)
-    setLocationQuery(loc.label)
     setShowSuggestions(false)
 
     if (mapRef.current) {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AppPage } from '../types'
+import ForgotPasswordModal from '../components/ForgotPasswordModal'
 
 type LoginPageProps = {
   onNavigate?: (page: AppPage) => void
@@ -9,6 +10,7 @@ type LoginPageProps = {
 export default function LoginPage({ onNavigate, onLoginAsAdmin }: LoginPageProps) {
   const [email, setEmail] = useState('kaelen@linkedsound.app')
   const [password, setPassword] = useState('********')
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
 
   const handleSignIn = () => {
     // Si el correo contiene 'admin', se redirige al sistema de Admin aislado
@@ -105,7 +107,13 @@ export default function LoginPage({ onNavigate, onLoginAsAdmin }: LoginPageProps
               <input type="checkbox" defaultChecked />
               <span>Remember me</span>
             </label>
-            <button type="button" className="ls-text-button">Forgot password?</button>
+            <button
+              type="button"
+              className="ls-text-button"
+              onClick={() => setIsForgotPasswordOpen(true)}
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
           </div>
 
           <button
@@ -126,6 +134,12 @@ export default function LoginPage({ onNavigate, onLoginAsAdmin }: LoginPageProps
           </button>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordOpen}
+        initialEmail={email}
+        onClose={() => setIsForgotPasswordOpen(false)}
+      />
     </div>
   )
 }
