@@ -1,5 +1,14 @@
-import { useState } from 'react'
-import { PiPushPinFill, PiBellSimpleSlashBold, PiProhibitBold } from 'react-icons/pi'
+import { useState, useRef, useEffect } from 'react'
+import {
+  PiPushPinFill,
+  PiPushPinBold,
+  PiBellSimpleSlashBold,
+  PiBellBold,
+  PiProhibitBold,
+  PiBroomBold,
+  PiUserMinusBold,
+  PiDotsThreeVerticalBold,
+} from 'react-icons/pi'
 import type { Conversation, Message } from '../data/mockData'
 
 type ConversationSidebarProps = {
@@ -7,6 +16,11 @@ type ConversationSidebarProps = {
   activeId: string
   onSelect: (id: string) => void
   messagesMap?: Record<string, Message[]>
+  onTogglePin?: (id: string) => void
+  onToggleMute?: (id: string) => void
+  onClearChat?: (id: string) => void
+  onToggleBlock?: (id: string) => void
+  onUnmatch?: (conversation: Conversation) => void
 }
 
 export default function ConversationSidebar({
@@ -14,9 +28,29 @@ export default function ConversationSidebar({
   activeId,
   onSelect,
   messagesMap,
+  onTogglePin,
+  onToggleMute,
+  onClearChat,
+  onToggleBlock,
+  onUnmatch,
 }: ConversationSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterTab, setFilterTab] = useState<'all' | 'new'>('all')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    if (openMenuId) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [openMenuId])
 
   const newMatchesCount = conversations.filter((c) => c.unread > 0).length
 
@@ -40,7 +74,6 @@ export default function ConversationSidebar({
     const matchesName = conv.name.toLowerCase().includes(query)
     const matchesPreview = conv.preview.toLowerCase().includes(query)
     const matchesRole = conv.role.toLowerCase().includes(query)
-    const matchesType = conv.type.toLowerCase().includes(query)
 
     // Also check if any message text in this conversation matches
     const conversationMessages = messagesMap ? messagesMap[conv.id] : undefined
@@ -48,7 +81,7 @@ export default function ConversationSidebar({
       m.text.toLowerCase().includes(query)
     )
 
-    return matchesName || matchesPreview || matchesRole || matchesType || matchesMessages
+    return matchesName || matchesPreview || matchesRole || matchesMessages
   })
 
   return (
@@ -96,53 +129,235 @@ export default function ConversationSidebar({
 
       <div className="ls-conversation-list">
         {filteredConversations.length > 0 ? (
-          filteredConversations.map((conversation) => (
-            <button
-              key={conversation.id}
-              type="button"
-              className={`ls-conversation-item ${activeId === conversation.id ? 'is-selected' : ''}`}
-              onClick={() => onSelect(conversation.id)}
-              style={{
-                opacity: conversation.blocked ? 0.6 : 1,
-                position: 'relative',
-              }}
-            >
-              {conversation.profileImage ? (
-                <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
-                  <img
-                    src={conversation.profileImage}
-                    alt={conversation.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                  />
-                </div>
-              ) : (
-                <div className={`ls-avatar ${conversation.accent} small`}>{conversation.avatar}</div>
-              )}
-              <div className="ls-conversation-copy">
-                <div className="ls-conversation-head">
-                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    {conversation.pinned && <PiPushPinFill style={{ color: '#a855f7', fontSize: '0.8rem' }} title="Fijado" />}
-                    {conversation.name}
-                  </strong>
-                  <span>{conversation.time}</span>
-                </div>
-                <div className="ls-conversation-meta">
-                  <span>{conversation.type}</span>
-                  <span className="ls-dot-inline">•</span>
-                  <span>{conversation.blocked ? '[Usuario bloqueado]' : conversation.preview}</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                {conversation.muted && (
-                  <PiBellSimpleSlashBold style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.9rem' }} title="Silenciado" />
+          filteredConversations.map((conversation) => {
+            const convMessages = messagesMap ? messagesMap[conversation.id] : undefined
+            const lastMsg = convMessages && convMessages.length > 0 ? convMessages[convMessages.length - 1] : null
+            const displayTime = lastMsg ? lastMsg.time : conversation.time
+            const lastMessageDisplay = conversation.blocked
+              ? '[Usuario bloqueado]'
+              : lastMsg
+              ? (lastMsg.text || (lastMsg.attachment ? `📎 ${lastMsg.attachment.name}` : ''))
+              : conversation.preview
+
+            return (
+              <button
+                key={conversation.id}
+                type="button"
+                className={`ls-conversation-item ${activeId === conversation.id ? 'is-selected' : ''}`}
+                onClick={() => onSelect(conversation.id)}
+                style={{
+                  opacity: conversation.blocked ? 0.6 : 1,
+                  position: 'relative',
+                }}
+              >
+                {conversation.profileImage ? (
+                  <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
+                    <img
+                      src={conversation.profileImage}
+                      alt={conversation.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                    />
+                  </div>
+                ) : (
+                  <div className={`ls-avatar ${conversation.accent} small`}>{conversation.avatar}</div>
                 )}
-                {conversation.blocked && (
-                  <PiProhibitBold style={{ color: '#ef4444', fontSize: '0.9rem' }} title="Bloqueado" />
-                )}
-                {conversation.unread > 0 && <span className="ls-unread">{conversation.unread}</span>}
-              </div>
-            </button>
-          ))
+                <div className="ls-conversation-copy">
+                  <div className="ls-conversation-head">
+                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {conversation.pinned && <PiPushPinFill style={{ color: '#a855f7', fontSize: '0.8rem' }} title="Fijado" />}
+                      {conversation.name}
+                    </strong>
+                    <span>{displayTime}</span>
+                  </div>
+                  <div className="ls-conversation-meta">
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {lastMessageDisplay}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', position: 'relative' }}>
+                  {conversation.muted && (
+                    <PiBellSimpleSlashBold style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.9rem' }} title="Silenciado" />
+                  )}
+                  {conversation.blocked && (
+                    <PiProhibitBold style={{ color: '#ef4444', fontSize: '0.9rem' }} title="Bloqueado" />
+                  )}
+                  {conversation.unread > 0 && <span className="ls-unread">{conversation.unread}</span>}
+
+                  {/* 3 puntitos que aparecen al pasar el mouse (hover) */}
+                  <button
+                    type="button"
+                    className={`ls-conv-dots-btn ${openMenuId === conversation.id ? 'is-active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setOpenMenuId(openMenuId === conversation.id ? null : conversation.id)
+                    }}
+                    style={{
+                      background: openMenuId === conversation.id ? 'rgba(168, 85, 247, 0.35)' : 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#fff',
+                      borderRadius: '6px',
+                      padding: '3px 5px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justify: 'center',
+                    }}
+                    title="Opciones de chat"
+                  >
+                    <PiDotsThreeVerticalBold size={15} />
+                  </button>
+
+                  {/* Desplegable de opciones */}
+                  {openMenuId === conversation.id && (
+                    <div
+                      ref={menuRef}
+                      className="ls-conv-menu-dropdown"
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '100%',
+                        marginTop: '4px',
+                        background: '#141628',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        borderRadius: '10px',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.85)',
+                        width: '180px',
+                        zIndex: 1000,
+                        padding: '6px 0',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        className="ls-menu-option"
+                        onClick={() => {
+                          onTogglePin?.(conversation.id)
+                          setOpenMenuId(null)
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        {conversation.pinned ? <PiPushPinFill style={{ color: '#a855f7' }} /> : <PiPushPinBold />}
+                        <span>{conversation.pinned ? 'Desfijar chat' : 'Fijar chat'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="ls-menu-option"
+                        onClick={() => {
+                          onToggleMute?.(conversation.id)
+                          setOpenMenuId(null)
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        {conversation.muted ? <PiBellBold style={{ color: '#00e5ff' }} /> : <PiBellSimpleSlashBold />}
+                        <span>{conversation.muted ? 'Dessilenciar' : 'Silenciar'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="ls-menu-option"
+                        onClick={() => {
+                          onClearChat?.(conversation.id)
+                          setOpenMenuId(null)
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <PiBroomBold style={{ color: '#ffb703' }} />
+                        <span>Vaciar chat</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="ls-menu-option"
+                        onClick={() => {
+                          onToggleBlock?.(conversation.id)
+                          setOpenMenuId(null)
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <PiProhibitBold style={{ color: '#ef4444' }} />
+                        <span>{conversation.blocked ? 'Desbloquear' : 'Bloquear'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="ls-menu-option danger"
+                        onClick={() => {
+                          onUnmatch?.(conversation)
+                          setOpenMenuId(null)
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ff3c6e',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <PiUserMinusBold style={{ color: '#ff3c6e' }} />
+                        <span>Desconectar</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </button>
+            )
+          })
         ) : (
           <div
             style={{
@@ -159,3 +374,4 @@ export default function ConversationSidebar({
     </aside>
   )
 }
+

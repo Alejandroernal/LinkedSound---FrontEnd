@@ -828,8 +828,8 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
               <label style={{ gridColumn: 'span 2', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
                 Biografía / Descripción del Perfil
                 <textarea
-                  value={editingUser.bio ?? ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, bio: e.target.value })}
+                  value={editingUser.descript ?? ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, descript: e.target.value })}
                   rows={3}
                   style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
                 />

@@ -9,9 +9,16 @@ import {
   PiMusicNotesFill,
   PiSpeakerHighBold,
   PiMapPinBold,
+  PiCalendarBold,
+  PiClockBold,
+  PiTicketBold,
+  PiFlameBold,
+  PiWarningBold,
+  PiTimerBold,
 } from 'react-icons/pi'
 import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
+import { formatEventDate } from '../types'
 
 type SoundCloudPreviewModalProps = {
   isOpen: boolean
@@ -38,6 +45,7 @@ export default function SoundCloudPreviewModal({
   const [shouldAutoplay, setShouldAutoplay] = useState<boolean>(false)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const markerRef = useRef<maplibregl.Marker | null>(null)
 
   useEffect(() => {
     if (card?.soundcloudUrl ?? card?.soundcloud) {
@@ -47,47 +55,107 @@ export default function SoundCloudPreviewModal({
     }
   }, [card, isOpen])
 
-  // Inicializar mapa de localización para Eventos
+  // Inicializar o actualizar el mapa de localización para Eventos (instancia única con geocodificación exacta)
   useEffect(() => {
-    if (!isOpen || !card || card.isProfile !== false || !mapContainerRef.current) return
-
-    // Evitar reinicialización repetida
-    if (mapRef.current) {
-      mapRef.current.remove()
-      mapRef.current = null
+    if (!isOpen || !card || card.isProfile !== false || !mapContainerRef.current) {
+      if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
+      }
+      return
     }
 
-    const locLower = (card.location ?? '').toLowerCase()
-    let coords: [number, number] = [13.405, 52.520] // Default Berlin
+    let isMounted = true
 
+    const updateMapInstance = (coords: [number, number], zoomLevel = 14) => {
+      if (!isMounted || !mapContainerRef.current) return
+
+      if (mapRef.current) {
+        mapRef.current.flyTo({ center: coords, zoom: zoomLevel })
+        if (markerRef.current) {
+          markerRef.current.setLngLat(coords)
+        } else {
+          markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+            .setLngLat(coords)
+            .addTo(mapRef.current)
+        }
+        mapRef.current.resize()
+        return
+      }
+
+      mapContainerRef.current.innerHTML = ''
+
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center: coords,
+        zoom: zoomLevel,
+      })
+
+      const marker = new maplibregl.Marker({ color: '#a855f7' })
+        .setLngLat(coords)
+        .addTo(map)
+
+      markerRef.current = marker
+      mapRef.current = map
+
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.resize()
+        }
+      }, 150)
+    }
+
+    // 1. Si el ítem tiene coordenadas explícitas asignadas en creación o backend
+    if (card.longitude !== undefined && card.latitude !== undefined) {
+      updateMapInstance([card.longitude, card.latitude], 14)
+      return
+    }
+
+    // 2. Coordenadas aproximadas de respaldo por ciudad
+    const locLower = (card.location ?? '').toLowerCase()
+    let fallbackCoords: [number, number] = [13.405, 52.520] // Default Berlin
     for (const [city, c] of Object.entries(PRESET_COORDINATES)) {
       if (locLower.includes(city)) {
-        coords = c
+        fallbackCoords = c
         break
       }
     }
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-      center: coords,
-      zoom: 12,
-    })
+    // Inicializar primero con fallback para respuesta inmediata en UI
+    updateMapInstance(fallbackCoords, 12)
 
-    new maplibregl.Marker({ color: '#a855f7' })
-      .setLngLat(coords)
-      .addTo(map)
-
-    setTimeout(() => {
-      map.resize()
-    }, 200)
-
-    mapRef.current = map
+    // 3. Geocodificación exacta dinámica mediante Nominatim para direcciones complejas
+    if (card.location && card.location.trim()) {
+      fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(card.location.trim())}&limit=1`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (isMounted && Array.isArray(data) && data.length > 0 && data[0].lat && data[0].lon) {
+            const lat = parseFloat(data[0].lat)
+            const lon = parseFloat(data[0].lon)
+            updateMapInstance([lon, lat], 14)
+          }
+        })
+        .catch(() => {
+          // Si falla la red, se mantiene el mapa con las coordenadas de respaldo
+        })
+    }
 
     return () => {
+      isMounted = false
       if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
         mapRef.current.remove()
         mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
       }
     }
   }, [isOpen, card])
@@ -138,21 +206,54 @@ export default function SoundCloudPreviewModal({
         </button>
 
         {!isProfile ? (
-          <div className="ls-non-profile-notice">
+          <div className="ls-non-profile-notice" style={{ textAlign: 'left' }}>
             {(card.image || card.profileImage) && (
-              <div className="ls-notice-image-wrap" style={{ width: '100%', maxHeight: '130px', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
+              <div
+                className="ls-notice-image-wrap"
+                style={{
+                  width: '100%',
+                  height: '220px',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  marginTop: '28px',
+                  marginBottom: '16px',
+                  position: 'relative',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                }}
+              >
                 <img
                   src={card.image || card.profileImage}
                   alt={profileName}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center 35%',
+                    display: 'block',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '60px',
+                    background: 'linear-gradient(to top, rgba(20, 22, 40, 0.9), transparent)',
+                    pointerEvents: 'none',
+                  }}
                 />
               </div>
             )}
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{profileName}</h3>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', margin: '4px 0 8px 0' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '4px', textAlign: 'left', color: '#ffffff' }}>{profileName}</h3>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start', margin: '4px 0 10px 0' }}>
               <span
                 style={{
-                  padding: '3px 10px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
                   borderRadius: '12px',
                   fontSize: '0.72rem',
                   fontWeight: 'bold',
@@ -161,20 +262,50 @@ export default function SoundCloudPreviewModal({
                   border: `1px solid ${card.isFinished ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
                 }}
               >
-                {card.isFinished ? '⚠️ Evento Finalizado' : '🔥 Evento Vigente'}
+                {card.isFinished ? (
+                  <>
+                    <PiWarningBold /> Evento Finalizado
+                  </>
+                ) : (
+                  <>
+                    <PiFlameBold /> Evento Vigente
+                  </>
+                )}
               </span>
             </div>
 
-            <p className="ls-notice-text" style={{ fontSize: '0.82rem', marginBottom: '8px' }}>
+            <p className="ls-notice-text" style={{ fontSize: '0.84rem', marginBottom: '10px', textAlign: 'left' }}>
               <strong>Evento / Sesión en Vivo</strong> • {card.role} ({card.location}).
             </p>
 
             {card.eventDate && (
-              <div style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '8px 12px', borderRadius: '10px', margin: '8px 0', border: '1px solid rgba(168, 85, 247, 0.25)', fontSize: '0.8rem' }}>
-                <p style={{ margin: 0, fontWeight: 600, color: '#e9d5ff' }}>
-                  📅 Fecha: <span>{card.eventDate}</span> {card.eventTime && `| 🕒 ${card.eventTime} hs`}
+              <div style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '12px 14px', borderRadius: '12px', margin: '10px 0', border: '1px solid rgba(168, 85, 247, 0.25)', fontSize: '0.82rem', textAlign: 'left' }}>
+                <p style={{ margin: 0, fontWeight: 600, color: '#e9d5ff', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', textAlign: 'left' }}>
+                  <PiCalendarBold style={{ color: '#c084fc' }} />
+                  <span>Fecha: {formatEventDate(card.eventDate)}</span>
+                  {card.eventTime && (
+                    <>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', margin: '0 4px' }}>|</span>
+                      <PiClockBold style={{ color: '#c084fc' }} />
+                      <span>{card.eventTime} hs</span>
+                    </>
+                  )}
                 </p>
-                {card.venue && <p style={{ margin: '3px 0 0 0', color: '#c084fc' }}>📍 Venue / Lugar: {card.venue}</p>}
+                {card.venue && (
+                  <p style={{ margin: '6px 0 0 0', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px', textAlign: 'left' }}>
+                    <PiMapPinBold />
+                    <span>Venue / Lugar: {card.venue}</span>
+                  </p>
+                )}
+                {(card.streetAddress || card.city || card.province || card.country) && (
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed rgba(168, 85, 247, 0.25)', fontSize: '0.78rem', color: '#e9d5ff', textAlign: 'left' }}>
+                    {card.streetAddress && <div style={{ marginBottom: '3px', textAlign: 'left' }}><strong>Calle y Altura:</strong> {card.streetAddress}</div>}
+                    {(card.city || card.province) && (
+                      <div style={{ marginBottom: '3px', textAlign: 'left' }}><strong>Localidad / Provincia:</strong> {[card.city, card.province].filter(Boolean).join(', ')}</div>
+                    )}
+                    {card.country && <div style={{ textAlign: 'left' }}><strong>País:</strong> {card.country}</div>}
+                  </div>
+                )}
                 {card.ticketUrl && !card.isFinished && (
                   <a
                     href={card.ticketUrl}
@@ -184,20 +315,20 @@ export default function SoundCloudPreviewModal({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
-                      marginTop: '6px',
+                      marginTop: '8px',
                       color: '#a855f7',
                       fontWeight: 'bold',
                       textDecoration: 'underline',
                     }}
                   >
-                    🎟️ Adquirir Entradas <PiArrowSquareOutBold />
+                    <PiTicketBold /> Adquirir Entradas <PiArrowSquareOutBold />
                   </a>
                 )}
               </div>
             )}
 
             {card.bio && (
-              <p className="ls-notice-text" style={{ fontStyle: 'italic', opacity: 0.9, marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem' }}>
+              <p className="ls-notice-text" style={{ fontStyle: 'italic', opacity: 0.9, marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem', textAlign: 'left' }}>
                 "{card.bio}"
               </p>
             )}
@@ -355,8 +486,12 @@ export default function SoundCloudPreviewModal({
                           </div>
 
                           <div className="ls-sc-track-meta">
-                            <span>▶ {track.plays} reproducciones</span>
-                            <span>⏱ {track.duration}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <PiPlayFill style={{ fontSize: '0.72rem', color: '#ffaa71' }} /> {track.plays} reproducciones
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <PiTimerBold style={{ fontSize: '0.75rem', color: '#ffaa71' }} /> {track.duration}
+                            </span>
                             {isSelected && (
                               <span style={{ color: '#ff5500', fontWeight: 'bold' }}>
                                 ● CARGADO EN REPRODUCTOR

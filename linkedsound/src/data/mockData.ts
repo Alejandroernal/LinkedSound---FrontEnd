@@ -1,6 +1,6 @@
-import type { AppPage, UserProfile, SoundCloudTrack } from '../types'
+import type { AppPage, UserProfile, EventItem, ExplorerItemCard, SoundCloudTrack } from '../types'
 
-export type { SoundCloudTrack }
+export type { SoundCloudTrack, EventItem, UserProfile }
 
 export type NavItem = {
   label: AppPage
@@ -12,7 +12,7 @@ export type FilterOption = {
   checked?: boolean
 }
 
-export type ProfileCard = UserProfile
+export type ProfileCard = ExplorerItemCard
 
 
 export type Conversation = {
@@ -22,7 +22,6 @@ export type Conversation = {
   avatar: string
   accent: 'purple' | 'pink' | 'cyan' | 'gold'
   status: string
-  type: string
   preview: string
   time: string
   unread: number
@@ -105,7 +104,7 @@ export const recommendations: ProfileCard[] = [
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk3D-J2lE2LLanWoFeEkrMec5OB_tRjxzqgg_Y9w7iNXOUAjPCWDTrICZ8&s=10',
     match: '22%',
-    bio: 'Analog textures and harsh synth design.',
+    descript: 'Analog textures and harsh synth design.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'jesus-922347355',
@@ -139,7 +138,7 @@ export const recommendations: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    bio: 'Warm vocals with cinematic melodic hooks.',
+    descript: 'Warm vocals with cinematic melodic hooks.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'lunasol_official',
@@ -173,7 +172,7 @@ export const recommendations: ProfileCard[] = [
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
     match: '100%',
-    bio: 'HardTrap Specialist, Producer, Artist.',
+    descript: 'HardTrap Specialist, Producer, Artist.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'goldennnnnnnnnnnnnnn',
@@ -207,7 +206,7 @@ export const recommendations: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
     match: '91%',
-    bio: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
+    descript: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'elena-rostova',
@@ -233,7 +232,7 @@ export const recommendations: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
     match: '88%',
-    bio: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
+    descript: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'marcus-cyber',
@@ -259,7 +258,7 @@ export const recommendations: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
     match: '84%',
-    bio: 'Groovy underground minimal & tech house producer based in BA.',
+    descript: 'Groovy underground minimal & tech house producer based in BA.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'mateosound',
@@ -285,7 +284,7 @@ export const recommendations: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
     match: '79%',
-    bio: 'Atmospheric ambient textures and dream-pop vocal loops.',
+    descript: 'Atmospheric ambient textures and dream-pop vocal loops.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'ariavibe',
@@ -311,7 +310,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    bio: 'A dark, rhythmic fusion of techno textures and gritty vocal layers.',
+    descript: 'A dark, rhythmic fusion of techno textures and gritty vocal layers.',
     badge: 'Featured',
     itemRole: 'Evento',
     isProfile: false,
@@ -322,6 +321,10 @@ export const exploreCards: ProfileCard[] = [
     venue: 'Watergate Club Berlin',
     ticketUrl: 'https://ra.co/events/berlin-circuito-nocturno',
     isFinished: false,
+    country: 'Alemania',
+    province: 'Berlín',
+    city: 'Mitte',
+    streetAddress: 'Köpenicker Str. 70',
 
     // Atributos de Perfil (nulos en eventos)
     soundcloudUrl: '',
@@ -340,7 +343,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk3D-J2lE2LLanWoFeEkrMec5OB_tRjxzqgg_Y9w7iNXOUAjPCWDTrICZ8&s=10',
     match: '22%',
-    bio: 'Analog textures and harsh synth design.',
+    descript: 'Analog textures and harsh synth design.',
     badge: 'Producer',
     itemRole: 'Perfil',
     isProfile: true,
@@ -383,7 +386,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    bio: 'Warm vocals with cinematic melodic hooks.',
+    descript: 'Warm vocals with cinematic melodic hooks.',
     badge: 'Artist',
     itemRole: 'Perfil',
     isProfile: true,
@@ -425,7 +428,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
     match: '100%',
-    bio: 'HardTrap Specialist, Producer, Artist.',
+    descript: 'HardTrap Specialist, Producer, Artist.',
     badge: 'Producer',
     itemRole: 'Perfil',
     isProfile: true,
@@ -461,7 +464,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
     match: '91%',
-    bio: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
+    descript: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
     badge: 'Artist',
     itemRole: 'Perfil',
     isProfile: true,
@@ -478,7 +481,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
     match: '88%',
-    bio: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
+    descript: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
     badge: 'Producer',
     itemRole: 'Perfil',
     isProfile: true,
@@ -492,7 +495,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
     match: '92%',
-    bio: 'Un encuentro masivo de música electrónica industrial, sintetizadores analógicos e instalaciones audiovisuales.',
+    descript: 'Un encuentro masivo de música electrónica industrial, sintetizadores analógicos e instalaciones audiovisuales.',
     badge: 'Evento',
     itemRole: 'Evento',
     isProfile: false,
@@ -503,6 +506,10 @@ export const exploreCards: ProfileCard[] = [
     venue: 'AGEHA Tokyo Dome Arena',
     ticketUrl: 'https://eventbrite.com/e/cyberpunk-sound-expo-2026',
     isFinished: false,
+    country: 'Japón',
+    province: 'Tokio',
+    city: 'Shinkiba',
+    streetAddress: '2 Chome-4-38 Shinkiba',
 
     soundcloudUrl: '',
     spotifyUrl: '',
@@ -516,7 +523,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&q=80',
     match: '85%',
-    bio: 'Jam libre para productores y DJs locales de minimal y tech house en Palermo.',
+    descript: 'Jam libre para productores y DJs locales de minimal y tech house en Palermo.',
     badge: 'Evento',
     itemRole: 'Evento',
     isProfile: false,
@@ -527,6 +534,10 @@ export const exploreCards: ProfileCard[] = [
     venue: 'Niceto Club Palermo',
     ticketUrl: 'https://passline.com/eventos/buenos-aires-underground-jam',
     isFinished: true,
+    country: 'Argentina',
+    province: 'Buenos Aires',
+    city: 'Palermo (CABA)',
+    streetAddress: 'Niceto Vega 5510',
 
     soundcloudUrl: '',
     spotifyUrl: '',
@@ -543,7 +554,7 @@ export const exploreCards: ProfileCard[] = [
     image:
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
     match: '79%',
-    bio: 'Atmospheric ambient textures and dream-pop vocal loops.',
+    descript: 'Atmospheric ambient textures and dream-pop vocal loops.',
     badge: 'Artist',
     itemRole: 'Perfil',
     isProfile: true,
@@ -559,7 +570,6 @@ export const conversations: Conversation[] = [
     avatar: 'LS',
     accent: 'purple',
     status: 'Online',
-    type: 'Direct',
     preview: '¡Recibido! Le echo un ojo a las maquetas de sintetizador.',
     time: '14:32',
     unread: 2,
@@ -572,7 +582,6 @@ export const conversations: Conversation[] = [
     avatar: 'GB',
     accent: 'gold',
     status: 'Online',
-    type: 'Direct',
     preview: 'Perfecto, te pasé los stems con el 808 ajustado.',
     time: '13:18',
     unread: 0,
@@ -585,7 +594,6 @@ export const conversations: Conversation[] = [
     avatar: 'ER',
     accent: 'pink',
     status: 'Offline',
-    type: 'Direct',
     preview: 'Me encanta esa progresión de acordes. Grabando tomas de voz.',
     time: 'Ayer',
     unread: 1,
@@ -598,7 +606,6 @@ export const conversations: Conversation[] = [
     avatar: 'MC',
     accent: 'cyan',
     status: 'Offline',
-    type: 'Direct',
     preview: '¿Tuviste tiempo de escuchar el beat industrial?',
     time: '10 May',
     unread: 0,
@@ -716,7 +723,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/kaelen',
     instagramUrl: 'https://instagram.com/kaelen',
     soundcloudUrl: 'https://soundcloud.com/kaelen',
-    bio: 'Building cinematic soundscapes with modular synths.'
+    descript: 'Building cinematic soundscapes with modular synths.'
   },
   {
     id: 'USR-02',
@@ -733,7 +740,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/alexvibe',
     instagramUrl: 'https://instagram.com/alexvibe',
     soundcloudUrl: 'https://soundcloud.com/alexvibe',
-    bio: 'Tech house & minimal DJ.'
+    descript: 'Tech house & minimal DJ.'
   },
   {
     id: 'USR-03',
@@ -750,7 +757,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/lunabeats',
     instagramUrl: 'https://instagram.com/lunabeats',
     soundcloudUrl: 'https://soundcloud.com/lunabeats',
-    bio: 'Chilled beats & atmospheric sounds.'
+    descript: 'Chilled beats & atmospheric sounds.'
   },
   {
     id: 'USR-04',
@@ -767,7 +774,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/markstudio',
     instagramUrl: 'https://instagram.com/markstudio',
     soundcloudUrl: 'https://soundcloud.com/markstudio',
-    bio: 'Audio engineer & mixing master.'
+    descript: 'Audio engineer & mixing master.'
   },
 ]
 

@@ -114,32 +114,36 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
     }, 1200)
   }
 
-  const handleClearChat = () => {
-    if (!activeId) return
-    setMessagesMap((prev) => ({ ...prev, [activeId]: [] }))
+  const handleClearChat = (id?: string) => {
+    const targetId = id ?? activeId
+    if (!targetId) return
+    setMessagesMap((prev) => ({ ...prev, [targetId]: [] }))
     setConversationsList((prev) =>
-      prev.map((c) => (c.id === activeId ? { ...c, preview: '[Chat vaciado]', unread: 0 } : c))
+      prev.map((c) => (c.id === targetId ? { ...c, preview: '[Chat vaciado]', unread: 0 } : c))
     )
   }
 
-  const handleToggleMute = () => {
-    if (!activeId) return
+  const handleToggleMute = (id?: string) => {
+    const targetId = id ?? activeId
+    if (!targetId) return
     setConversationsList((prev) =>
-      prev.map((c) => (c.id === activeId ? { ...c, muted: !c.muted } : c))
+      prev.map((c) => (c.id === targetId ? { ...c, muted: !c.muted } : c))
     )
   }
 
-  const handleTogglePin = () => {
-    if (!activeId) return
+  const handleTogglePin = (id?: string) => {
+    const targetId = id ?? activeId
+    if (!targetId) return
     setConversationsList((prev) =>
-      prev.map((c) => (c.id === activeId ? { ...c, pinned: !c.pinned } : c))
+      prev.map((c) => (c.id === targetId ? { ...c, pinned: !c.pinned } : c))
     )
   }
 
-  const handleToggleBlock = () => {
-    if (!activeId) return
+  const handleToggleBlock = (id?: string) => {
+    const targetId = id ?? activeId
+    if (!targetId) return
     setConversationsList((prev) =>
-      prev.map((c) => (c.id === activeId ? { ...c, blocked: !c.blocked } : c))
+      prev.map((c) => (c.id === targetId ? { ...c, blocked: !c.blocked } : c))
     )
   }
 
@@ -153,6 +157,11 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
           activeId={activeId}
           onSelect={handleSelectConversation}
           messagesMap={messagesMap}
+          onTogglePin={handleTogglePin}
+          onToggleMute={handleToggleMute}
+          onClearChat={handleClearChat}
+          onToggleBlock={handleToggleBlock}
+          onUnmatch={(conv) => setUnmatchingTarget(conv)}
         />
 
         {activeConversation ? (

@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
 import TopBar from '../components/TopBar'
-import StatusBar from '../components/StatusBar'
 import { RadarFilters, type RadarFilterState } from '../components/SidebarPanels'
 import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
@@ -23,6 +22,27 @@ const initialFilters: RadarFilterState = {
   radius: 50,
 }
 
+const LOCATION_COORDINATES: Record<string, { lat: number; lon: number }> = {
+  'francia, paris': { lat: 48.8566, lon: 2.3522 },
+  'berlin, germany': { lat: 52.52, lon: 13.405 },
+  'entre rios, argentina': { lat: -31.741, lon: -58.514 },
+  'new york, ny': { lat: 40.7128, lon: -74.006 },
+  'london, uk': { lat: 51.5074, lon: -0.1278 },
+  'tokyo, japan': { lat: 35.6895, lon: 139.6917 },
+  'buenos aires, argentina': { lat: -34.6037, lon: -58.3816 },
+}
+
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Earth radius in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLon = (lon2 - lon1) * (Math.PI / 180)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
 export default function DashboardPage({ activePage, onNavigate, profile, isAdminSession }: DashboardPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
@@ -30,15 +50,51 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
   const [filters, setFilters] = useState<RadarFilterState>(initialFilters)
 
   const filteredRecommendations = useMemo(() => {
+    let centerLat = filters.centerLat
+    let centerLng = filters.centerLng
+
+    if ((centerLat === undefined || centerLng === undefined) && filters.locationQuery.trim()) {
+      const q = filters.locationQuery.trim().toLowerCase()
+      for (const [key, coords] of Object.entries(LOCATION_COORDINATES)) {
+        if (q.includes(key) || key.includes(q)) {
+          centerLat = coords.lat
+          centerLng = coords.lon
+          break
+        }
+      }
+    }
+
     return recommendations.filter((card) => {
-      // 1. Location filter (Compara location del perfil)
+      // 1. Location text filter
       if (filters.locationQuery.trim()) {
         const query = filters.locationQuery.trim().toLowerCase()
         const loc = (card.location ?? '').toLowerCase()
-        if (!loc.includes(query)) return false
+        if (!loc.includes(query) && centerLat === undefined) return false
       }
 
-      // 2. Collaborator Type / Categoría filter (Permite seleccionar todas, una o ninguna)
+      // 2. Distance radius filter in kilometers
+      if (filters.radius < 500 && centerLat !== undefined && centerLng !== undefined) {
+        let cardLat = card.latitude
+        let cardLng = card.longitude
+
+        if (cardLat === undefined || cardLng === undefined) {
+          const cLoc = (card.location ?? '').toLowerCase()
+          for (const [key, coords] of Object.entries(LOCATION_COORDINATES)) {
+            if (cLoc.includes(key) || key.includes(cLoc)) {
+              cardLat = coords.lat
+              cardLng = coords.lon
+              break
+            }
+          }
+        }
+
+        if (cardLat !== undefined && cardLng !== undefined) {
+          const distance = getDistanceKm(centerLat, centerLng, cardLat, cardLng)
+          if (distance > filters.radius) return false
+        }
+      }
+
+      // 3. Collaborator Type / Categoría filter
       if (filters.selectedCategories.length > 0) {
         const cardRole = (card.role ?? card.category ?? '').toLowerCase()
         const matchesCategory = filters.selectedCategories.some((cat) =>
@@ -47,7 +103,7 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
         if (!matchesCategory) return false
       }
 
-      // 3. Genre Interests filter (Permite seleccionar todas, una o ninguna)
+      // 4. Genre Interests filter
       if (filters.selectedGenres.length > 0) {
         const cardGenres = (card.interestGenres ?? card.tags ?? []).map((g) => g.toLowerCase())
         const matchesGenre = filters.selectedGenres.some((fg) =>
@@ -80,9 +136,8 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
   return (
     <div className="ls-app-shell">
       <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} isAdminSession={isAdminSession} />
-      <StatusBar poolCount={filteredRecommendations.length} />
 
-      <main className="ls-layout ls-discovery-swipe-layout">
+      <main className="ls-layout ls-discovery-swipe-layout" style={{ marginTop: '16px' }}>
         <section className="ls-discovery-panel">
           <div className="ls-swipe-stage">
             {currentProfile ? (

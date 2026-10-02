@@ -211,7 +211,26 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
   }
 
   useEffect(() => {
-    if (!showMap || !mapContainerRef.current || mapRef.current) return
+    if (!showMap || !mapContainerRef.current) {
+      if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
+      }
+      return
+    }
+
+    if (mapRef.current) {
+      mapRef.current.resize()
+      return
+    }
+
+    // Limpiar residuos en el contenedor antes de crear la instancia única
+    mapContainerRef.current.innerHTML = ''
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -221,7 +240,7 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
     })
 
     map.addControl(new maplibregl.FullscreenControl())
-    setTimeout(() => map.resize(), 100)
+    const timer = setTimeout(() => map.resize(), 150)
 
     map.on('click', (e) => {
       const { lng, lat } = e.lngLat
@@ -238,9 +257,16 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
     mapRef.current = map
 
     return () => {
-      map.remove()
-      mapRef.current = null
-      markerRef.current = null
+      clearTimeout(timer)
+      if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
+      }
     }
   }, [showMap])
 
@@ -301,11 +327,11 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
               {isEditing ? (
                 <textarea
                   style={{ width: '100%', minWidth: '100%', boxSizing: 'border-box', marginTop: '12px' }}
-                  value={profile.bio ?? ''}
-                  onChange={(event) => handleChange('bio', event.target.value)}
+                  value={profile.descript ?? ''}
+                  onChange={(event) => handleChange('descript', event.target.value)}
                 />
               ) : (
-                <p>{profile.bio}</p>
+                <p>{profile.descript}</p>
               )}
             </div>
           </div>

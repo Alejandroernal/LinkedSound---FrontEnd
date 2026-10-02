@@ -13,7 +13,7 @@ export default function RecommendationCard({ item }: { item: ProfileCard }) {
           <span>{item.badge}</span>
         </div>
         <p className="ls-card-role">{item.role}</p>
-        <p className="ls-card-desc">{item.bio || item.description}</p>
+        <p className="ls-card-desc">{item.descript || item.description}</p>
         <div className="ls-mini-tags">
           {(item.interestGenres || item.tags || []).map((tag) => (
             <span key={tag}>{tag}</span>

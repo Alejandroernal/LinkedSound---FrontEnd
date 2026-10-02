@@ -215,7 +215,26 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
   }
 
   useEffect(() => {
-    if (!showMap || !mapContainerRef.current || mapRef.current) return
+    if (!showMap || !mapContainerRef.current) {
+      if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
+      }
+      return
+    }
+
+    if (mapRef.current) {
+      mapRef.current.resize()
+      return
+    }
+
+    // Limpiar residuos en el contenedor antes de crear la instancia única
+    mapContainerRef.current.innerHTML = ''
 
     const initialPreset = PRESET_LOCATIONS.find((p) => p.label.toLowerCase() === location.toLowerCase())
     const centerLon = initialPreset ? initialPreset.lon : 13.405
@@ -229,7 +248,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
     })
 
     map.addControl(new maplibregl.FullscreenControl())
-    setTimeout(() => map.resize(), 100)
+    const timer = setTimeout(() => map.resize(), 150)
 
     markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
       .setLngLat([centerLon, centerLat])
@@ -252,9 +271,16 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
     mapRef.current = map
 
     return () => {
-      map.remove()
-      mapRef.current = null
-      markerRef.current = null
+      clearTimeout(timer)
+      if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
+      }
     }
   }, [showMap])
 

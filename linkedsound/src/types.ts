@@ -49,63 +49,123 @@ export type ExplorerItem = {
 }
 
 export type UserProfile = {
-  // Campos estándar de registro / edición
-  profileImage?: string
+  // Identificación y Registro
+  id?: string
+  nickname: string
   firstName?: string
   lastName?: string
-  nickname: string
   email?: string
   password?: string
+  profileImage?: string
+  image?: string // Alias / fallback para profileImage
+
+  // Perfil Profesional y Descripción
   role: string
   interestGenres: string[]
+  description?: string
+  descript?: string // Alias / fallback para description
+  match?: string
+  badge?: string
+  category?: string
+  tags?: string[]
+
+  // Enlaces y Redes Sociales
   soundcloudUrl: string
   spotifyUrl: string
   instagramUrl: string
-  location: string
-  descript?: string
-
-  // Campos adicionales para presentación e interactividad (Flexible Perfil vs Evento)
-  id?: string
-  image?: string
-  match?: string
-  badge?: string
-  itemRole?: 'Perfil' | 'Evento'
-  isProfile?: boolean
-
-  // Campos específicos de PERFILES (null / undefined en Eventos)
-  soundcloudHandle?: string
-  tracks?: SoundCloudTrack[]
-
-  // Campos específicos de EVENTOS (null / undefined en Perfiles)
-  eventDate?: string // Formato YYYY-MM-DD
-  eventTime?: string // Formato HH:MM
-  venue?: string // Nombre del club / venue
-  ticketUrl?: string // Enlace para compra de entradas
-  isFinished?: boolean // Estado derivado o explícito si expiró
-
-  // Compatibilidad hacia atrás y reglas administrativas
-  bio?: string
-  description?: string
-  category?: string
-  tags?: string[]
   spotify?: string
   instagram?: string
   soundcloud?: string
+
+  // Campos específicos de CREADORES / PERFILES
+  soundcloudHandle?: string
+  tracks?: SoundCloudTrack[]
+
+  // Discriminador de tipo
+  itemRole?: 'Perfil'
+  isProfile?: true
+
+  // Localización detallada
+  location: string
+  country?: string // País
+  province?: string // Provincia / Estado
+  city?: string // Localidad / Ciudad
+  streetAddress?: string // Calle y Altura
+  latitude?: number
+  longitude?: number
+
+  // Administración y Estado
+  status?: 'Active' | 'Suspended' | 'Pending Approval' | 'Banned'
+  joinedDate?: string
+  reportsCount?: number
+
+  // Reglas de negocio y permisos
   allowEdit?: boolean
   allowPostRegister?: boolean
   teamDecision?: string
   validationRule?: string
   eliminationPolicy?: string
   finalAction?: string
-
-  // Admin & Status
-  status?: 'Active' | 'Suspended' | 'Pending Approval' | 'Banned'
-  joinedDate?: string
-  reportsCount?: number
 }
 
 // Backward compatibility alias
 export type Profile = UserProfile
+
+// Clase/Tipo dedicado exclusivamente para EVENTOS
+export type EventItem = {
+  id?: string
+  title?: string // Nombre del evento
+  nickname: string // Nombre / Título del evento para renderizado uniforme
+  owner?: string // Organizador / Creador
+  role: string // Subtítulo del evento (ej: "Berlin Live Session")
+
+  // Atributos de fecha, hora y lugar del Evento
+  eventDate: string // Formato YYYY-MM-DD
+  eventTime?: string // Formato HH:MM
+  venue?: string // Nombre del club / venue
+  ticketUrl?: string // Enlace para compra de entradas
+  isFinished?: boolean // Estado si expiró el evento
+
+  // Descripción e imágenes
+  description?: string
+  descript?: string // Alias / fallback para description
+  image?: string
+  profileImage?: string // Alias para image
+
+  // Géneros y etiquetas
+  interestGenres: string[]
+  match?: string
+  badge?: string
+  category?: string
+  tags?: string[]
+
+  // Discriminador de tipo
+  itemRole?: 'Evento'
+  isProfile?: false
+
+  // Localización detallada del evento
+  location: string
+  country?: string // País
+  province?: string // Provincia / Estado
+  city?: string // Localidad / Ciudad
+  streetAddress?: string // Calle y Altura
+  latitude?: number
+  longitude?: number
+
+  // Administración y Estado
+  status?: 'Active' | 'Suspended' | 'Pending Approval' | 'Banned'
+  createdDate?: string
+  reportsCount?: number
+
+  // Enlaces o temas opcionales del evento
+  soundcloudUrl?: string
+  spotifyUrl?: string
+  instagramUrl?: string
+  tracks?: SoundCloudTrack[]
+}
+
+// Tipo de unión para Explorer y visualización general de tarjetas
+export type ExplorerItemCard = UserProfile | EventItem
 
 export type NotificationItem = {
   id: string
@@ -115,5 +175,16 @@ export type NotificationItem = {
   read: boolean
   type: 'match' | 'message' | 'system' | 'report' | 'like'
   linkPage?: AppPage
+}
+
+// Función helper para formatear fechas a DD/MM/YYYY
+export function formatEventDate(dateStr?: string): string {
+  if (!dateStr) return ''
+  const parts = dateStr.trim().split('-')
+  if (parts.length === 3 && parts[0].length === 4) {
+    const [year, month, day] = parts
+    return `${day}/${month}/${year}`
+  }
+  return dateStr
 }
 

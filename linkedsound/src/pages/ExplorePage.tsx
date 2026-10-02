@@ -5,9 +5,26 @@ import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import CreateEventModal from '../components/CreateEventModal'
 import RejectMatchModal from '../components/RejectMatchModal'
-import { PiFlagBold, PiSoundcloudLogoFill, PiCalendarPlusBold, PiMagnifyingGlassBold, PiArrowClockwiseBold } from 'react-icons/pi'
+import GenreFilterPopover from '../components/GenreFilterPopover'
+import {
+  PiFlagBold,
+  PiSoundcloudLogoFill,
+  PiCalendarPlusBold,
+  PiMagnifyingGlassBold,
+  PiArrowClockwiseBold,
+  PiCompassBold,
+  PiFunnelBold,
+  PiArrowsDownUpBold,
+  PiSquaresFourBold,
+  PiUsersBold,
+  PiTicketBold,
+  PiCalendarBold,
+  PiMapPinBold,
+  PiXBold,
+  PiCheckBold,
+} from 'react-icons/pi'
 import { exploreCards as initialExploreCards, type ProfileCard } from '../data/mockData'
-import type { AppPage, Profile, NotificationItem } from '../types'
+import { type AppPage, type Profile, type NotificationItem, formatEventDate } from '../types'
 
 type ExplorePageProps = {
   activePage?: AppPage
@@ -36,6 +53,8 @@ export default function ExplorePage({
   const [searchQuery, setSearchQuery] = useState('')
   const [activeGenre, setActiveGenre] = useState('')
   const [itemRoleFilter, setItemRoleFilter] = useState<'Todos' | 'Perfil' | 'Evento'>('Todos')
+  const [sortBy, setSortBy] = useState<'match' | 'name' | 'role'>('match')
+  const [isGenreFilterOpen, setIsGenreFilterOpen] = useState(false)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
   const [rejectingTarget, setRejectingTarget] = useState<ProfileCard | null>(null)
   const [selectedPreviewCard, setSelectedPreviewCard] = useState<ProfileCard | null>(null)
@@ -50,22 +69,22 @@ export default function ExplorePage({
   }
 
   const filteredCards = useMemo(() => {
-    return cardsList.filter((card) => {
+    let result = cardsList.filter((card) => {
       const cardItemRole = card.itemRole ?? (card.isProfile !== false ? 'Perfil' : 'Evento')
       if (itemRoleFilter !== 'Todos' && cardItemRole !== itemRoleFilter) {
         return false
       }
 
       const cardTags = card.interestGenres ?? card.tags ?? []
-      const cardName = card.nickname ?? card.nickname ?? ''
-      const cardBio = card.bio ?? card.description ?? ''
+      const cardName = card.nickname ?? ''
+      const cardBio = card.description ?? ''
 
-      // Filter by genre pill
+      // Filter by genre
       if (activeGenre) {
         const matchesTag = cardTags.some(
           (t) => t.toLowerCase() === activeGenre.toLowerCase()
         )
-        const matchesRole = card.role.toLowerCase().includes(activeGenre.toLowerCase())
+        const matchesRole = card.role ? card.role.toLowerCase().includes(activeGenre.toLowerCase()) : false
         if (!matchesTag && !matchesRole) return false
       }
 
@@ -74,7 +93,7 @@ export default function ExplorePage({
       if (!query) return true
 
       const inName = cardName.toLowerCase().includes(query)
-      const inRole = card.role.toLowerCase().includes(query)
+      const inRole = card.role ? card.role.toLowerCase().includes(query) : false
       const inLocation = card.location?.toLowerCase().includes(query) ?? false
       const inDesc = cardBio.toLowerCase().includes(query)
       const inBadge = (card.badge ?? '').toLowerCase().includes(query)
@@ -82,7 +101,21 @@ export default function ExplorePage({
 
       return inName || inRole || inLocation || inDesc || inBadge || inTags
     })
-  }, [cardsList, searchQuery, activeGenre, itemRoleFilter])
+
+    if (sortBy === 'name') {
+      result = [...result].sort((a, b) => (a.nickname ?? '').localeCompare(b.nickname ?? ''))
+    } else if (sortBy === 'role') {
+      result = [...result].sort((a, b) => (a.role ?? '').localeCompare(b.role ?? ''))
+    } else if (sortBy === 'match') {
+      result = [...result].sort((a, b) => {
+        const matchA = parseInt(a.match?.replace('%', '') || '0', 10)
+        const matchB = parseInt(b.match?.replace('%', '') || '0', 10)
+        return matchB - matchA
+      })
+    }
+
+    return result
+  }, [cardsList, searchQuery, activeGenre, itemRoleFilter, sortBy])
 
   return (
     <div className="ls-app-shell">
@@ -101,42 +134,28 @@ export default function ExplorePage({
       <main className="ls-page-content">
         <section className="ls-panel ls-page-panel">
           <div className="ls-panel-header compact ls-explore-header-redesigned">
+            {/* Fila Superior: Título con Icono + Badge Verde */}
             <div className="ls-explore-title-row">
-              <div>
-                <h3 className="ls-explore-main-title">Explorer</h3>
-                <span className="ls-explore-subtitle">
-                  Red global activa ({filteredCards.length}{' '}
-                  {filteredCards.length === 1 ? 'publicación' : 'publicaciones'})
-                </span>
+              <div className="ls-explore-title-with-icon">
+                <div className="ls-explore-title-badge-icon">
+                  <PiCompassBold />
+                </div>
+                <div>
+                  <h3 className="ls-explore-main-title">
+                    El punto de encuentro para la música: explora perfiles, encuentra tu match y vive shows
+                  </h3>
+                  <span className="ls-explore-subtitle ls-explore-subtitle-row">
+                    <span className="ls-live-status-dot" />
+                    Descubre la red global • {filteredCards.length}{' '}
+                    {filteredCards.length === 1 ? 'publicación' : 'publicaciones'}
+                  </span>
+                </div>
               </div>
-
-              {/* Botón de Publicar Nuevo Evento */}
-              <button
-                type="button"
-                className="ls-primary-button ls-create-event-trigger"
-                onClick={() => setShowCreateEventModal(true)}
-              >
-                <PiCalendarPlusBold style={{ fontSize: '1.15rem' }} /> Publicar Evento
-              </button>
             </div>
 
-            {/* Barra de Filtros Reestructurada y Limpia */}
+            {/* Fila de Herramientas: Búsqueda (izq) + Funcionalidades Iconicas (der) */}
             <div className="ls-explore-toolbar-clean">
-              {/* Pestañas de categoría (Todos, Perfiles, Eventos) */}
-              <div className="ls-explore-category-tabs">
-                {(['Todos', 'Perfil', 'Evento'] as const).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    className={`ls-explore-tab-btn ${itemRoleFilter === r ? 'is-active' : ''}`}
-                    onClick={() => setItemRoleFilter(r)}
-                  >
-                    {r === 'Todos' ? 'Todos' : r === 'Perfil' ? 'Perfiles' : 'Eventos'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Campo de búsqueda con icono estilizado */}
+              {/* Campo de búsqueda principal */}
               <div className="ls-explore-search-wrapper">
                 <PiMagnifyingGlassBold className="ls-explore-search-icon" />
                 <input
@@ -151,51 +170,131 @@ export default function ExplorePage({
                     type="button"
                     className="ls-search-clear-btn"
                     onClick={() => setSearchQuery('')}
+                    title="Limpiar texto de búsqueda"
                   >
                     ✕
                   </button>
                 )}
               </div>
 
-              {/* Botón Reset */}
-              {(searchQuery || activeGenre || itemRoleFilter !== 'Todos') && (
+              {/* Grupo unificado de funcionalidades (Derecha) */}
+              <div className="ls-explore-functionalities-group">
+                {/* 1. Pestañas icónicas (Todos, Perfiles, Eventos) */}
+                <div className="ls-explore-icon-tabs" title="Filtrar tipo de contenido">
+                  <button
+                    type="button"
+                    className={`ls-icon-tab-btn ${itemRoleFilter === 'Todos' ? 'is-active' : ''}`}
+                    onClick={() => setItemRoleFilter('Todos')}
+                    title="Todos los contenidos"
+                  >
+                    <PiSquaresFourBold />
+                  </button>
+                  <button
+                    type="button"
+                    className={`ls-icon-tab-btn ${itemRoleFilter === 'Perfil' ? 'is-active' : ''}`}
+                    onClick={() => setItemRoleFilter('Perfil')}
+                    title="Solo Perfiles"
+                  >
+                    <PiUsersBold />
+                  </button>
+                  <button
+                    type="button"
+                    className={`ls-icon-tab-btn ${itemRoleFilter === 'Evento' ? 'is-active' : ''}`}
+                    onClick={() => setItemRoleFilter('Evento')}
+                    title="Solo Eventos"
+                  >
+                    <PiTicketBold />
+                  </button>
+                </div>
+
+                {/* 2. Botón Filtro por Género (Popover) */}
+                <div className="ls-relative-popover-wrap">
+                  <button
+                    type="button"
+                    className={`ls-icon-func-btn ${activeGenre ? 'is-active' : ''}`}
+                    onClick={() => setIsGenreFilterOpen(!isGenreFilterOpen)}
+                    title={activeGenre ? `Filtrando por: ${activeGenre}` : 'Filtrar por género musical'}
+                  >
+                    <PiFunnelBold />
+                    {activeGenre && <span className="ls-icon-active-dot" />}
+                  </button>
+
+                  <GenreFilterPopover
+                    isOpen={isGenreFilterOpen}
+                    onClose={() => setIsGenreFilterOpen(false)}
+                    currentGenre={activeGenre}
+                    onSelectGenre={(genre) => {
+                      setActiveGenre(genre)
+                      setIsGenreFilterOpen(false)
+                    }}
+                  />
+                </div>
+
+                {/* 3. Selector de Ordenamiento por Icono */}
+                <div className="ls-sort-icon-select-wrap">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'match' | 'name' | 'role')}
+                    className="ls-explore-sort-select-icononly"
+                    title="Ordenar publicaciones"
+                  >
+                    <option value="match">Mayor Match %</option>
+                    <option value="name">Nombre (A - Z)</option>
+                    <option value="role">Rol / Tipo</option>
+                  </select>
+                  <PiArrowsDownUpBold className="ls-sort-select-icon" />
+                </div>
+
+                {/* 4. Botón Publicar Evento (Icono destacado) */}
                 <button
                   type="button"
-                  className="ls-explore-reset-btn"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setActiveGenre('')
-                    setItemRoleFilter('Todos')
-                  }}
-                  title="Restablecer todos los filtros"
+                  className="ls-create-event-icon-btn"
+                  onClick={() => setShowCreateEventModal(true)}
+                  title="Publicar nuevo evento musical"
                 >
-                  <PiArrowClockwiseBold /> Limpiar
+                  <PiCalendarPlusBold />
                 </button>
-              )}
+
+                {/* Botón Reset si hay filtros aplicados */}
+                {(searchQuery || activeGenre || itemRoleFilter !== 'Todos') && (
+                  <button
+                    type="button"
+                    className="ls-explore-reset-btn-icon"
+                    onClick={() => {
+                      setSearchQuery('')
+                      setActiveGenre('')
+                      setItemRoleFilter('Todos')
+                    }}
+                    title="Restablecer todos los filtros"
+                  >
+                    <PiArrowClockwiseBold />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
 
           <div className="ls-card-grid">
             {filteredCards.length > 0 ? (
-              filteredCards.map((card) => {
+              filteredCards.map((card, idx) => {
                 const itemRole = card.itemRole ?? (card.isProfile !== false ? 'Perfil' : 'Evento')
                 const isProfile = itemRole === 'Perfil'
+                const cardKey = card.id ? card.id : `${card.nickname ?? 'card'}-${idx}`
 
                 return (
                   <article
-                    key={card.nickname ?? card.nickname}
-                    className={`ls-recommend-card ls-clickable-card ${isProfile ? 'has-soundcloud' : ''
-                      }`}
+                    key={cardKey}
+                    className={`ls-recommend-card ls-clickable-card ${isProfile ? 'has-soundcloud' : ''}`}
                     onClick={() => setSelectedPreviewCard(card)}
                     title={
                       isProfile
-                        ? `Haz clic para ver los trabajos en SoundCloud de ${card.nickname ?? card.nickname}`
-                        : `Ver detalles de ${card.nickname ?? card.nickname}`
+                        ? `Haz clic para ver los trabajos en SoundCloud de ${card.nickname ?? ''}`
+                        : `Ver detalles de ${card.nickname ?? ''}`
                     }
                   >
                     <div className="ls-card-visual">
-                      <img src={card.image || card.profileImage} alt={card.nickname ?? card.nickname} />
+                      <img src={card.image || card.profileImage} alt={card.nickname ?? 'Card Image'} />
                       <span className="ls-card-badge">
                         {itemRole.toUpperCase()}
                       </span>
@@ -205,14 +304,7 @@ export default function ExplorePage({
                         </span>
                       ) : (
                         <span
-                          className="ls-sc-card-indicator"
-                          style={{
-                            background: card.isFinished
-                              ? 'rgba(239, 68, 68, 0.9)'
-                              : 'rgba(34, 197, 94, 0.9)',
-                            color: '#ffffff',
-                            fontWeight: 'bold',
-                          }}
+                          className={`ls-sc-card-indicator ${card.isFinished ? 'is-finished' : 'is-active-event'}`}
                         >
                           {card.isFinished ? 'Finalizado' : 'Vigente'}
                         </span>
@@ -220,7 +312,7 @@ export default function ExplorePage({
                     </div>
                     <div className="ls-card-body">
                       <div className="ls-card-head">
-                        <h3>{card.nickname ?? card.nickname}</h3>
+                        <h3>{card.nickname ?? ''}</h3>
                         <span className="ls-match-tag">{card.match} match</span>
                       </div>
                       <p className="ls-card-role">
@@ -229,24 +321,13 @@ export default function ExplorePage({
 
                       {/* En perfiles: Caja de Track / Muestra destacada */}
                       {isProfile && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            background: 'rgba(255, 85, 0, 0.08)',
-                            border: '1px solid rgba(255, 85, 0, 0.25)',
-                            borderRadius: '10px',
-                            padding: '8px 10px',
-                            margin: '8px 0',
-                          }}
-                        >
-                          <PiSoundcloudLogoFill style={{ color: '#ff5500', fontSize: '1.2rem', flexShrink: 0 }} />
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <span style={{ display: 'block', fontSize: '0.68rem', color: '#ffaa71', fontWeight: 700, textTransform: 'uppercase' }}>
+                        <div className="ls-card-track-sample-box">
+                          <PiSoundcloudLogoFill className="ls-card-track-sc-icon" />
+                          <div className="ls-card-track-info">
+                            <span className="ls-card-track-label">
                               Track / Muestra SoundCloud
                             </span>
-                            <span style={{ display: 'block', fontSize: '0.78rem', color: '#ffffff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span className="ls-card-track-title">
                               {card.tracks && card.tracks[0]?.title ? card.tracks[0].title : 'Última producción de catálogo'}
                             </span>
                           </div>
@@ -255,82 +336,78 @@ export default function ExplorePage({
 
                       {/* En eventos: Caja de Fecha, Hora y Venue */}
                       {!isProfile && card.eventDate && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '4px',
-                            background: 'rgba(168, 85, 247, 0.08)',
-                            border: '1px solid rgba(168, 85, 247, 0.22)',
-                            borderRadius: '10px',
-                            padding: '8px 10px',
-                            margin: '8px 0',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#e9d5ff', fontWeight: 600 }}>
-                            <span>📅</span>
-                            <span>{card.eventDate}</span>
-                            {card.eventTime && <span style={{ color: '#c084fc' }}>• {card.eventTime} hs</span>}
+                        <div className="ls-card-event-info-box">
+                          <div className="ls-card-event-date-row">
+                            <PiCalendarBold className="ls-card-event-icon" />
+                            <span>{formatEventDate(card.eventDate)}</span>
+                            {card.eventTime && <span className="ls-card-event-time-text">• {card.eventTime} hs</span>}
                           </div>
                           {card.venue && (
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.7)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>📍</span>
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.venue}</span>
+                            <div className="ls-card-event-venue-row">
+                              <PiMapPinBold className="ls-card-event-icon" />
+                              <span className="ls-card-event-venue-text">
+                                {card.venue}
+                                {[card.streetAddress, card.city, card.province, card.country].filter(Boolean).length > 0 &&
+                                  ` (${[card.streetAddress, card.city, card.province, card.country].filter(Boolean).join(', ')})`}
+                              </span>
                             </div>
                           )}
                         </div>
                       )}
 
-                      <p className="ls-card-desc">{card.bio ?? card.description}</p>
-                      {(card.interestGenres ?? card.tags ?? []).length > 0 && (
-                        <div className="ls-mini-tags">
-                          {(card.interestGenres ?? card.tags ?? []).map((tag) => (
-                            <span key={tag}>{tag}</span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="ls-card-actions" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                        {isProfile && (
-                          <div className="ls-explore-match-actions" style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              type="button"
-                              className="ls-swipe-pass"
-                              style={{ width: '36px', height: '36px', minHeight: '36px', flex: 'none', borderRadius: '8px', fontSize: '0.9rem' }}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setRejectingTarget(card)
-                              }}
-                              title="Descartar / Rechazar Match"
-                            >
-                              ✕
-                            </button>
-                            <button
-                              type="button"
-                              className="ls-swipe-like"
-                              style={{ width: '36px', height: '36px', minHeight: '36px', flex: 'none', borderRadius: '8px', fontSize: '0.9rem' }}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                              }}
-                              title="Conectar / Match"
-                            >
-                              ✓
-                            </button>
+                      <p className="ls-card-desc">{card.description ?? ''}</p>
+                      <div className="ls-card-footer-row">
+                        {(card.interestGenres ?? card.tags ?? []).length > 0 ? (
+                          <div className="ls-mini-tags ls-card-mini-tags-wrap">
+                            {(card.interestGenres ?? card.tags ?? []).map((tag) => (
+                              <span key={tag}>{tag}</span>
+                            ))}
                           </div>
+                        ) : (
+                          <div className="ls-card-tags-spacer" />
                         )}
 
-                        <button
-                          type="button"
-                          className="ls-report-card-btn"
-                          style={{ marginLeft: 'auto', flex: 'none' }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setReportingTarget(card.nickname ?? card.nickname)
-                          }}
-                          title={`Reportar ${card.nickname ?? card.nickname}`}
-                        >
-                          <PiFlagBold /> Reporte
-                        </button>
+                        <div className="ls-card-action-group">
+                          {isProfile && (
+                            <>
+                              <button
+                                type="button"
+                                className="ls-card-btn-action pass"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setRejectingTarget(card)
+                                }}
+                                title="Descartar Perfil"
+                              >
+                                <PiXBold />
+                              </button>
+
+                              <button
+                                type="button"
+                                className="ls-card-btn-action like"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedPreviewCard(card)
+                                }}
+                                title="Ver Perfil / Match"
+                              >
+                                <PiCheckBold />
+                              </button>
+                            </>
+                          )}
+
+                          <button
+                            type="button"
+                            className="ls-card-btn-action report"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setReportingTarget(card.nickname ?? '')
+                            }}
+                            title={isProfile ? `Reportar Perfil ${card.nickname ?? ''}` : `Reportar Evento ${card.nickname ?? ''}`}
+                          >
+                            <PiFlagBold />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </article>

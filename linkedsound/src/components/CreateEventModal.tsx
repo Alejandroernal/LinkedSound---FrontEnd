@@ -66,6 +66,11 @@ export default function CreateEventModal({
   const [title, setTitle] = useState('')
   const [role, setRole] = useState('Showcase & Live Performance')
   const [location, setLocation] = useState(userLocation)
+  const [country, setCountry] = useState('Alemania')
+  const [province, setProvince] = useState('Berlín')
+  const [city, setCity] = useState('Mitte')
+  const [streetAddress, setStreetAddress] = useState('')
+
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showMap, setShowMap] = useState(false)
@@ -77,7 +82,7 @@ export default function CreateEventModal({
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('22:00')
   const [ticketUrl, setTicketUrl] = useState('')
-  const [bio, setBio] = useState('')
+  const [descript, setDescript] = useState('')
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Live', 'Techno'])
   const [image, setImage] = useState(
     'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80'
@@ -87,6 +92,13 @@ export default function CreateEventModal({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
 
+  const updateLocationFromParts = (c: string, p: string, ct: string, st: string) => {
+    const parts = [st, ct, p, c].filter(Boolean)
+    if (parts.length > 0) {
+      setLocation(parts.join(', '))
+    }
+  }
+
   const reverseGeocode = async (lat: number, lon: number) => {
     setIsLocating(true)
     try {
@@ -94,14 +106,24 @@ export default function CreateEventModal({
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`
       )
       const data = await response.json()
-      const city =
-        data.address?.city ||
-        data.address?.town ||
-        data.address?.village ||
-        data.address?.municipality ||
+      const addr = data.address || {}
+      const foundCity =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
+        addr.suburb ||
         ''
-      const country = data.address?.country || ''
-      const label = [city, country].filter(Boolean).join(', ')
+      const foundProvince = addr.state || addr.province || addr.region || ''
+      const foundCountry = addr.country || ''
+      const foundStreet = [addr.road, addr.house_number].filter(Boolean).join(' ') || addr.pedestrian || ''
+
+      if (foundCountry) setCountry(foundCountry)
+      if (foundProvince) setProvince(foundProvince)
+      if (foundCity) setCity(foundCity)
+      if (foundStreet) setStreetAddress(foundStreet)
+
+      const label = [foundStreet, foundCity, foundProvince, foundCountry].filter(Boolean).join(', ')
       setLocation(label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`)
     } catch {
       setLocation(`${lat.toFixed(3)}, ${lon.toFixed(3)}`)
@@ -126,15 +148,16 @@ export default function CreateEventModal({
       const data = await response.json()
       if (Array.isArray(data) && data.length > 0) {
         const results: LocationSuggestion[] = data.map((item: any) => {
-          const city =
-            item.address?.city ||
-            item.address?.town ||
-            item.address?.village ||
-            item.address?.municipality ||
+          const addr = item.address || {}
+          const foundCity =
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.municipality ||
             item.display_name.split(',')[0]
-          const country = item.address?.country || ''
+          const foundCountry = addr.country || ''
           return {
-            label: [city, country].filter(Boolean).join(', '),
+            label: [foundCity, foundCountry].filter(Boolean).join(', '),
             lat: parseFloat(item.lat),
             lon: parseFloat(item.lon),
             full: item.display_name,
@@ -214,7 +237,26 @@ export default function CreateEventModal({
   }
 
   useEffect(() => {
-    if (!showMap || !mapContainerRef.current || mapRef.current) return
+    if (!isOpen || !showMap || !mapContainerRef.current) {
+      if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
+      }
+      return
+    }
+
+    if (mapRef.current) {
+      mapRef.current.resize()
+      return
+    }
+
+    // Limpiar residuos en el contenedor antes de crear la instancia única
+    mapContainerRef.current.innerHTML = ''
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -224,7 +266,7 @@ export default function CreateEventModal({
     })
 
     map.addControl(new maplibregl.FullscreenControl())
-    setTimeout(() => map.resize(), 100)
+    const timer = setTimeout(() => map.resize(), 150)
 
     map.on('click', (e) => {
       const { lng, lat } = e.lngLat
@@ -241,11 +283,18 @@ export default function CreateEventModal({
     mapRef.current = map
 
     return () => {
-      map.remove()
-      mapRef.current = null
-      markerRef.current = null
+      clearTimeout(timer)
+      if (mapRef.current) {
+        markerRef.current?.remove()
+        markerRef.current = null
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = ''
+      }
     }
-  }, [showMap])
+  }, [isOpen, showMap])
 
   if (!isOpen) return null
 
@@ -257,19 +306,52 @@ export default function CreateEventModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const now = new Date()
+    // Formatting local date as YYYY-MM-DD
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const todayStr = `${year}-${month}-${day}`
+
     if (!title.trim() || !eventDate) {
       setValidationError('Por favor completa el título y la fecha del evento.')
       return
     }
 
+    if (eventDate < todayStr) {
+      setValidationError('No puedes crear eventos con fechas pasadas. La fecha debe ser posterior o igual al día de hoy.')
+      return
+    }
+
+    if (eventDate === todayStr && eventTime) {
+      const [hours, minutes] = eventTime.split(':').map(Number)
+      const currentHours = now.getHours()
+      const currentMinutes = now.getMinutes()
+
+      if (hours < currentHours || (hours === currentHours && minutes <= currentMinutes)) {
+        setValidationError('Para eventos en el día de hoy, la hora debe ser posterior a la hora actual.')
+        return
+      }
+    }
+
+    const finalLocation =
+      [streetAddress.trim(), city.trim(), province.trim(), country.trim()].filter(Boolean).join(', ') ||
+      location.trim() ||
+      'Online / Global'
+
     const newEvent: ProfileCard = {
       nickname: title.trim(),
       role: role.trim() || 'Evento Live',
-      location: location.trim() || 'Online / Global',
+      location: finalLocation,
+      country: country.trim(),
+      province: province.trim(),
+      city: city.trim(),
+      streetAddress: streetAddress.trim(),
       interestGenres: selectedGenres,
       image: image.trim() || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
       match: '100%',
-      bio: bio.trim() || 'Nuevo evento publicado por la comunidad en LinkedSound.',
+      descript: descript.trim() || 'Nuevo evento publicado por la comunidad en LinkedSound.',
       badge: 'Evento',
       itemRole: 'Evento',
       isProfile: false,
@@ -290,7 +372,7 @@ export default function CreateEventModal({
     setTitle('')
     setVenue('')
     setEventDate('')
-    setBio('')
+    setDescript('')
   }
 
   return (
@@ -298,7 +380,7 @@ export default function CreateEventModal({
       <div
         className="ls-modal-content ls-create-event-solid-card"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '640px', width: '100%' }}
+        style={{ maxWidth: '680px', width: '100%' }}
       >
         <button
           type="button"
@@ -393,6 +475,75 @@ export default function CreateEventModal({
             </div>
           </div>
 
+          {/* Bloque Detallado de Localización (País, Provincia, Localidad, Calle y Altura) */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px', margin: '8px 0 14px 0' }}>
+            <span style={{ display: 'block', fontSize: '0.8rem', color: '#c084fc', fontWeight: 700, marginBottom: '10px' }}>
+              <PiMapPinBold style={{ marginRight: '4px' }} /> Detalle de Localización del Evento
+            </span>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>País</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Argentina, Alemania, España..."
+                  value={country}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setCountry(val)
+                    updateLocationFromParts(val, province, city, streetAddress)
+                  }}
+                  className="ls-select-input"
+                />
+              </div>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Provincia / Estado</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Buenos Aires, Berlín, Madrid..."
+                  value={province}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setProvince(val)
+                    updateLocationFromParts(country, val, city, streetAddress)
+                  }}
+                  className="ls-select-input"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Localidad / Ciudad</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Palermo, Mitte, Malasaña..."
+                  value={city}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setCity(val)
+                    updateLocationFromParts(country, province, val, streetAddress)
+                  }}
+                  className="ls-select-input"
+                />
+              </div>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Calle y Altura</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Niceto Vega 5510, Skalitzer Str. 130..."
+                  value={streetAddress}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setStreetAddress(val)
+                    updateLocationFromParts(country, province, city, val)
+                  }}
+                  className="ls-select-input"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Selector Completo de Ubicación con Mapa y Geocodificación OSM */}
           <div className="ls-form-group wide-field ls-location-group" style={{ position: 'relative' }}>
             <label className="ls-form-label">Location / Ubicación del Evento</label>
@@ -480,6 +631,7 @@ export default function CreateEventModal({
               <label className="ls-form-label">Fecha *</label>
               <input
                 type="date"
+                min={new Date().toLocaleDateString('sv-SE')}
                 value={eventDate}
                 onChange={(e) => {
                   setEventDate(e.target.value)
@@ -524,8 +676,8 @@ export default function CreateEventModal({
               className="ls-textarea-input"
               rows={3}
               placeholder="Describe la propuesta musical, DJs o artistas invitados..."
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              value={descript}
+              onChange={(e) => setDescript(e.target.value)}
             />
           </div>
 
