@@ -200,7 +200,7 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
                     </div>
                   </div>
 
-                  <p className="ls-card-desc">{currentProfile.descript ?? currentProfile.bio ?? currentProfile.description}</p>
+                  <p className="ls-card-desc">{currentProfile.descript ?? currentProfile.description ?? currentProfile.description}</p>
 
                   <div className="ls-profile-interest-block">
                     <span className="ls-interest-label">Intereses de género</span>

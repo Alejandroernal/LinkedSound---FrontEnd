@@ -99,7 +99,7 @@ export type UserProfile = {
   joinedDate?: string
   reportsCount?: number
 
-  // Reglas de negocio y permisos
+  // Reglas de negocio y permisos xs
   allowEdit?: boolean
   allowPostRegister?: boolean
   teamDecision?: string
