@@ -251,7 +251,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
           <form className="ls-auth-form" onSubmit={(e) => { e.preventDefault(); handleContinue() }}>
             {/* ── Top Row: Foto de perfil + Inputs First Name & Last Name ── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
-              
+
               {/* Circle preview */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <button

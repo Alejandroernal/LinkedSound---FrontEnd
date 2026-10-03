@@ -646,8 +646,8 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
               {currentFilters.selectedCategories.length === 0
                 ? 'Todas las categorías'
                 : currentFilters.selectedCategories.length === 1
-                ? currentFilters.selectedCategories[0]
-                : `${currentFilters.selectedCategories.length} categorías seleccionadas`}
+                  ? currentFilters.selectedCategories[0]
+                  : `${currentFilters.selectedCategories.length} categorías seleccionadas`}
             </span>
           </div>
           <PiCaretDownBold style={{ transform: showCategoryPopover ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
