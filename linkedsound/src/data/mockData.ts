@@ -65,7 +65,7 @@ export const defaultUserProfile: UserProfile = {
   spotifyUrl: 'https://open.spotify.com/artist/kaelenvoss',
   instagramUrl: 'https://instagram.com/kaelenvoss',
   location: 'Berlin, Germany',
-  descript: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
+  description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
   allowEdit: true,
   allowPostRegister: true,
   teamDecision: 'Permitir cambiar el rol (Productor/Artista) después del alta, y si eso recalcula los matches generados por afinidad. -> Sí, permite cambiar el rol y recalcularía matches.',
@@ -94,6 +94,8 @@ export const queueItems = [
 
 export const recommendations: ProfileCard[] = [
   {
+    firstName: 'Kylian',
+    lastName: 'Mbappé',
     nickname: 'Kylian Dictador',
     role: 'Productor/Artista',
     location: 'Francia, paris',
@@ -101,10 +103,10 @@ export const recommendations: ProfileCard[] = [
     soundcloudUrl: 'https://soundcloud.com/jesus-922347355',
     spotifyUrl: 'https://open.spotify.com/artist/kylian',
     instagramUrl: 'https://instagram.com/kyliandictador',
-    image:
+    profileImage:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk3D-J2lE2LLanWoFeEkrMec5OB_tRjxzqgg_Y9w7iNXOUAjPCWDTrICZ8&s=10',
     match: '22%',
-    descript: 'Analog textures and harsh synth design.',
+    description: 'Analog textures and harsh synth design.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'jesus-922347355',
@@ -128,17 +130,19 @@ export const recommendations: ProfileCard[] = [
     ],
   },
   {
-    nickname: 'Luna Sol',
+    firstName: 'Luna',
+    lastName: 'Sol',
+    nickname: 'sOLEDADlUNA',
     role: 'Artista',
     location: 'New York, NY',
     interestGenres: ['Vocal', 'Alt Pop', 'Analog'],
     soundcloudUrl: 'https://soundcloud.com/lunasol_official',
     spotifyUrl: 'https://open.spotify.com/artist/lunasol',
     instagramUrl: 'https://instagram.com/lunasol',
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    descript: 'Warm vocals with cinematic melodic hooks.',
+    description: 'Warm vocals with cinematic melodic hooks.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'lunasol_official',
@@ -162,6 +166,8 @@ export const recommendations: ProfileCard[] = [
     ],
   },
   {
+    firstName: 'Facundo',
+    lastName: 'Doro',
     nickname: 'Golden Boy',
     role: 'Productor/Artista',
     location: 'Entre Rios, Argentina',
@@ -169,10 +175,10 @@ export const recommendations: ProfileCard[] = [
     soundcloudUrl: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
     spotifyUrl: 'https://open.spotify.com/artist/goldenboy',
     instagramUrl: 'https://instagram.com/goldenboy',
-    image:
+    profileImage:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
     match: '100%',
-    descript: 'HardTrap Specialist, Producer, Artist.',
+    description: 'HardTrap Specialist, Producer, Artist.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'goldennnnnnnnnnnnnnn',
@@ -196,6 +202,8 @@ export const recommendations: ProfileCard[] = [
     ],
   },
   {
+    firstName: 'Elena',
+    lastName: 'Rostova',
     nickname: 'Elena Rostova',
     role: 'Artista',
     location: 'Berlin, Germany',
@@ -203,10 +211,10 @@ export const recommendations: ProfileCard[] = [
     soundcloudUrl: 'https://soundcloud.com/elena-rostova',
     spotifyUrl: 'https://open.spotify.com/artist/elenarostova',
     instagramUrl: 'https://instagram.com/elenarostova',
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
     match: '91%',
-    descript: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
+    description: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'elena-rostova',
@@ -222,6 +230,8 @@ export const recommendations: ProfileCard[] = [
     ],
   },
   {
+    firstName: 'Marcus',
+    lastName: 'Cyber',
     nickname: 'Marcus Cyber',
     role: 'Productor',
     location: 'Tokyo, Japan',
@@ -229,10 +239,10 @@ export const recommendations: ProfileCard[] = [
     soundcloudUrl: 'https://soundcloud.com/marcus-cyber',
     spotifyUrl: 'https://open.spotify.com/artist/marcuscyber',
     instagramUrl: 'https://instagram.com/marcuscyber',
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
     match: '88%',
-    descript: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
+    description: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'marcus-cyber',
@@ -248,6 +258,8 @@ export const recommendations: ProfileCard[] = [
     ],
   },
   {
+    firstName: 'Mateo',
+    lastName: 'Sound',
     nickname: 'Mateo Sound',
     role: 'Productor',
     location: 'Buenos Aires, Argentina',
@@ -255,10 +267,10 @@ export const recommendations: ProfileCard[] = [
     soundcloudUrl: 'https://soundcloud.com/mateosound',
     spotifyUrl: 'https://open.spotify.com/artist/mateosound',
     instagramUrl: 'https://instagram.com/mateosound',
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
     match: '84%',
-    descript: 'Groovy underground minimal & tech house producer based in BA.',
+    description: 'Groovy underground minimal & tech house producer based in BA.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'mateosound',
@@ -274,6 +286,8 @@ export const recommendations: ProfileCard[] = [
     ],
   },
   {
+    firstName: 'Aria',
+    lastName: 'Vibe',
     nickname: 'Aria Vibe',
     role: 'Artista',
     location: 'London, UK',
@@ -281,10 +295,10 @@ export const recommendations: ProfileCard[] = [
     soundcloudUrl: 'https://soundcloud.com/ariavibe',
     spotifyUrl: 'https://open.spotify.com/artist/ariavibe',
     instagramUrl: 'https://instagram.com/ariavibe',
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
     match: '79%',
-    descript: 'Atmospheric ambient textures and dream-pop vocal loops.',
+    description: 'Atmospheric ambient textures and dream-pop vocal loops.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'ariavibe',
@@ -298,24 +312,24 @@ export const recommendations: ProfileCard[] = [
         soundcloudLink: 'https://soundcloud.com/search?q=ariavibe',
       },
     ],
-  }
+  },
 ]
 
-export const exploreCards: ProfileCard[] = [
+
+export const eventCards: ProfileCard[] = [
   {
     nickname: 'Circuito Nocturno',
     role: 'Berlin live session',
     location: 'Berlin, Germany',
     interestGenres: ['Live', 'Techno', 'Cinematic', 'Experimental'],
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    descript: 'A dark, rhythmic fusion of techno textures and gritty vocal layers.',
+    description: 'A dark, rhythmic fusion of techno textures and gritty vocal layers.',
     badge: 'Featured',
     itemRole: 'Evento',
     isProfile: false,
 
-    // Atributos específicos de Evento (Campos de Perfil son undefined / null)
     eventDate: '2026-10-15',
     eventTime: '23:00',
     venue: 'Watergate Club Berlin',
@@ -326,181 +340,24 @@ export const exploreCards: ProfileCard[] = [
     city: 'Mitte',
     streetAddress: 'Köpenicker Str. 70',
 
-    // Atributos de Perfil (nulos en eventos)
     soundcloudUrl: '',
     spotifyUrl: '',
     instagramUrl: '',
     tracks: undefined,
   },
   {
-    nickname: 'Kylian Dictador',
-    role: 'Productor/Artista',
-    location: 'Francia, paris',
-    interestGenres: ['ModularSynth', 'Live', 'Drone'],
-    soundcloudUrl: 'https://soundcloud.com/jesus-922347355',
-    spotifyUrl: 'https://open.spotify.com/artist/kylian',
-    instagramUrl: 'https://instagram.com/kyliandictador',
-    image:
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk3D-J2lE2LLanWoFeEkrMec5OB_tRjxzqgg_Y9w7iNXOUAjPCWDTrICZ8&s=10',
-    match: '22%',
-    descript: 'Analog textures and harsh synth design.',
-    badge: 'Producer',
-    itemRole: 'Perfil',
-    isProfile: true,
-    soundcloudHandle: 'jesus-922347355',
-
-    // Atributos de Evento (nulos en perfiles)
-    eventDate: undefined,
-    eventTime: undefined,
-    venue: undefined,
-    ticketUrl: undefined,
-    isFinished: undefined,
-
-    tracks: [
-      {
-        id: 'kd0_exp',
-        title: 'pink_mew_laughing_d...',
-        plays: '249',
-        duration: '0:42',
-        genre: 'Último tema subido',
-        soundcloudLink: 'https://soundcloud.com/jesus-922347355',
-      },
-      {
-        id: 'kd1_exp',
-        title: 'KYLIAN MBAPPE #808',
-        plays: '24.5k',
-        duration: '6:20',
-        genre: 'Eurorack',
-        soundcloudLink: 'https://soundcloud.com/jesus-922347355/kylian-mbappe-dictador-anthem?si=19e7123b5b73411cb1db73c20ee79e73&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing',
-      },
-    ],
-  },
-  {
-    nickname: 'Luna Sol',
-    role: 'Artista',
-    location: 'New York, NY',
-    interestGenres: ['Vocal', 'Alt Pop', 'Analog'],
-    soundcloudUrl: 'https://soundcloud.com/lunasol_official',
-    spotifyUrl: 'https://open.spotify.com/artist/lunasol',
-    instagramUrl: 'https://instagram.com/lunasol',
-    image:
-      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
-    match: '96%',
-    descript: 'Warm vocals with cinematic melodic hooks.',
-    badge: 'Artist',
-    itemRole: 'Perfil',
-    isProfile: true,
-    soundcloudHandle: 'lunasol_official',
-
-    // Atributos de Evento
-    eventDate: undefined,
-    eventTime: undefined,
-    venue: undefined,
-    ticketUrl: undefined,
-
-    tracks: [
-      {
-        id: 'ls1_exp',
-        title: 'Cinematic Melodies (Acapella Stems)',
-        plays: '52.8k',
-        duration: '3:30',
-        genre: 'Vocal',
-        soundcloudLink: 'https://soundcloud.com/search?q=lunasol',
-      },
-      {
-        id: 'ls2_exp',
-        title: 'Hypnotic Tape Delays (R&B Edit)',
-        plays: '31.4k',
-        duration: '4:05',
-        genre: 'Alt Pop',
-        soundcloudLink: 'https://soundcloud.com/search?q=lunasol',
-      },
-    ],
-  },
-  {
-    nickname: 'Golden Boy',
-    role: 'Productor/Artista',
-    location: 'Entre Rios, Argentina',
-    interestGenres: ['HardTrap', 'Producer', 'Artist'],
-    soundcloudUrl: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
-    spotifyUrl: 'https://open.spotify.com/artist/goldenboy',
-    instagramUrl: 'https://instagram.com/goldenboy',
-    image:
-      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
-    match: '100%',
-    descript: 'HardTrap Specialist, Producer, Artist.',
-    badge: 'Producer',
-    itemRole: 'Perfil',
-    isProfile: true,
-    soundcloudHandle: 'goldennnnnnnnnnnnnnn',
-
-    tracks: [
-      {
-        id: 'gb0_exp',
-        title: 'Step back - !Deoro',
-        plays: '158',
-        duration: '2:22',
-        genre: 'HardTrap',
-        soundcloudLink: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
-      },
-      {
-        id: 'gb1_exp',
-        title: '0ffl1n3 - !Deoro',
-        plays: '156',
-        duration: '2:43',
-        genre: 'HardTrap',
-        soundcloudLink: 'https://soundcloud.com/goldennnnnnnnnnnnnnn/4nd0-0ffl1n3-deoro?si=e618d823716e4d25a3bb80ea3f627bfd&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing',
-      },
-    ],
-  },
-  {
-    nickname: 'Elena Rostova',
-    role: 'Artista',
-    location: 'Berlin, Germany',
-    interestGenres: ['Darkwave', 'Synthwave', 'Vocal'],
-    soundcloudUrl: 'https://soundcloud.com/elena-rostova',
-    spotifyUrl: 'https://open.spotify.com/artist/elenarostova',
-    instagramUrl: 'https://instagram.com/elenarostova',
-    image:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
-    match: '91%',
-    descript: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
-    badge: 'Artist',
-    itemRole: 'Perfil',
-    isProfile: true,
-    soundcloudHandle: 'elena-rostova',
-  },
-  {
-    nickname: 'Marcus Cyber',
-    role: 'Productor',
-    location: 'Tokyo, Japan',
-    interestGenres: ['Cyberpunk', 'Industrial', 'EBM'],
-    soundcloudUrl: 'https://soundcloud.com/marcus-cyber',
-    spotifyUrl: 'https://open.spotify.com/artist/marcuscyber',
-    instagramUrl: 'https://instagram.com/marcuscyber',
-    image:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
-    match: '88%',
-    descript: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
-    badge: 'Producer',
-    itemRole: 'Perfil',
-    isProfile: true,
-    soundcloudHandle: 'marcus-cyber',
-  },
-  {
     nickname: 'Cyberpunk Sound Expo 2026',
     role: 'Festival & Workshop',
     location: 'Tokyo, Japan',
     interestGenres: ['Cyberpunk', 'Industrial', 'Synthwave'],
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
     match: '92%',
-    descript: 'Un encuentro masivo de música electrónica industrial, sintetizadores analógicos e instalaciones audiovisuales.',
+    description: 'Un encuentro masivo de música electrónica industrial, sintetizadores analógicos e instalaciones audiovisuales.',
     badge: 'Evento',
     itemRole: 'Evento',
     isProfile: false,
 
-    // Atributos de Evento Activo
     eventDate: '2026-11-20',
     eventTime: '18:00',
     venue: 'AGEHA Tokyo Dome Arena',
@@ -520,15 +377,14 @@ export const exploreCards: ProfileCard[] = [
     role: 'Jam Session Live',
     location: 'Buenos Aires, Argentina',
     interestGenres: ['Tech House', 'Minimal', 'Electronic'],
-    image:
+    profileImage:
       'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&q=80',
     match: '85%',
-    descript: 'Jam libre para productores y DJs locales de minimal y tech house en Palermo.',
+    description: 'Jam libre para productores y DJs locales de minimal y tech house en Palermo.',
     badge: 'Evento',
     itemRole: 'Evento',
     isProfile: false,
 
-    // Atributos de Evento Expirado / Finalizado (Fecha pasada en 2026)
     eventDate: '2026-09-15',
     eventTime: '22:00',
     venue: 'Niceto Club Palermo',
@@ -543,23 +399,13 @@ export const exploreCards: ProfileCard[] = [
     spotifyUrl: '',
     instagramUrl: '',
   },
-  {
-    nickname: 'Aria Vibe',
-    role: 'Artista',
-    location: 'London, UK',
-    interestGenres: ['Ambient', 'Lo-Fi', 'Vocal'],
-    soundcloudUrl: 'https://soundcloud.com/ariavibe',
-    spotifyUrl: 'https://open.spotify.com/artist/ariavibe',
-    instagramUrl: 'https://instagram.com/ariavibe',
-    image:
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
-    match: '79%',
-    descript: 'Atmospheric ambient textures and dream-pop vocal loops.',
-    badge: 'Artist',
-    itemRole: 'Perfil',
-    isProfile: true,
-    soundcloudHandle: 'ariavibe',
-  }
+]
+
+export const exploreCards: ProfileCard[] = [
+  eventCards[0],
+  ...recommendations,
+  eventCards[1],
+  eventCards[2],
 ]
 
 export const conversations: Conversation[] = [
@@ -723,7 +569,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/kaelen',
     instagramUrl: 'https://instagram.com/kaelen',
     soundcloudUrl: 'https://soundcloud.com/kaelen',
-    descript: 'Building cinematic soundscapes with modular synths.'
+    description: 'Building cinematic soundscapes with modular synths.'
   },
   {
     id: 'USR-02',
@@ -740,7 +586,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/alexvibe',
     instagramUrl: 'https://instagram.com/alexvibe',
     soundcloudUrl: 'https://soundcloud.com/alexvibe',
-    descript: 'Tech house & minimal DJ.'
+    description: 'Tech house & minimal DJ.'
   },
   {
     id: 'USR-03',
@@ -757,7 +603,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/lunabeats',
     instagramUrl: 'https://instagram.com/lunabeats',
     soundcloudUrl: 'https://soundcloud.com/lunabeats',
-    descript: 'Chilled beats & atmospheric sounds.'
+    description: 'Chilled beats & atmospheric sounds.'
   },
   {
     id: 'USR-04',
@@ -774,7 +620,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/markstudio',
     instagramUrl: 'https://instagram.com/markstudio',
     soundcloudUrl: 'https://soundcloud.com/markstudio',
-    descript: 'Audio engineer & mixing master.'
+    description: 'Audio engineer & mixing master.'
   },
 ]
 

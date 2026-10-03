@@ -2,9 +2,8 @@ import { useState } from 'react'
 import TopBar from '../components/TopBar'
 import StatusBar from '../components/StatusBar'
 import { mockReports, mockActivity, mockUsers, mockExplorerItems } from '../data/mockData'
-import type { AppPage, Profile, UserReport, UserActivityLog, UserProfile, ExplorerItem } from '../types'
+import type { AppPage, Profile, UserReport, UserActivityLog, UserProfile, ExplorerItem, NotificationItem } from '../types'
 import {
-  PiSignOutBold,
   PiUsersBold,
   PiWarningOctagonBold,
   PiPulseBold,
@@ -17,9 +16,23 @@ type AdminPageProps = {
   onNavigate: (page: AppPage) => void
   onLogout?: () => void
   profile?: Profile
+  notifications?: NotificationItem[]
+  onMarkNotificationAsRead?: (id: string) => void
+  onMarkAllNotificationsAsRead?: () => void
+  onClearNotifications?: () => void
+  onSignOut?: () => void
 }
 
-export default function AdminPage({ onNavigate, onLogout, profile }: AdminPageProps) {
+export default function AdminPage({
+  onNavigate,
+  onLogout,
+  profile,
+  notifications,
+  onMarkNotificationAsRead,
+  onMarkAllNotificationsAsRead,
+  onClearNotifications,
+  onSignOut,
+}: AdminPageProps) {
   const [activeTab, setActiveTab] = useState<'reports' | 'users' | 'explorer' | 'activity'>('reports')
 
   // Estados de datos interactivos desde mockData.ts
@@ -144,8 +157,12 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
   }
 
   const handleSignOut = () => {
-    onLogout?.()
-    onNavigate('Login')
+    const signOutFn = onSignOut || onLogout
+    if (signOutFn) {
+      signOutFn()
+    } else {
+      onNavigate('Login')
+    }
   }
 
   // Filtros aplicados
@@ -175,14 +192,24 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
     <div className="ls-admin-app-layout">
 
       {/* TopBar global con la sesión de Administrador activa */}
-      <TopBar activePage="Admin" onNavigate={onNavigate} profile={profile} isAdminSession={true} />
+      <TopBar
+        activePage="Admin"
+        onNavigate={onNavigate}
+        profile={profile}
+        isAdminSession={true}
+        notifications={notifications}
+        onMarkNotificationAsRead={onMarkNotificationAsRead}
+        onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
+        onClearNotifications={onClearNotifications}
+        onSignOut={onSignOut || onLogout}
+      />
 
       <main className="ls-admin-main-content">
 
         {/* Banner Admin Header */}
         <div className="ls-admin-banner">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <div className="ls-admin-banner-header-row">
               <span className="ls-admin-badge-isolated">Sistema Aislado de Administración</span>
               <h1 className="ls-admin-banner-title">Panel de Moderación y Control Global</h1>
             </div>
@@ -191,7 +218,7 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="ls-admin-banner-stats-group">
             <div className="ls-admin-stat-card pending">
               <div className="ls-admin-stat-num pending">{reports.filter(r => r.status === 'Pending').length}</div>
               <div className="ls-admin-stat-lbl">Reportes Pendientes</div>
@@ -200,12 +227,6 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
               <div className="ls-admin-stat-num users">{users.length}</div>
               <div className="ls-admin-stat-lbl">Usuarios Totales</div>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="ls-admin-logout-btn"
-            >
-              <PiSignOutBold /> Salir
-            </button>
           </div>
         </div>
 
@@ -215,28 +236,28 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
             onClick={() => setActiveTab('reports')}
             className={`ls-admin-tab-btn ${activeTab === 'reports' ? 'active-reports' : ''}`}
           >
-            <PiWarningOctagonBold style={{ fontSize: '18px' }} /> Reportes ({reports.length})
+            <PiWarningOctagonBold className="ls-admin-tab-icon" /> Reportes ({reports.length})
           </button>
 
           <button
             onClick={() => setActiveTab('users')}
             className={`ls-admin-tab-btn ${activeTab === 'users' ? 'active-users' : ''}`}
           >
-            <PiUsersBold style={{ fontSize: '18px' }} /> Gestión de Usuarios ({users.length})
+            <PiUsersBold className="ls-admin-tab-icon" /> Gestión de Usuarios ({users.length})
           </button>
 
           <button
             onClick={() => setActiveTab('explorer')}
             className={`ls-admin-tab-btn ${activeTab === 'explorer' ? 'active-explorer' : ''}`}
           >
-            <PiMagnifyingGlassBold style={{ fontSize: '18px' }} /> Objetos de Explorer ({explorerItems.length})
+            <PiMagnifyingGlassBold className="ls-admin-tab-icon" /> Objetos de Explorer ({explorerItems.length})
           </button>
 
           <button
             onClick={() => setActiveTab('activity')}
             className={`ls-admin-tab-btn ${activeTab === 'activity' ? 'active-activity' : ''}`}
           >
-            <PiPulseBold style={{ fontSize: '18px' }} /> Registro de Actividad ({activities.length})
+            <PiPulseBold className="ls-admin-tab-icon" /> Registro de Actividad ({activities.length})
           </button>
         </div>
 
@@ -245,8 +266,8 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
           <div className="ls-admin-card-panel">
             <div className="ls-admin-card-header">
               <div>
-                <h3 style={{ margin: 0, color: '#fff', fontSize: '18px', fontWeight: 700 }}>Todos los Reportes de la Plataforma</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Visualiza el origen (Discovery / Explorer) y la categoría (Perfil / Evento) de cada reporte.</p>
+                <h3 className="ls-admin-panel-title">Todos los Reportes de la Plataforma</h3>
+                <p className="ls-admin-panel-subtitle">Visualiza el origen (Discovery / Explorer) y la categoría (Perfil / Evento) de cada reporte.</p>
               </div>
 
               {/* Filtro por origen */}
@@ -266,32 +287,33 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
             <div className="ls-admin-list-container">
               {filteredReports.map((report) => (
                 <div key={report.id} className="ls-admin-report-card">
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>{report.id}</span>
+                  <div className="ls-admin-report-card-main">
+                    <div className="ls-admin-report-card-header">
+                      <span className="ls-admin-report-id">{report.id}</span>
 
-                      <span className={report.origin === 'Discovery' ? 'ls-admin-badge-origin-discovery' : 'ls-admin-badge-origin-explorer'}>
+                      <span className="ls-admin-badge-subtle">
                         Origen: {report.origin}
                       </span>
 
-                      <span className={report.targetType === 'Perfil' ? 'ls-admin-badge-type-perfil' : 'ls-admin-badge-type-evento'}>
+                      <span className="ls-admin-badge-subtle">
                         Tipo: {report.targetType}
                       </span>
 
-                      <span className={report.severity === 'High' ? 'ls-admin-badge-severity-high' : 'ls-admin-badge-severity-medium'}>
+                      <span className="ls-admin-badge-subtle">
                         Severidad: {report.severity}
                       </span>
 
-                      <span style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>
-                        <strong style={{ color: '#ff3c6e' }}>{report.reportedUser}</strong> reportado por <strong>{report.reporterUser}</strong>
+                      <span className="ls-admin-report-user-line">
+                        <strong className="ls-admin-reported-user">{report.reportedUser}</strong>
+                        <span className="ls-admin-reporter-text"> reportado por <strong>{report.reporterUser}</strong></span>
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '14px', color: '#fff', marginBottom: '8px', fontWeight: 500 }}>
-                      Motivo: <span style={{ color: 'rgba(255,255,255,0.95)', fontWeight: 600 }}>{report.reason}</span>
+                    <div className="ls-admin-report-reason">
+                      Motivo: <span className="ls-admin-reason-text">{report.reason}</span>
                     </div>
 
-                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.3)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #ff3c6e' }}>
+                    <p className="ls-admin-report-details">
                       "{report.details}"
                     </p>
 
@@ -301,14 +323,17 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
                       </div>
                     )}
 
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
+                    <div className="ls-admin-report-date">
                       Fecha y hora: {report.date}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '160px' }}>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>
-                      Estado: <strong style={{ color: report.status === 'Resolved' ? '#27ae60' : report.status === 'Pending' ? '#ffb400' : 'rgba(255,255,255,0.6)' }}>{report.status}</strong>
+                  <div className="ls-admin-report-card-actions">
+                    <div className="ls-admin-status-wrap">
+                      <span className="ls-admin-status-label">Estado:</span>
+                      <span className={`ls-admin-status-pill status-${report.status.toLowerCase()}`}>
+                        {report.status}
+                      </span>
                     </div>
 
                     <button
@@ -339,123 +364,73 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
         {/* ── TAB 2: GESTIÓN DE USUARIOS (Con Conteo Interactivo de Reportes) ── */}
         {activeTab === 'users' && (
-          <div style={{ background: 'rgba(18, 18, 28, 0.6)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div className="ls-admin-card-panel">
+            <div className="ls-admin-card-header">
               <div>
-                <h3 style={{ margin: 0, color: '#fff', fontSize: '18px', fontWeight: 700 }}>Gestión Total de Usuarios</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Inspecciona la información completa de las cuentas y presiona sobre la cifra de reportes para auditar sus casos.</p>
+                <h3 className="ls-admin-card-title">Gestión Total de Usuarios</h3>
+                <p className="ls-admin-card-subtitle">Inspecciona la información completa de las cuentas y presiona sobre la cifra de reportes para auditar sus casos.</p>
               </div>
               <input
                 type="text"
                 placeholder="Buscar usuario, email o rol..."
                 value={userSearchTerm}
                 onChange={e => setUserSearchTerm(e.target.value)}
-                style={{
-                  background: 'rgba(0,0,0,0.4)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '8px',
-                  padding: '10px 16px',
-                  color: '#fff',
-                  width: '280px',
-                  fontSize: '13px'
-                }}
+                className="ls-admin-search-input"
               />
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+            <div className="ls-admin-table-container">
+              <table className="ls-admin-table">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                    <th style={{ padding: '14px' }}>Usuario</th>
-                    <th style={{ padding: '14px' }}>Email</th>
-                    <th style={{ padding: '14px' }}>Rol</th>
-                    <th style={{ padding: '14px' }}>Ubicación</th>
-                    <th style={{ padding: '14px' }}>Estado</th>
-                    <th style={{ padding: '14px' }}>Reportes</th>
-                    <th style={{ padding: '14px', textAlign: 'right' }}>Acciones Administrador</th>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Ubicación</th>
+                    <th>Estado</th>
+                    <th>Reportes</th>
+                    <th className="ls-admin-table-align-right">Acciones Administrador</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.map(u => (
-                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
-                      <td style={{ padding: '14px', fontWeight: 700 }}>
+                    <tr key={u.id}>
+                      <td className="ls-admin-table-bold-cell">
                         <div>
                           <div>{u.nickname}</div>
-                          <small style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{u.firstName} {u.lastName}</small>
+                          <small className="ls-admin-table-subtext">{u.firstName} {u.lastName}</small>
                         </div>
                       </td>
-                      <td style={{ padding: '14px', color: 'rgba(255,255,255,0.7)' }}>{u.email}</td>
-                      <td style={{ padding: '14px' }}>{u.role}</td>
-                      <td style={{ padding: '14px', color: 'rgba(255,255,255,0.6)' }}>{u.location}</td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          background: u.status === 'Active' ? 'rgba(39, 174, 96, 0.2)' : 'rgba(231, 76, 60, 0.2)',
-                          color: u.status === 'Active' ? '#27ae60' : '#e74c3c',
-                          border: `1px solid ${u.status === 'Active' ? '#27ae60' : '#e74c3c'}`
-                        }}>
+                      <td className="ls-admin-table-secondary-cell">{u.email}</td>
+                      <td>{u.role}</td>
+                      <td className="ls-admin-table-muted-cell">{u.location}</td>
+                      <td>
+                        <span className={`ls-admin-user-status-pill status-${u.status?.toLowerCase() === 'active' ? 'active' : 'suspended'}`}>
                           {u.status}
                         </span>
                       </td>
-                      <td style={{ padding: '14px' }}>
+                      <td>
                         {/* Botón interactivo para ver los reportes específicos de este usuario */}
                         <button
                           onClick={() => handleOpenUserReportsModal(u)}
-                          style={{
-                            background: u.reportsCount ? 'rgba(255, 60, 110, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                            color: u.reportsCount ? '#ff3c6e' : 'rgba(255,255,255,0.6)',
-                            border: `1px solid ${u.reportsCount ? '#ff3c6e' : 'rgba(255,255,255,0.1)'}`,
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
+                          className={`ls-admin-user-reports-btn ${u.reportsCount ? 'has-reports' : ''}`}
                           title="Presione para ver el desglose de reportes de este usuario"
                         >
-                          <PiWarningOctagonBold /> {u.reportsCount ?? 0} Reportes
+                          <PiWarningOctagonBold /> {u.reportsCount ?? 0} Rep
                         </button>
                       </td>
-                      <td style={{ padding: '14px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <td className="ls-admin-table-align-right">
+                        <div className="ls-admin-table-actions">
                           <button
                             onClick={() => setEditingUser(u)}
-                            style={{
-                              background: 'rgba(0,229,255,0.15)',
-                              color: '#00e5ff',
-                              border: '1px solid rgba(0,229,255,0.3)',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
+                            className="ls-admin-table-btn-edit"
                             title="Editar Perfil Completo"
                           >
                             <PiPencilBold /> Editar / Ver Todo
                           </button>
                           <button
                             onClick={() => handleDeleteUser(u.id!)}
-                            style={{
-                              background: 'rgba(231, 76, 60, 0.2)',
-                              color: '#e74c3c',
-                              border: '1px solid rgba(231, 76, 60, 0.4)',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
+                            className="ls-admin-table-btn-delete"
                             title="Eliminar Perfil"
                           >
                             <PiTrashBold /> Eliminar
@@ -472,125 +447,73 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
         {/* ── TAB 3: OBJETOS DE EXPLORER ── */}
         {activeTab === 'explorer' && (
-          <div style={{ background: 'rgba(18, 18, 28, 0.6)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div className="ls-admin-card-panel">
+            <div className="ls-admin-card-header">
               <div>
-                <h3 style={{ margin: 0, color: '#fff', fontSize: '18px', fontWeight: 700 }}>Gestión de Artículos y Objetos en Explorer</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Controla los eventos, perfiles y artículos publicados en la sección Explorer.</p>
+                <h3 className="ls-admin-card-title">Gestión de Artículos y Objetos en Explorer</h3>
+                <p className="ls-admin-card-subtitle">Controla los eventos, perfiles y artículos publicados en la sección Explorer.</p>
               </div>
               <input
                 type="text"
                 placeholder="Buscar artículo, autor o lugar..."
                 value={explorerSearchTerm}
                 onChange={e => setExplorerSearchTerm(e.target.value)}
-                style={{
-                  background: 'rgba(0,0,0,0.4)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '8px',
-                  padding: '10px 16px',
-                  color: '#fff',
-                  width: '280px',
-                  fontSize: '13px'
-                }}
+                className="ls-admin-search-input"
               />
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+            <div className="ls-admin-table-container">
+              <table className="ls-admin-table">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                    <th style={{ padding: '14px' }}>Título del Objeto</th>
-                    <th style={{ padding: '14px' }}>Tipo</th>
-                    <th style={{ padding: '14px' }}>Propietario</th>
-                    <th style={{ padding: '14px' }}>Ubicación</th>
-                    <th style={{ padding: '14px' }}>Vistas</th>
-                    <th style={{ padding: '14px' }}>Estado</th>
-                    <th style={{ padding: '14px', textAlign: 'right' }}>Acciones</th>
+                  <tr>
+                    <th>Título del Objeto</th>
+                    <th>Tipo</th>
+                    <th>Propietario</th>
+                    <th>Ubicación</th>
+                    <th>Vistas</th>
+                    <th>Estado</th>
+                    <th className="ls-admin-table-align-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredExplorerItems.map(item => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
-                      <td style={{ padding: '14px', fontWeight: 700 }}>
+                    <tr key={item.id}>
+                      <td className="ls-admin-table-bold-cell">
                         <div>
                           <div>{item.title}</div>
-                          <small style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{item.genres.join(', ')}</small>
+                          <small className="ls-admin-table-subtext">{item.genres.join(', ')}</small>
                         </div>
                       </td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          background: item.type === 'Evento' ? 'rgba(255, 180, 0, 0.2)' : 'rgba(155, 81, 224, 0.2)',
-                          color: item.type === 'Evento' ? '#ffb400' : '#9b51e0'
-                        }}>
+                      <td>
+                        <span className="ls-admin-badge-subtle">
                           {item.type}
                         </span>
                       </td>
-                      <td style={{ padding: '14px', color: 'rgba(255,255,255,0.8)' }}>{item.owner}</td>
-                      <td style={{ padding: '14px', color: 'rgba(255,255,255,0.6)' }}>{item.location}</td>
-                      <td style={{ padding: '14px', color: '#00e5ff', fontWeight: 600 }}>{item.views}</td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          background: item.status === 'Active' ? 'rgba(39, 174, 96, 0.2)' : 'rgba(231, 76, 60, 0.2)',
-                          color: item.status === 'Active' ? '#27ae60' : '#e74c3c'
-                        }}>
+                      <td className="ls-admin-table-owner-cell">{item.owner}</td>
+                      <td className="ls-admin-table-muted-cell">{item.location}</td>
+                      <td className="ls-admin-table-views-cell">{item.views}</td>
+                      <td>
+                        <span className={`ls-admin-status-pill status-${item.status === 'Active' ? 'resolved' : item.status === 'Under Review' ? 'pending' : 'dismissed'}`}>
                           {item.status}
                         </span>
                       </td>
-                      <td style={{ padding: '14px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <td className="ls-admin-table-align-right">
+                        <div className="ls-admin-table-actions">
                           <button
                             onClick={() => handleToggleExplorerStatus(item.id)}
-                            style={{
-                              background: 'rgba(255,255,255,0.08)',
-                              color: '#fff',
-                              border: '1px solid rgba(255,255,255,0.15)',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '11px'
-                            }}
+                            className="ls-admin-table-btn-toggle"
                           >
                             {item.status === 'Active' ? 'Ocultar' : 'Activar'}
                           </button>
                           <button
                             onClick={() => setEditingExplorerItem(item)}
-                            style={{
-                              background: 'rgba(0,229,255,0.15)',
-                              color: '#00e5ff',
-                              border: '1px solid rgba(0,229,255,0.3)',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '11px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
+                            className="ls-admin-table-btn-edit"
                           >
                             <PiPencilBold /> Editar / Ver Todo
                           </button>
                           <button
                             onClick={() => handleDeleteExplorerItem(item.id)}
-                            style={{
-                              background: 'rgba(231, 76, 60, 0.2)',
-                              color: '#e74c3c',
-                              border: '1px solid rgba(231, 76, 60, 0.4)',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '11px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
+                            className="ls-admin-table-btn-delete"
                           >
                             <PiTrashBold /> Eliminar
                           </button>
@@ -606,29 +529,20 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
         {/* ── TAB 4: REGISTRO DE ACTIVIDAD ── */}
         {activeTab === 'activity' && (
-          <div style={{ background: 'rgba(18, 18, 28, 0.6)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div className="ls-admin-activity-panel">
+            <div className="ls-admin-activity-header">
               <div>
-                <h3 style={{ margin: 0, color: '#fff', fontSize: '18px', fontWeight: 700 }}>Registro Global de Actividad e IP</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Auditoría completa de acciones realizadas en Perfiles, Explorer y Sistema.</p>
+                <h3 className="ls-admin-panel-title">Registro Global de Actividad e IP</h3>
+                <p className="ls-admin-panel-subtitle">Auditoría completa de acciones realizadas en Perfiles, Explorer y Sistema.</p>
               </div>
 
               {/* Filtro por Módulo */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="ls-admin-activity-filter-group">
                 {(['All', 'Perfil', 'Explorer', 'Sistema'] as const).map(mod => (
                   <button
                     key={mod}
                     onClick={() => setActivityModuleFilter(mod)}
-                    style={{
-                      background: activityModuleFilter === mod ? '#00e5ff' : 'rgba(255,255,255,0.06)',
-                      color: activityModuleFilter === mod ? '#000' : '#fff',
-                      border: 'none',
-                      padding: '6px 14px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
+                    className={`ls-admin-activity-filter-btn ${activityModuleFilter === mod ? 'active' : ''}`}
                   >
                     {mod === 'All' ? 'Todos los Módulos' : mod}
                   </button>
@@ -636,40 +550,33 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
               </div>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+            <div className="ls-admin-activity-table-wrap">
+              <table className="ls-admin-activity-table">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                    <th style={{ padding: '14px' }}>ID Evento</th>
-                    <th style={{ padding: '14px' }}>Módulo</th>
-                    <th style={{ padding: '14px' }}>Usuario</th>
-                    <th style={{ padding: '14px' }}>Acción Ejecutada</th>
-                    <th style={{ padding: '14px' }}>Tiempo</th>
-                    <th style={{ padding: '14px' }}>Dirección IP</th>
-                    <th style={{ padding: '14px' }}>Dispositivo</th>
+                  <tr className="ls-admin-activity-table-head-row">
+                    <th>ID Evento</th>
+                    <th>Módulo</th>
+                    <th>Usuario</th>
+                    <th>Acción Ejecutada</th>
+                    <th>Tiempo</th>
+                    <th>Dirección IP</th>
+                    <th>Dispositivo</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredActivities.map(act => (
-                    <tr key={act.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
-                      <td style={{ padding: '14px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>{act.id}</td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          background: act.module === 'Explorer' ? 'rgba(255, 180, 0, 0.2)' : act.module === 'Perfil' ? 'rgba(155, 81, 224, 0.2)' : 'rgba(0, 229, 255, 0.2)',
-                          color: act.module === 'Explorer' ? '#ffb400' : act.module === 'Perfil' ? '#9b51e0' : '#00e5ff'
-                        }}>
+                    <tr key={act.id} className="ls-admin-activity-table-row">
+                      <td className="ls-admin-activity-id-cell">{act.id}</td>
+                      <td className="ls-admin-activity-cell">
+                        <span className={`ls-admin-module-badge ${act.module.toLowerCase()}`}>
                           {act.module}
                         </span>
                       </td>
-                      <td style={{ padding: '14px', fontWeight: 600 }}>{act.user}</td>
-                      <td style={{ padding: '14px', color: '#00e5ff', fontWeight: 500 }}>{act.action}</td>
-                      <td style={{ padding: '14px', color: 'rgba(255,255,255,0.6)' }}>{act.timestamp}</td>
-                      <td style={{ padding: '14px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.2)' }}>{act.ip}</td>
-                      <td style={{ padding: '14px', color: 'rgba(255,255,255,0.5)' }}>{act.device}</td>
+                      <td className="ls-admin-activity-user-cell">{act.user}</td>
+                      <td className="ls-admin-activity-action-cell">{act.action}</td>
+                      <td className="ls-admin-activity-time-cell">{act.timestamp}</td>
+                      <td className="ls-admin-activity-ip-cell">{act.ip}</td>
+                      <td className="ls-admin-activity-device-cell">{act.device}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -682,101 +589,80 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
       {/* ── MODAL EDICIÓN Y VISUALIZACIÓN COMPLETA DE USUARIO (TODOS LOS CAMPOS) ── */}
       {editingUser && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#141420',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '16px',
-            padding: '28px',
-            width: '650px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            color: '#fff'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#9b51e0', fontWeight: 700 }}>Edición Completa del Perfil de Usuario</h3>
-              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>ID: {editingUser.id}</span>
+        <div className="ls-admin-modal-overlay">
+          <div className="ls-admin-modal-content w-650">
+            <div className="ls-admin-modal-header">
+              <h3 className="ls-admin-modal-title purple">Edición Completa del Perfil de Usuario</h3>
+              <span className="ls-admin-modal-id">ID: {editingUser.id}</span>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveUser(editingUser) }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveUser(editingUser) }} className="ls-admin-modal-grid-form">
+              <label className="ls-admin-form-label">
                 Primer Nombre (firstName)
                 <input
                   type="text"
                   value={editingUser.firstName ?? ''}
                   onChange={(e) => setEditingUser({ ...editingUser, firstName: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Apellido (lastName)
                 <input
                   type="text"
                   value={editingUser.lastName ?? ''}
                   onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Nickname / Nombre Artístico
                 <input
                   type="text"
                   value={editingUser.nickname}
                   onChange={(e) => setEditingUser({ ...editingUser, nickname: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Email
                 <input
                   type="email"
                   value={editingUser.email ?? ''}
                   onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Rol
                 <input
                   type="text"
                   value={editingUser.role}
                   onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Ubicación (location)
                 <input
                   type="text"
                   value={editingUser.location}
                   onChange={(e) => setEditingUser({ ...editingUser, location: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Estado de la Cuenta
                 <select
                   value={editingUser.status ?? 'Active'}
                   onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value as any })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-select"
                 >
                   <option value="Active">Active</option>
                   <option value="Suspended">Suspended</option>
@@ -785,67 +671,67 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
                 </select>
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 SoundCloud URL
                 <input
                   type="url"
                   value={editingUser.soundcloudUrl ?? ''}
                   onChange={(e) => setEditingUser({ ...editingUser, soundcloudUrl: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Spotify URL
                 <input
                   type="url"
                   value={editingUser.spotifyUrl ?? ''}
                   onChange={(e) => setEditingUser({ ...editingUser, spotifyUrl: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Instagram URL
                 <input
                   type="url"
                   value={editingUser.instagramUrl ?? ''}
                   onChange={(e) => setEditingUser({ ...editingUser, instagramUrl: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ gridColumn: 'span 2', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label span-2">
                 Géneros de Interés (separados por coma)
                 <input
                   type="text"
                   value={(editingUser.interestGenres ?? []).join(', ')}
                   onChange={(e) => setEditingUser({ ...editingUser, interestGenres: e.target.value.split(',').map(s => s.trim()) })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ gridColumn: 'span 2', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label span-2">
                 Biografía / Descripción del Perfil
                 <textarea
-                  value={editingUser.descript ?? ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, descript: e.target.value })}
+                  value={editingUser.description ?? ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, description: e.target.value })}
                   rows={3}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-textarea"
                 />
               </label>
 
-              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div className="ls-admin-form-actions">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}
+                  className="ls-admin-btn-cancel"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  style={{ background: '#9b51e0', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  className="ls-admin-btn-save-purple"
                 >
                   Guardar Cambios
                 </button>
@@ -857,63 +743,42 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
       {/* ── MODAL EDICIÓN Y VISUALIZACIÓN COMPLETA DE OBJETO EXPLORER (TODOS LOS CAMPOS) ── */}
       {editingExplorerItem && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#141420',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '16px',
-            padding: '28px',
-            width: '600px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            color: '#fff'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#ffb400', fontWeight: 700 }}>Edición Completa del Objeto de Explorer</h3>
-              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>ID: {editingExplorerItem.id}</span>
+        <div className="ls-admin-modal-overlay">
+          <div className="ls-admin-modal-content w-600">
+            <div className="ls-admin-modal-header">
+              <h3 className="ls-admin-modal-title yellow">Edición Completa del Objeto de Explorer</h3>
+              <span className="ls-admin-modal-id">ID: {editingExplorerItem.id}</span>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveExplorerItem(editingExplorerItem) }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <label style={{ gridColumn: 'span 2', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveExplorerItem(editingExplorerItem) }} className="ls-admin-modal-grid-form">
+              <label className="ls-admin-form-label span-2">
                 Título del Objeto / Evento
                 <input
                   type="text"
                   value={editingExplorerItem.title}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, title: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Tipo de Objeto
                 <select
                   value={editingExplorerItem.type}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, type: e.target.value as 'Perfil' | 'Evento' })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-select"
                 >
                   <option value="Perfil">Perfil</option>
                   <option value="Evento">Evento</option>
                 </select>
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Estado de Publicación
                 <select
                   value={editingExplorerItem.status}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, status: e.target.value as any })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-select"
                 >
                   <option value="Active">Active</option>
                   <option value="Under Review">Under Review</option>
@@ -921,77 +786,77 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
                 </select>
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Propietario / Creador
                 <input
                   type="text"
                   value={editingExplorerItem.owner}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, owner: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Ubicación
                 <input
                   type="text"
                   value={editingExplorerItem.location}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, location: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Número de Vistas
                 <input
                   type="number"
                   value={editingExplorerItem.views}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, views: parseInt(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Fecha de Creación
                 <input
                   type="text"
                   value={editingExplorerItem.createdDate}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, createdDate: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ gridColumn: 'span 2', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label span-2">
                 Géneros y Etiquetas (separados por coma)
                 <input
                   type="text"
                   value={editingExplorerItem.genres.join(', ')}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, genres: e.target.value.split(',').map(s => s.trim()) })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ gridColumn: 'span 2', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label span-2">
                 Descripción Detallada
                 <textarea
                   value={editingExplorerItem.description}
                   onChange={(e) => setEditingExplorerItem({ ...editingExplorerItem, description: e.target.value })}
                   rows={4}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-textarea"
                 />
               </label>
 
-              <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div className="ls-admin-form-actions">
                 <button
                   type="button"
                   onClick={() => setEditingExplorerItem(null)}
-                  style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}
+                  className="ls-admin-btn-cancel"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  style={{ background: '#ffb400', color: '#000', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  className="ls-admin-btn-save-yellow"
                 >
                   Guardar Cambios
                 </button>
@@ -1003,86 +868,67 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
       {/* ── MODAL EDICIÓN Y VISUALIZACIÓN COMPLETA DE REPORTE (TODOS LOS CAMPOS) ── */}
       {editingReport && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#141420',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '16px',
-            padding: '28px',
-            width: '550px',
-            color: '#fff'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#00e5ff', fontWeight: 700 }}>Detalles del Reporte</h3>
-              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>ID: {editingReport.id}</span>
+        <div className="ls-admin-modal-overlay">
+          <div className="ls-admin-modal-content w-550">
+            <div className="ls-admin-modal-header">
+              <h3 className="ls-admin-modal-title cyan">Detalles del Reporte</h3>
+              <span className="ls-admin-modal-id">ID: {editingReport.id}</span>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveReportDetails(editingReport) }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveReportDetails(editingReport) }} className="ls-admin-modal-flex-form">
+              <div className="ls-admin-modal-grid-form">
+                <label className="ls-admin-form-label">
                   Usuario Reportado
                   <input
                     type="text"
                     value={editingReport.reportedUser}
                     onChange={(e) => setEditingReport({ ...editingReport, reportedUser: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                    className="ls-admin-form-input"
                   />
                 </label>
 
-                <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+                <label className="ls-admin-form-label">
                   Usuario Denunciante
                   <input
                     type="text"
                     value={editingReport.reporterUser}
                     onChange={(e) => setEditingReport({ ...editingReport, reporterUser: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                    className="ls-admin-form-input"
                   />
                 </label>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <div className="ls-admin-modal-grid-form">
+                <label className="ls-admin-form-label">
                   Origen
                   <select
                     value={editingReport.origin}
                     onChange={(e) => setEditingReport({ ...editingReport, origin: e.target.value as any })}
-                    style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                    className="ls-admin-form-select"
                   >
                     <option value="Discovery">Discovery</option>
                     <option value="Explorer">Explorer</option>
                   </select>
                 </label>
 
-                <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+                <label className="ls-admin-form-label">
                   Tipo Objetivo
                   <select
                     value={editingReport.targetType}
                     onChange={(e) => setEditingReport({ ...editingReport, targetType: e.target.value as any })}
-                    style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                    className="ls-admin-form-select"
                   >
                     <option value="Perfil">Perfil</option>
                     <option value="Evento">Evento</option>
                   </select>
                 </label>
 
-                <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+                <label className="ls-admin-form-label">
                   Severidad
                   <select
                     value={editingReport.severity}
                     onChange={(e) => setEditingReport({ ...editingReport, severity: e.target.value as any })}
-                    style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                    className="ls-admin-form-select"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -1091,32 +937,32 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
                 </label>
               </div>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Motivo Principal
                 <input
                   type="text"
                   value={editingReport.reason}
                   onChange={(e) => setEditingReport({ ...editingReport, reason: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-input"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Detalles del Incidente
                 <textarea
                   value={editingReport.details}
                   onChange={(e) => setEditingReport({ ...editingReport, details: e.target.value })}
                   rows={4}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-textarea"
                 />
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Estado
                 <select
                   value={editingReport.status}
                   onChange={(e) => setEditingReport({ ...editingReport, status: e.target.value as any })}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-select"
                 >
                   <option value="Pending">Pending</option>
                   <option value="Reviewed">Reviewed</option>
@@ -1125,28 +971,28 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
                 </select>
               </label>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
+              <label className="ls-admin-form-label">
                 Comentario de Resolución (Administrador)
                 <textarea
                   placeholder="Detalla los motivos o resolución de la acción tomada..."
                   value={editingReport.adminComment ?? ''}
                   onChange={(e) => setEditingReport({ ...editingReport, adminComment: e.target.value })}
                   rows={3}
-                  style={{ width: '100%', padding: '8px 12px', marginTop: '4px', borderRadius: '6px', border: '1px solid rgba(39, 174, 96, 0.4)', background: 'rgba(0,0,0,0.3)', color: '#fff' }}
+                  className="ls-admin-form-textarea green-border"
                 />
               </label>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
+              <div className="ls-admin-form-actions flex-start-margin">
                 <button
                   type="button"
                   onClick={() => setEditingReport(null)}
-                  style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}
+                  className="ls-admin-btn-cancel"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  style={{ background: '#00e5ff', color: '#000', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  className="ls-admin-btn-save-cyan"
                 >
                   Guardar Cambios
                 </button>
@@ -1158,98 +1004,65 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
       {/* ── MODAL VER REPORTES DE UN USUARIO ESPECÍFICO (AL PRESIONAR EL NÚMERO DE REPORTES) ── */}
       {viewingUserReports && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#141420',
-            border: '1px solid rgba(255, 60, 110, 0.3)',
-            borderRadius: '16px',
-            padding: '28px',
-            width: '600px',
-            maxHeight: '85vh',
-            overflowY: 'auto',
-            color: '#fff'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+        <div className="ls-admin-modal-overlay">
+          <div className="ls-admin-modal-content w-600 border-user-reports">
+            <div className="ls-admin-modal-header">
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#ff3c6e', fontWeight: 700 }}>
+                <h3 className="ls-admin-modal-title pink">
                   Reportes Asociados a {viewingUserReports.user.nickname}
                 </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                <p className="ls-admin-panel-subtitle">
                   Total contabilizado: {viewingUserReports.reports.length} reporte(s)
                 </p>
               </div>
               <button
                 onClick={() => setViewingUserReports(null)}
-                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}
+                className="ls-admin-modal-close-btn"
               >
                 ✕
               </button>
             </div>
 
             {viewingUserReports.reports.length === 0 ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
+              <div className="ls-admin-user-reports-empty">
                 Este usuario no cuenta con reportes activos o contabilizados en el sistema.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="ls-admin-user-reports-list">
                 {viewingUserReports.reports.map(rep => (
-                  <div key={rep.id} style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '10px',
-                    padding: '16px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', fontFamily: 'monospace', color: 'rgba(255,255,255,0.4)' }}>{rep.id}</span>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        background: rep.severity === 'High' ? 'rgba(255,60,110,0.25)' : 'rgba(255,180,0,0.25)',
-                        color: rep.severity === 'High' ? '#ff3c6e' : '#ffb400'
-                      }}>
+                  <div key={rep.id} className="ls-admin-user-report-item">
+                    <div className="ls-admin-user-report-item-header">
+                      <span className="ls-admin-user-report-item-id">{rep.id}</span>
+                      <span className={`ls-admin-severity-badge ${rep.severity === 'High' ? 'high' : 'medium'}`}>
                         {rep.severity}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '13px', color: '#fff', marginBottom: '6px', fontWeight: 600 }}>
-                      Denunciado por: <span style={{ color: '#00e5ff' }}>{rep.reporterUser}</span>
+                    <div className="ls-admin-user-report-reported-by">
+                      Denunciado por: <span className="ls-admin-user-report-reporter-name">{rep.reporterUser}</span>
                     </div>
 
-                    <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginBottom: '6px' }}>
+                    <div className="ls-admin-user-report-reason-line">
                       <strong>Motivo:</strong> {rep.reason}
                     </div>
 
-                    <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'rgba(255,255,255,0.6)', background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: '6px' }}>
+                    <p className="ls-admin-user-report-details-box">
                       "{rep.details}"
                     </p>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
+                    <div className="ls-admin-user-report-footer">
                       <span>Fecha: {rep.date} | Origen: {rep.origin}</span>
-                      <span>Estado: <strong style={{ color: rep.status === 'Resolved' ? '#27ae60' : '#ffb400' }}>{rep.status}</strong></span>
+                      <span>Estado: <strong className={rep.status === 'Resolved' ? 'ls-admin-status-resolved' : 'ls-admin-status-pending-text'}>{rep.status}</strong></span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+            <div className="ls-admin-form-actions flex-start-margin">
               <button
                 onClick={() => setViewingUserReports(null)}
-                style={{ background: '#ff3c6e', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                className="ls-admin-btn-save-pink"
               >
                 Cerrar
               </button>
@@ -1260,52 +1073,32 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
 
       {/* ── MODAL MARCAR COMO RESUELTO CON COMENTARIO DE ADMINISTRADOR ── */}
       {resolvingReport && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#141420',
-            border: '1px solid rgba(39, 174, 96, 0.4)',
-            borderRadius: '16px',
-            padding: '28px',
-            width: '500px',
-            color: '#fff',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#27ae60', fontWeight: 700 }}>
+        <div className="ls-admin-modal-overlay">
+          <div className="ls-admin-modal-content w-500 border-resolve">
+            <div className="ls-admin-modal-header resolve-header">
+              <h3 className="ls-admin-modal-title green">
                 Resolver Reporte {resolvingReport.id}
               </h3>
               <button
                 type="button"
                 onClick={() => setResolvingReport(null)}
-                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}
+                className="ls-admin-modal-close-btn"
               >
                 ✕
               </button>
             </div>
 
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '0 0 16px 0' }}>
+            <p className="ls-admin-resolve-prompt-text">
               Ingresa el comentario de resolución que se asociará al reporte e informará a <strong>{resolvingReport.reporterUser}</strong>.
             </p>
 
-            <form onSubmit={handleConfirmResolve} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px', borderLeft: '3px solid #ff3c6e', fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
+            <form onSubmit={handleConfirmResolve} className="ls-admin-modal-flex-form resolve-form-gap">
+              <div className="ls-admin-resolve-callout">
                 <strong>Motivo denunciado:</strong> {resolvingReport.reason}<br />
                 <strong>Reportado:</strong> {resolvingReport.reportedUser} | <strong>Denunciante:</strong> {resolvingReport.reporterUser}
               </div>
 
-              <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+              <label className="ls-admin-form-label bold-label">
                 Comentario de resolución del Administrador:
                 <textarea
                   required
@@ -1313,31 +1106,21 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
                   value={resolveComment}
                   onChange={(e) => setResolveComment(e.target.value)}
                   rows={4}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    marginTop: '6px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(39, 174, 96, 0.5)',
-                    background: 'rgba(0,0,0,0.4)',
-                    color: '#fff',
-                    fontSize: '13px',
-                    outline: 'none'
-                  }}
+                  className="ls-admin-form-textarea green-outline"
                 />
               </label>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              <div className="ls-admin-form-actions resolve-margin">
                 <button
                   type="button"
                   onClick={() => setResolvingReport(null)}
-                  style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer' }}
+                  className="ls-admin-btn-cancel"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  style={{ background: '#27ae60', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  className="ls-admin-btn-save-green"
                 >
                   Confirmar y Notificar
                 </button>
@@ -1350,18 +1133,18 @@ export default function AdminPage({ onNavigate, onLogout, profile }: AdminPagePr
       {/* ── NOTIFICACIÓN ESTILIZADA AL USUARIO DENUNCIANTE ── */}
       {notificationToast && (
         <div className="ls-toast-notification">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#27ae60' }}>
+          <div className="ls-toast-header">
+            <span className="ls-toast-title">
               Notificación enviada a {notificationToast.targetUser}
             </span>
             <button
               onClick={() => setNotificationToast(null)}
-              style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}
+              className="ls-toast-close-btn"
             >
               ✕
             </button>
           </div>
-          <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>
+          <p className="ls-toast-message">
             "{notificationToast.message}"
           </p>
         </div>

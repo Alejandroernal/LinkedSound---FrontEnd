@@ -6,13 +6,19 @@ import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import { PiFlagBold } from 'react-icons/pi'
 import { recommendations, type ProfileCard } from '../data/mockData'
-import type { AppPage, Profile } from '../types'
+import type { AppPage, Profile, NotificationItem, UserProfile } from '../types'
+import { isUserProfile } from '../types'
 
 type DashboardPageProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
   profile: Profile
   isAdminSession?: boolean
+  notifications?: NotificationItem[]
+  onMarkNotificationAsRead?: (id: string) => void
+  onMarkAllNotificationsAsRead?: () => void
+  onClearNotifications?: () => void
+  onSignOut?: () => void
 }
 
 const initialFilters: RadarFilterState = {
@@ -26,6 +32,8 @@ const LOCATION_COORDINATES: Record<string, { lat: number; lon: number }> = {
   'francia, paris': { lat: 48.8566, lon: 2.3522 },
   'berlin, germany': { lat: 52.52, lon: 13.405 },
   'entre rios, argentina': { lat: -31.741, lon: -58.514 },
+  'trenque lauquen, argentina': { lat: -35.973, lon: -62.734 },
+  'trenque lauquen': { lat: -35.973, lon: -62.734 },
   'new york, ny': { lat: 40.7128, lon: -74.006 },
   'london, uk': { lat: 51.5074, lon: -0.1278 },
   'tokyo, japan': { lat: 35.6895, lon: 139.6917 },
@@ -43,7 +51,17 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
   return R * c
 }
 
-export default function DashboardPage({ activePage, onNavigate, profile, isAdminSession }: DashboardPageProps) {
+export default function DashboardPage({
+  activePage,
+  onNavigate,
+  profile,
+  isAdminSession,
+  notifications,
+  onMarkNotificationAsRead,
+  onMarkAllNotificationsAsRead,
+  onClearNotifications,
+  onSignOut,
+}: DashboardPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
   const [previewProfile, setPreviewProfile] = useState<ProfileCard | null>(null)
@@ -133,25 +151,42 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
     setCurrentIndex(0)
   }
 
+  const isProfile = currentProfile ? isUserProfile(currentProfile) : false
+  const firstName = isProfile && currentProfile ? (currentProfile as UserProfile).firstName : ''
+  const lastName = isProfile && currentProfile ? (currentProfile as UserProfile).lastName : ''
+  const fullName = [firstName, lastName].filter(Boolean).join(' ')
+  const greenBoxTitle = currentProfile?.nickname?.trim() || fullName || 'Artista'
+  const redBoxFullName = isProfile ? fullName : currentProfile?.nickname || ''
+
   return (
     <div className="ls-app-shell">
-      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} isAdminSession={isAdminSession} />
+      <TopBar
+        activePage={activePage}
+        onNavigate={onNavigate}
+        profile={profile}
+        isAdminSession={isAdminSession}
+        notifications={notifications}
+        onMarkNotificationAsRead={onMarkNotificationAsRead}
+        onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
+        onClearNotifications={onClearNotifications}
+        onSignOut={onSignOut}
+      />
 
-      <main className="ls-layout ls-discovery-swipe-layout" style={{ marginTop: '16px' }}>
+      <main className="ls-layout ls-discovery-swipe-layout">
         <section className="ls-discovery-panel">
           <div className="ls-swipe-stage">
             {currentProfile ? (
               <div
                 className="ls-swipe-card ls-clickable-card"
                 onClick={() => setPreviewProfile(currentProfile)}
-                title={`Ver trabajos en SoundCloud de ${currentProfile.nickname ?? ''}`}
+                title={`Ver trabajos en SoundCloud de ${greenBoxTitle}`}
               >
                 <div className="ls-swipe-image-wrap">
-                  <img src={currentProfile.image || currentProfile.profileImage} alt={currentProfile.nickname ?? ''} />
+                  <img src={currentProfile.profileImage} alt={greenBoxTitle} />
                   <span className="ls-card-badge">{currentProfile.match}</span>
                   <div className="ls-swipe-overlay">
                     <div>
-                      <h2>{currentProfile.nickname ?? ''}</h2>
+                      <h2>{greenBoxTitle}</h2>
                       <p>{currentProfile.role}</p>
                     </div>
                     <span>{currentProfile.location}</span>
@@ -185,13 +220,19 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
 
                 <div className="ls-swipe-body">
                   <div className="ls-swipe-head">
-                    <div className="ls-swipe-head-right" style={{ marginLeft: 'auto' }}>
+                    <div className="ls-swipe-head-left">
+                      <span className="ls-swipe-fullname">
+                        {redBoxFullName}
+                      </span>
+                    </div>
+
+                    <div className="ls-swipe-head-right">
                       <button
                         type="button"
                         className="ls-report-text-btn"
                         onClick={(e) => {
                           e.stopPropagation()
-                          setReportingTarget(currentProfile.nickname ?? currentProfile.firstName ?? '')
+                          setReportingTarget(greenBoxTitle)
                         }}
                       >
                         <PiFlagBold /> Reporte
@@ -200,7 +241,7 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
                     </div>
                   </div>
 
-                  <p className="ls-card-desc">{currentProfile.descript ?? currentProfile.description ?? currentProfile.description}</p>
+                  <p className="ls-card-desc">{currentProfile.description ?? ''}</p>
 
                   <div className="ls-profile-interest-block">
                     <span className="ls-interest-label">Intereses de género</span>
@@ -213,23 +254,9 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
                 </div>
               </div>
             ) : (
-              <div
-                className="ls-swipe-card ls-empty-card"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  padding: '40px 24px',
-                  minHeight: '420px',
-                  background: 'rgba(15, 18, 32, 0.8)',
-                  borderRadius: '20px',
-                  border: '1px border rgba(255, 255, 255, 0.1)'
-                }}
-              >
-                <h3 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '10px' }}>No hay creadores coincidentes</h3>
-                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', maxWidth: '360px', marginBottom: '24px', lineHeight: 1.5 }}>
+              <div className="ls-swipe-card ls-empty-card">
+                <h3>No hay creadores coincidentes</h3>
+                <p>
                   No se encontraron tarjetas que coincidan con la ubicación, categoría o géneros seleccionados en el radar.
                 </p>
                 <button
@@ -243,7 +270,6 @@ export default function DashboardPage({ activePage, onNavigate, profile, isAdmin
             )}
           </div>
         </section>
-
         <aside className="ls-sidebar">
           <RadarFilters
             filters={filters}

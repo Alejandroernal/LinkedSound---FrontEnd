@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { AppPage, Profile } from '../types'
+import { PiXBold, PiWarningOctagonBold } from 'react-icons/pi'
 
 const AVAILABLE_GENRES = [
   'Synthwave', 'Electronic', 'Dark Pop', 'Hip Hop', 'Indie',
@@ -170,7 +171,8 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
   const [rawImage, setRawImage] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
   const [showPhotoActions, setShowPhotoActions] = useState(false)
-  const selectedGenres = profile?.interestGenres ?? ['Synthwave', 'Electronic', 'Dark Pop']
+  const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null)
+  const selectedGenres = profile?.interestGenres ?? []
 
   const handleFieldChange = (field: keyof Profile, value: string | string[]) => {
     onProfileChange?.(field, value)
@@ -191,6 +193,36 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
     setShowEditor(false)
   }
 
+  const handleContinue = () => {
+    const fn = profile?.firstName?.trim() || ''
+    const ln = profile?.lastName?.trim() || ''
+    const em = profile?.email?.trim() || ''
+    const pw = profile?.password?.trim() || ''
+
+    if (!fn || !ln || !em || !pw) {
+      setErrorModalMsg('Por favor completa los campos obligatorios: Nombre, Apellido, Correo electrónico y Contraseña.')
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(em)) {
+      setErrorModalMsg('Por favor ingresa un correo electrónico válido (ejemplo: usuario@dominio.com).')
+      return
+    }
+
+    if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw)) {
+      setErrorModalMsg('La contraseña no cumple con los requisitos de seguridad: Mínimo 8 caracteres, incluir al menos 1 letra mayúscula, 1 minúscula y 1 número.')
+      return
+    }
+
+    if (selectedGenres.length < 3) {
+      setErrorModalMsg('Debes seleccionar un mínimo de 3 géneros musicales según las especificaciones del SRS para continuar con el registro.')
+      return
+    }
+
+    onNavigate?.('Onboarding')
+  }
+
   const currentAvatar = profile?.profileImage ?? rawImage
 
   return (
@@ -209,14 +241,14 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
             <div className="ls-brand-mark">L</div>
             <div>
               <div className="ls-brand-name">LinkedSound</div>
-              <small>create your profile</small>
+              <small>crea tu perfil</small>
             </div>
           </div>
 
-          <h1>Create account</h1>
-          <p className="ls-auth-subtitle">Start matching with artists and producers.</p>
+          <h1>Crear cuenta</h1>
+          <p className="ls-auth-subtitle">Comienza a conectar con artistas y productores musicales.</p>
 
-          <form className="ls-auth-form">
+          <form className="ls-auth-form" onSubmit={(e) => { e.preventDefault(); handleContinue() }}>
             {/* ── Top Row: Foto de perfil + Inputs First Name & Last Name ── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
               
@@ -246,13 +278,13 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
               {/* Inputs First Name & Last Name al lado */}
               <div className="ls-two-col" style={{ gap: '10px' }}>
                 <label>
-                  First Name
-                  <input type="text" value={profile?.firstName ?? 'Kaelen'}
+                  Nombre *
+                  <input type="text" value={profile?.firstName ?? ''} placeholder="Nombre"
                     onChange={e => handleFieldChange('firstName', e.target.value)} />
                 </label>
                 <label>
-                  Last Name
-                  <input type="text" value={profile?.lastName ?? 'Voss'}
+                  Apellido *
+                  <input type="text" value={profile?.lastName ?? ''} placeholder="Apellido"
                     onChange={e => handleFieldChange('lastName', e.target.value)} />
                 </label>
               </div>
@@ -262,11 +294,11 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
             {showPhotoActions && (
               <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '10px 14px', borderRadius: '12px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <label className="ls-av-upload-btn" htmlFor="av-file-input" style={{ cursor: 'pointer', margin: 0 }}>
-                  Choose photo
+                  Elegir foto
                 </label>
                 {currentAvatar && rawImage && (
                   <button type="button" className="ls-av-edit-btn" onClick={() => setShowEditor(true)}>
-                    Edit crop
+                    Editar encuadre
                   </button>
                 )}
                 <span className="ls-av-hint" style={{ fontSize: '0.75rem', opacity: 0.8 }}>
@@ -276,81 +308,128 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
             )}
 
             <label>
-              NickName / Artistic name
-              <input type="text" value={profile?.nickname ?? 'Kaelen Voss'}
+              Nombre artístico / Apodo
+              <input type="text" value={profile?.nickname ?? ''} placeholder="Nombre artístico u apodo"
                 onChange={e => handleFieldChange('nickname', e.target.value)} />
             </label>
 
             <label>
-              Email
-              <input type="email" value={profile?.email ?? 'kaelen@linkedsound.app'}
+              Correo electrónico *
+              <input type="email" value={profile?.email ?? ''} placeholder="correo@ejemplo.com"
                 onChange={e => handleFieldChange('email', e.target.value)} />
             </label>
 
             <label>
-              Password
-              <input type="password" value={profile?.password ?? 'password123'}
+              Contraseña *
+              <input type="password" value={profile?.password ?? ''} placeholder="Crea una contraseña segura"
                 onChange={e => handleFieldChange('password', e.target.value)} />
+              <small style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.74rem', marginTop: '4px', display: 'block' }}>
+                Mínimo 8 caracteres con al menos 1 mayúscula, 1 minúscula y 1 número.
+              </small>
             </label>
 
             <label>
-              Role
-              <select value={profile?.role ?? 'Productor/Artista'}
-                onChange={e => handleFieldChange('role', e.target.value)}>
+              Rol en la Plataforma
+              <select
+                className="ls-auth-select"
+                value={profile?.role ?? 'Productor y Artista'}
+                onChange={e => handleFieldChange('role', e.target.value)}
+              >
                 <option value="Productor">Productor</option>
                 <option value="Artista">Artista</option>
-                <option value="Productor/Artista">Productor/Artista</option>
+                <option value="Productor y Artista">Productor y Artista</option>
               </select>
             </label>
 
             <div className="ls-profile-field wide-field">
-              <label>Interest Genres</label>
+              <label>Géneros de Interés * (Mínimo 3)</label>
               <div style={{ marginBottom: '8px' }}>
                 <input type="text" placeholder="Buscar géneros..."
                   value={genreSearch}
                   onChange={e => setGenreSearch(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.2)', color: '#fff' }}
+                  className="ls-admin-search-input"
+                  style={{ width: '100%' }}
                 />
               </div>
               <div className="ls-genre-selector genre-selector">
-                {AVAILABLE_GENRES.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).map(genre => {
-                  const isSelected = selectedGenres.includes(genre)
-                  return (
-                    <button key={genre} type="button"
-                      className={`ls-genre-chip ${isSelected ? 'is-selected' : ''}`}
-                      onClick={() => {
-                        if (isSelected) {
-                          handleFieldChange('interestGenres', selectedGenres.filter(i => i !== genre))
-                        } else if (selectedGenres.length < 6) {
-                          handleFieldChange('interestGenres', [...selectedGenres, genre])
-                        }
-                      }}>
-                      {genre}
-                    </button>
-                  )
-                })}
+                {AVAILABLE_GENRES.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).length === 0 ? (
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', padding: '12px 0', textAlign: 'center', gridColumn: '1 / -1' }}>
+                    No se encontraron géneros musicales que coincidan con "{genreSearch}".
+                  </div>
+                ) : (
+                  AVAILABLE_GENRES.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).map(genre => {
+                    const isSelected = selectedGenres.includes(genre)
+                    return (
+                      <button key={genre} type="button"
+                        className={`ls-genre-chip ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => {
+                          if (isSelected) {
+                            handleFieldChange('interestGenres', selectedGenres.filter(i => i !== genre))
+                          } else {
+                            handleFieldChange('interestGenres', [...selectedGenres, genre])
+                          }
+                        }}>
+                        {genre}
+                      </button>
+                    )
+                  })
+                )}
               </div>
-              {selectedGenres.length > 0 && (
-                <small className="selected-genres-info">
-                  Seleccionados ({selectedGenres.length}/6): {selectedGenres.join(', ')}
-                </small>
-              )}
+              <small className="selected-genres-info" style={{ marginTop: '8px', display: 'block', color: selectedGenres.length >= 3 ? '#34d399' : '#f87171' }}>
+                Seleccionados: {selectedGenres.length} {selectedGenres.length < 3 ? '(Se requieren al menos 3)' : '(Válido)'}
+              </small>
             </div>
 
-            <button type="button" className="ls-primary-button ls-auth-button"
-              onClick={() => onNavigate?.('Validation')}>
-              Continue
+            <button type="submit" className="ls-primary-button ls-auth-button">
+              Continuar
             </button>
           </form>
 
           <div className="ls-auth-footer">
-            <span>Already have an account?</span>
+            <span>¿Ya tienes una cuenta?</span>
             <button type="button" className="ls-text-button" onClick={() => onNavigate?.('Login')}>
-              Sign in
+              Iniciar sesión
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal de Validación de Registro */}
+      {errorModalMsg && (
+        <div className="ls-modal-overlay" onClick={() => setErrorModalMsg(null)}>
+          <div className="ls-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+            <button type="button" className="ls-modal-close" onClick={() => setErrorModalMsg(null)} aria-label="Cerrar">
+              <PiXBold />
+            </button>
+            <div className="ls-report-header" style={{ marginBottom: '16px' }}>
+              <div className="ls-report-badge-icon" style={{ background: 'rgba(255, 60, 110, 0.15)', color: '#ff3c6e', border: '1px solid rgba(255, 60, 110, 0.3)' }}>
+                <PiWarningOctagonBold style={{ fontSize: '1.4rem' }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, color: '#fff' }}>Campos Incompletos</h3>
+                <p className="ls-report-subtitle" style={{ margin: '4px 0 0' }}>
+                  Completa los datos requeridos
+                </p>
+              </div>
+            </div>
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '20px' }}>
+              <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                {errorModalMsg}
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="ls-primary-button"
+                onClick={() => setErrorModalMsg(null)}
+                style={{ width: '100%' }}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

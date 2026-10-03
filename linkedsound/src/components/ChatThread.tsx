@@ -28,6 +28,7 @@ type ChatThreadProps = {
   onToggleMute?: () => void
   onTogglePin?: () => void
   onToggleBlock?: () => void
+  onInspectProfile?: () => void
 }
 
 export default function ChatThread({
@@ -39,9 +40,11 @@ export default function ChatThread({
   onToggleMute,
   onTogglePin,
   onToggleBlock,
+  onInspectProfile,
 }: ChatThreadProps) {
   const [text, setText] = useState('')
   const [showMenu, setShowMenu] = useState(false)
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<{
     file: File
     name: string
@@ -69,6 +72,16 @@ export default function ChatThread({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewImageUrl) {
+        setPreviewImageUrl(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [previewImageUrl])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -123,7 +136,12 @@ export default function ChatThread({
   return (
     <section className="ls-chat-panel">
       <header className="ls-chat-header">
-        <div className="ls-chat-user">
+        <div
+          className="ls-chat-user"
+          onClick={() => onInspectProfile?.()}
+          style={{ cursor: 'pointer' }}
+          title={`Ver perfil de ${conversation.name}`}
+        >
           {conversation.profileImage ? (
             <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
               <img
@@ -333,7 +351,12 @@ export default function ChatThread({
           >
             {message.sender !== 'me' && (
               conversation.profileImage ? (
-                <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
+                <div
+                  className={`ls-avatar ${conversation.accent} small`}
+                  style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }}
+                  onClick={() => onInspectProfile?.()}
+                  title={`Ver perfil de ${conversation.name}`}
+                >
                   <img
                     src={conversation.profileImage}
                     alt={conversation.name}
@@ -341,7 +364,14 @@ export default function ChatThread({
                   />
                 </div>
               ) : (
-                <div className={`ls-avatar ${conversation.accent} small`}>{conversation.avatar}</div>
+                <div
+                  className={`ls-avatar ${conversation.accent} small`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onInspectProfile?.()}
+                  title={`Ver perfil de ${conversation.name}`}
+                >
+                  {conversation.avatar}
+                </div>
               )
             )}
 
@@ -349,15 +379,23 @@ export default function ChatThread({
               {message.attachment && (
                 <div className="ls-message-attachment" style={{ marginBottom: message.text ? '8px' : '0' }}>
                   {message.attachment.type === 'image' ? (
-                    <div style={{ borderRadius: '8px', overflow: 'hidden', maxWidth: '240px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <div
+                      style={{
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        maxWidth: '260px',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onClick={() => setPreviewImageUrl(message.attachment?.url ?? null)}
+                      title="Haz clic para ver la imagen a tamaño completo"
+                    >
                       <img
                         src={message.attachment.url}
                         alt={message.attachment.name}
                         style={{ width: '100%', height: 'auto', display: 'block' }}
                       />
-                      <div style={{ padding: '4px 8px', fontSize: '0.72rem', background: 'rgba(0, 0, 0, 0.4)', color: 'rgba(255, 255, 255, 0.7)' }}>
-                        🖼️ {message.attachment.name}
-                      </div>
                     </div>
                   ) : (
                     <div
@@ -504,6 +542,50 @@ export default function ChatThread({
           Enviar
         </button>
       </form>
+
+      {/* Modal Lightbox para ampliar imágenes */}
+      {previewImageUrl && (
+        <div className="ls-modal-overlay" onClick={() => setPreviewImageUrl(null)}>
+          <div
+            className="ls-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              padding: '16px',
+              background: '#141628',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              borderRadius: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.7)',
+            }}
+          >
+            <button
+              type="button"
+              className="ls-modal-close"
+              onClick={() => setPreviewImageUrl(null)}
+              aria-label="Cerrar vista de imagen"
+            >
+              <PiXBold />
+            </button>
+            <img
+              src={previewImageUrl}
+              alt="Imagen adjunta a tamaño completo"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+                borderRadius: '10px',
+                display: 'block',
+              }}
+            />
+          </div>
+        </div>
+      )}
     </section>
   )
 }

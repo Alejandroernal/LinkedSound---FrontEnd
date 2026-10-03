@@ -15,7 +15,8 @@ import { userNotifications as defaultUserNotifs, adminNotifications as defaultAd
 const pagePaths: Record<AppPage, string> = {
   Login: '/login',
   Register: '/register',
-  Validation: '/validation',
+  Validation: '/onboarding',
+  Onboarding: '/onboarding',
   Discovery: '/discovery',
   Explorer: '/explorer',
   Messages: '/messages',
@@ -23,9 +24,32 @@ const pagePaths: Record<AppPage, string> = {
   Admin: '/admin',
 }
 
+type AuthSession = {
+  isLoggedIn: boolean
+  role: 'user' | 'admin' | null
+}
+
+const STORAGE_KEY = 'linkedsound_auth_session'
+
+const getInitialAuthSession = (): AuthSession => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (parsed && typeof parsed.isLoggedIn === 'boolean') {
+        return parsed
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return { isLoggedIn: false, role: null }
+}
+
 function App() {
   const navigate = useNavigate()
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
+  const [authSession, setAuthSession] = useState<AuthSession>(getInitialAuthSession)
+  const isAdminLoggedIn = authSession.isLoggedIn && authSession.role === 'admin'
 
   // Estado de notificaciones para usuario normal y administrador
   const [userNotifs, setUserNotifs] = useState<NotificationItem[]>(defaultUserNotifs)
@@ -57,8 +81,24 @@ function App() {
     }
   }
 
+  const handleLoginAsAdmin = () => {
+    const session: AuthSession = { isLoggedIn: true, role: 'admin' }
+    setAuthSession(session)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+  }
+
+  const handleLoginAsUser = (email?: string) => {
+    const session: AuthSession = { isLoggedIn: true, role: 'user' }
+    setAuthSession(session)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+    if (email) {
+      setProfile((prev) => ({ ...prev, email }))
+    }
+  }
+
   const handleSignOut = () => {
-    setIsAdminLoggedIn(false)
+    setAuthSession({ isLoggedIn: false, role: null })
+    localStorage.removeItem(STORAGE_KEY)
     navigate('/login')
   }
 
@@ -71,7 +111,7 @@ function App() {
     role: 'Usuario',
     category: 'Productor',
     location: 'Berlin, Germany',
-    descript: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
+    description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
     interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
     tags: ['Synthwave', 'Analog', 'Live', 'Night Drive'],
     spotifyUrl: 'https://open.spotify.com/artist/kaelenvoss',
@@ -95,7 +135,7 @@ function App() {
     role: 'Administrador',
     category: 'Productor',
     location: 'LinkedSound HQ',
-    descript: 'Administrador del sistema LinkedSound. Gestión de usuarios y moderación de contenidos.',
+    description: 'Administrador del sistema LinkedSound. Gestión de usuarios y moderación de contenidos.',
     interestGenres: ['Synthwave', 'DarkElectro', 'Cyberpunk'],
     tags: ['Admin', 'Mod', 'System'],
     spotifyUrl: 'https://spotify.com',
@@ -116,7 +156,6 @@ function App() {
     }
   }
 
-
   const handleNavigate = (page: AppPage) => {
     navigate(pagePaths[page])
   }
@@ -132,93 +171,133 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Rutas de Acceso / Autenticación */}
       <Route
         path="/login"
         element={
-          <LoginPage
-            onNavigate={handleNavigate}
-            onLoginAsAdmin={() => setIsAdminLoggedIn(true)}
-          />
+          authSession.isLoggedIn ? (
+            authSession.role === 'admin' ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <Navigate to="/discovery" replace />
+            )
+          ) : (
+            <LoginPage
+              onNavigate={handleNavigate}
+              onLoginAsAdmin={handleLoginAsAdmin}
+              onLoginAsUser={handleLoginAsUser}
+              registeredEmail={profile.email}
+              registeredPassword={profile.password}
+            />
+          )
         }
       />
       <Route
         path="/register"
         element={
-          <RegisterPage
-            onNavigate={handleNavigate}
-            profile={profile}
-            onProfileChange={handleProfileChange}
-          />
+          authSession.isLoggedIn ? (
+            authSession.role === 'admin' ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <Navigate to="/discovery" replace />
+            )
+          ) : (
+            <RegisterPage
+              onNavigate={handleNavigate}
+              profile={profile}
+              onProfileChange={handleProfileChange}
+            />
+          )
         }
       />
+      <Route path="/validation" element={<Navigate to="/onboarding" replace />} />
       <Route
-        path="/validation"
+        path="/onboarding"
         element={
           <ValidationPage
             onNavigate={handleNavigate}
             profile={profile}
             onProfileChange={handleProfileChange}
+            onRegisterComplete={() => handleLoginAsUser(profile.email)}
           />
         }
       />
-      
-      {/* Rutas estándar con prop isAdminSession si la sesión de admin está activa */}
+
+      {/* Rutas Protegidas para Usuarios */}
       <Route
         path="/discovery"
         element={
-          <DashboardPage
-            activePage="Discovery"
-            onNavigate={handleNavigate}
-            profile={activeProfile}
-            isAdminSession={isAdminLoggedIn}
-            {...topBarProps}
-          />
+          !authSession.isLoggedIn ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <DashboardPage
+              activePage="Discovery"
+              onNavigate={handleNavigate}
+              profile={activeProfile}
+              isAdminSession={isAdminLoggedIn}
+              {...topBarProps}
+            />
+          )
         }
       />
       <Route
         path="/explorer"
         element={
-          <ExplorePage
-            activePage="Explorer"
-            onNavigate={handleNavigate}
-            profile={activeProfile}
-            isAdminSession={isAdminLoggedIn}
-            {...topBarProps}
-          />
+          !authSession.isLoggedIn ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <ExplorePage
+              activePage="Explorer"
+              onNavigate={handleNavigate}
+              profile={activeProfile}
+              isAdminSession={isAdminLoggedIn}
+              {...topBarProps}
+            />
+          )
         }
       />
       <Route
         path="/messages"
         element={
-          <MessagesPage
-            activePage="Messages"
-            onNavigate={handleNavigate}
-            profile={activeProfile}
-            isAdminSession={isAdminLoggedIn}
-            {...topBarProps}
-          />
+          !authSession.isLoggedIn ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <MessagesPage
+              activePage="Messages"
+              onNavigate={handleNavigate}
+              profile={activeProfile}
+              isAdminSession={isAdminLoggedIn}
+              {...topBarProps}
+            />
+          )
         }
       />
       <Route
         path="/profile"
         element={
-          <ProfilePage
-            activePage="Profile"
-            onNavigate={handleNavigate}
-            profile={activeProfile}
-            onProfileChange={handleProfileChange}
-            isAdminSession={isAdminLoggedIn}
-            {...topBarProps}
-          />
+          !authSession.isLoggedIn ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <ProfilePage
+              activePage="Profile"
+              onNavigate={handleNavigate}
+              profile={activeProfile}
+              onProfileChange={handleProfileChange}
+              isAdminSession={isAdminLoggedIn}
+              {...topBarProps}
+            />
+          )
         }
       />
 
-      {/* Sistema para Administrador */}
+      {/* Ruta Protegida de Administrador */}
+      {/* Si no está logueado -> /login. Si está logueado como usuario normal -> /discovery. Si es admin -> AdminPage */}
       <Route
         path="/admin"
         element={
-          isAdminLoggedIn ? (
+          !authSession.isLoggedIn ? (
+            <Navigate to="/login" replace />
+          ) : authSession.role === 'admin' ? (
             <AdminPage
               onNavigate={handleNavigate}
               onLogout={handleSignOut}
@@ -226,14 +305,40 @@ function App() {
               {...topBarProps}
             />
           ) : (
-            <Navigate to="/login" replace />
+            <Navigate to="/discovery" replace />
           )
         }
       />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+
+      {/* Redirección por defecto */}
+      <Route
+        path="/"
+        element={
+          !authSession.isLoggedIn ? (
+            <Navigate to="/login" replace />
+          ) : authSession.role === 'admin' ? (
+            <Navigate to="/admin" replace />
+          ) : (
+            <Navigate to="/discovery" replace />
+          )
+        }
+      />
+      <Route
+        path="*"
+        element={
+          !authSession.isLoggedIn ? (
+            <Navigate to="/login" replace />
+          ) : authSession.role === 'admin' ? (
+            <Navigate to="/admin" replace />
+          ) : (
+            <Navigate to="/discovery" replace />
+          )
+        }
+      />
     </Routes>
   )
 }
 
 export default App
+
 

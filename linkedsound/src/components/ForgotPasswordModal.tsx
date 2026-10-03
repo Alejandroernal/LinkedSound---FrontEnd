@@ -105,12 +105,13 @@ export default function ForgotPasswordModal({
 
   const handleVerifyCode = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!code.trim()) {
-      setError('Por favor, ingresa el código de verificación enviado a tu correo.')
+    const cleanCode = code.trim()
+    if (!cleanCode) {
+      setError('Por favor, ingresa el código de verificación de 6 dígitos enviado a tu correo.')
       return
     }
-    if (code.trim().length < 4) {
-      setError('El código de verificación debe contener al menos 4 caracteres.')
+    if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
+      setError('El código de verificación debe contener exactamente 6 dígitos numéricos.')
       return
     }
 
@@ -130,8 +131,20 @@ export default function ForgotPasswordModal({
       setError('Por favor, ingresa la nueva contraseña.')
       return
     }
-    if (newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.')
+    if (newPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      setError('La contraseña debe incluir al menos una letra mayúscula.')
+      return
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setError('La contraseña debe incluir al menos una letra minúscula.')
+      return
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      setError('La contraseña debe incluir al menos un número.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -278,7 +291,7 @@ export default function ForgotPasswordModal({
                 className="ls-select-input"
                 placeholder="Ej. 748291"
                 value={code}
-                maxLength={8}
+                maxLength={6}
                 onChange={(e) => {
                   setCode(e.target.value)
                   if (error) setError('')
@@ -377,7 +390,7 @@ export default function ForgotPasswordModal({
                   type={showPassword ? 'text' : 'password'}
                   id="new-password"
                   className="ls-select-input"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mín. 8 caracteres (1 mayúscula, 1 minúscula, 1 número)"
                   value={newPassword}
                   onChange={(e) => {
                     setNewPassword(e.target.value)
@@ -409,6 +422,9 @@ export default function ForgotPasswordModal({
                   {showPassword ? <PiEyeSlashBold /> : <PiEyeBold />}
                 </button>
               </div>
+              <small style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.74rem', marginTop: '6px', display: 'block' }}>
+                Mínimo 8 caracteres con al menos 1 mayúscula, 1 minúscula y 1 número.
+              </small>
             </div>
 
             <div className="ls-form-group">

@@ -8,6 +8,7 @@ type ValidationPageProps = {
   onNavigate?: (page: AppPage) => void
   profile?: Profile
   onProfileChange?: (field: keyof Profile, value: any) => void
+  onRegisterComplete?: () => void
 }
 
 type LocationSuggestion = {
@@ -30,7 +31,7 @@ const PRESET_LOCATIONS: LocationSuggestion[] = [
   { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico' },
 ]
 
-export default function ValidationPage({ onNavigate, profile, onProfileChange }: ValidationPageProps) {
+export default function ValidationPage({ onNavigate, profile, onProfileChange, onRegisterComplete }: ValidationPageProps) {
   const [soundcloud, setSoundcloud] = useState(profile?.soundcloudUrl || profile?.soundcloud || '')
   const [instagram, setInstagram] = useState(profile?.instagramUrl || profile?.instagram || '')
   const [spotify, setSpotify] = useState(profile?.spotifyUrl || profile?.spotify || '')
@@ -248,6 +249,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
     })
 
     map.addControl(new maplibregl.FullscreenControl())
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
     const timer = setTimeout(() => map.resize(), 150)
 
     markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
@@ -298,6 +300,12 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
       onProfileChange?.('spotify', spotify)
     }
     if (location) onProfileChange?.('location', location)
+    onRegisterComplete?.()
+    onNavigate?.('Discovery')
+  }
+
+  const handleSkip = () => {
+    onRegisterComplete?.()
     onNavigate?.('Discovery')
   }
 
@@ -308,18 +316,18 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
           <div className="ls-brand-mark">L</div>
           <div>
             <div className="ls-brand-name">LinkedSound</div>
-            <small>verify your profile</small>
+            <small>complete your onboarding</small>
           </div>
         </div>
 
-        <h1>Profile validation</h1>
-        <p className="ls-auth-subtitle">Add your profile links and confirm your identity before continuing.</p>
+        <h1>Configuración de Perfil (Onboarding)</h1>
+        <p className="ls-auth-subtitle">Vincula tus redes musicales y confirma tu ubicación para comenzar en LinkedSound.</p>
 
         <div className="ls-auth-form">
           <label>
             <span>
               <FaSoundcloud className="ls-field-icon" />
-              SoundCloud Perfil URL
+              SoundCloud Perfil URL (Opcional)
             </span>
             <input
               type="url"
@@ -363,18 +371,18 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
               }}
             />
             <small style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: '2px', display: 'block' }}>
-              * Se mostrará automáticamente tu último tema de SoundCloud y opcionalmente este track destacado en tu modal.
+              * Se mostrará automáticamente tu último tema de SoundCloud y opcionalmente este track destacado en tu perfil.
             </small>
           </label>
 
           <label>
             <span>
               <FaInstagram className="ls-field-icon" />
-              Instagram (optional)
+              Instagram (Opcional)
             </span>
             <input
               type="text"
-              placeholder="instagram.com/your-handle"
+              placeholder="instagram.com/tu-usuario"
               value={instagram}
               onChange={(e) => {
                 const val = e.target.value
@@ -388,11 +396,11 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
           <label>
             <span>
               <FaSpotify className="ls-field-icon" />
-              Spotify profile (optional)
+              Perfil de Spotify (Opcional)
             </span>
             <input
               type="text"
-              placeholder="open.spotify.com/artist/your-profile"
+              placeholder="open.spotify.com/artist/tu-perfil"
               value={spotify}
               onChange={(e) => {
                 const val = e.target.value
@@ -469,8 +477,18 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
               >
                 Usar mi ubicación actual
               </button>
-              {isLocating && <span className="ls-map-status">Buscando dirección...</span>}
-              {isSearching && <span className="ls-map-status">Buscando ciudades...</span>}
+              {isLocating && (
+                <div className="ls-map-status-spinner-wrap">
+                  <span className="ls-spinner" />
+                  <span>Obteniendo ubicación...</span>
+                </div>
+              )}
+              {isSearching && (
+                <div className="ls-map-status-spinner-wrap">
+                  <span className="ls-spinner" />
+                  <span>Buscando ciudad...</span>
+                </div>
+              )}
               {showMap && <span className="ls-map-hint">Haz clic en el mapa para marcar tu posición</span>}
             </div>
 
@@ -478,12 +496,18 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange }:
           </div>
 
           <div className="ls-validation-box">
-            <span className="ls-status-indicator" />
-            Verification pending review
+            <span className="ls-status-indicator" style={{ background: soundcloud ? '#27ae60' : '#f59e0b' }} />
+            {soundcloud
+              ? 'Perfil listo: Cuenta de SoundCloud vinculada.'
+              : 'Perfil pendiente de vincular música: Tu perfil se activará en Discovery al cargar SoundCloud desde la edición de perfil.'}
           </div>
 
           <button type="button" className="ls-primary-button ls-auth-button" onClick={handleValidate}>
-            Validate profile
+            Finalizar Configuración
+          </button>
+
+          <button type="button" className="ls-skip-button" onClick={handleSkip}>
+            Omitir por ahora (Continuar más tarde)
           </button>
         </div>
       </div>

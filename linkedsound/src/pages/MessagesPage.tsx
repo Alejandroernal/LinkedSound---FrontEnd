@@ -4,26 +4,47 @@ import Footer from '../components/Footer'
 import ConversationSidebar from '../components/ConversationSidebar'
 import ChatThread from '../components/ChatThread'
 import UnmatchModal from '../components/UnmatchModal'
+import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import {
   conversations as initialConversations,
   messagesByConversation as initialMessages,
+  exploreCards,
+  recommendations,
+  mockUsers,
   type Message,
   type Conversation,
+  type ProfileCard,
 } from '../data/mockData'
-import type { AppPage, Profile } from '../types'
+import type { AppPage, Profile, NotificationItem } from '../types'
 
 type MessagesPageProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
   profile: Profile
   isAdminSession?: boolean
+  notifications?: NotificationItem[]
+  onMarkNotificationAsRead?: (id: string) => void
+  onMarkAllNotificationsAsRead?: () => void
+  onClearNotifications?: () => void
+  onSignOut?: () => void
 }
 
-export default function MessagesPage({ activePage, onNavigate, profile, isAdminSession }: MessagesPageProps) {
+export default function MessagesPage({
+  activePage,
+  onNavigate,
+  profile,
+  isAdminSession,
+  notifications,
+  onMarkNotificationAsRead,
+  onMarkAllNotificationsAsRead,
+  onClearNotifications,
+  onSignOut,
+}: MessagesPageProps) {
   const [conversationsList, setConversationsList] = useState<Conversation[]>(initialConversations)
   const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
   const [activeId, setActiveId] = useState('luna-sol')
   const [unmatchingTarget, setUnmatchingTarget] = useState<Conversation | null>(null)
+  const [inspectedProfileCard, setInspectedProfileCard] = useState<ProfileCard | null>(null)
 
   const activeConversation =
     conversationsList.find((item) => item.id === activeId) ?? conversationsList[0]
@@ -34,6 +55,54 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
     setConversationsList((prev) =>
       prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c))
     )
+  }
+
+  const handleInspectProfile = () => {
+    if (!activeConversation) return
+    const targetName = activeConversation.name.toLowerCase().trim()
+    const foundCard =
+      exploreCards.find((c) => c.nickname?.toLowerCase().trim() === targetName) ??
+      recommendations.find((c) => c.nickname?.toLowerCase().trim() === targetName) ??
+      mockUsers.find((c) => c.nickname?.toLowerCase().trim() === targetName)
+
+    if (foundCard) {
+      setInspectedProfileCard(foundCard)
+    } else {
+      const nameParts = activeConversation.name.trim().split(' ')
+      const firstName = nameParts[0] || activeConversation.name
+      const lastName = nameParts.slice(1).join(' ') || 'Artista'
+      const cleanHandle = activeConversation.name.toLowerCase().replace(/\s+/g, '')
+
+      setInspectedProfileCard({
+        firstName,
+        lastName,
+        nickname: activeConversation.name,
+        role: activeConversation.role || 'Productor/Artista',
+        location: activeConversation.location || 'LinkedSound HQ',
+        profileImage: activeConversation.profileImage || 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
+        isProfile: true,
+        itemRole: 'Perfil',
+        description: `Perfil oficial de ${activeConversation.name} en LinkedSound. Creador y colaborador de la comunidad musical.`,
+        match: '94%',
+        badge: 'Creador',
+        interestGenres: ['Electronic', 'Synthwave', 'Ambient'],
+        tags: ['Electronic', 'Synthwave'],
+        soundcloudUrl: `https://soundcloud.com/${cleanHandle}`,
+        spotifyUrl: `https://open.spotify.com/artist/${cleanHandle}`,
+        instagramUrl: `https://instagram.com/${cleanHandle}`,
+        soundcloudHandle: cleanHandle,
+        tracks: [
+          {
+            id: 'tr-msg-1',
+            title: `${activeConversation.name} - Official Single`,
+            plays: '15.4k',
+            duration: '3:45',
+            genre: 'Electronic',
+            soundcloudLink: `https://soundcloud.com/${cleanHandle}`,
+          },
+        ],
+      })
+    }
   }
 
   const handleConfirmUnmatch = () => {
@@ -149,7 +218,17 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
 
   return (
     <div className="ls-app-shell ls-messages-shell">
-      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} isAdminSession={isAdminSession} />
+      <TopBar
+        activePage={activePage}
+        onNavigate={onNavigate}
+        profile={profile}
+        isAdminSession={isAdminSession}
+        notifications={notifications}
+        onMarkNotificationAsRead={onMarkNotificationAsRead}
+        onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
+        onClearNotifications={onClearNotifications}
+        onSignOut={onSignOut}
+      />
 
       <div className="ls-messages-layout">
         <ConversationSidebar
@@ -174,6 +253,7 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
             onToggleMute={handleToggleMute}
             onTogglePin={handleTogglePin}
             onToggleBlock={handleToggleBlock}
+            onInspectProfile={handleInspectProfile}
           />
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
@@ -187,6 +267,12 @@ export default function MessagesPage({ activePage, onNavigate, profile, isAdminS
         targetName={unmatchingTarget?.name ?? ''}
         onClose={() => setUnmatchingTarget(null)}
         onConfirmUnmatch={handleConfirmUnmatch}
+      />
+
+      <SoundCloudPreviewModal
+        isOpen={Boolean(inspectedProfileCard)}
+        card={inspectedProfileCard}
+        onClose={() => setInspectedProfileCard(null)}
       />
 
       <Footer />

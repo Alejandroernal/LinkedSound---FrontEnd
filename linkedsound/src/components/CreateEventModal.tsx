@@ -81,10 +81,10 @@ export default function CreateEventModal({
   const [venue, setVenue] = useState('')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('22:00')
+  const [description, setDescription] = useState('')
   const [ticketUrl, setTicketUrl] = useState('')
-  const [descript, setDescript] = useState('')
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Live', 'Techno'])
-  const [image, setImage] = useState(
+  const [profileImage, setProfileImage] = useState(
     'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80'
   )
 
@@ -349,9 +349,9 @@ export default function CreateEventModal({
       city: city.trim(),
       streetAddress: streetAddress.trim(),
       interestGenres: selectedGenres,
-      image: image.trim() || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
+      profileImage: profileImage.trim() || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
       match: '100%',
-      descript: descript.trim() || 'Nuevo evento publicado por la comunidad en LinkedSound.',
+      description: description.trim() || 'Nuevo evento publicado por la comunidad en LinkedSound.',
       badge: 'Evento',
       itemRole: 'Evento',
       isProfile: false,
@@ -372,7 +372,8 @@ export default function CreateEventModal({
     setTitle('')
     setVenue('')
     setEventDate('')
-    setDescript('')
+    setDescription('')
+    setTicketUrl('')
   }
 
   return (
@@ -676,8 +677,8 @@ export default function CreateEventModal({
               className="ls-textarea-input"
               rows={3}
               placeholder="Describe la propuesta musical, DJs o artistas invitados..."
-              value={descript}
-              onChange={(e) => setDescript(e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
@@ -707,8 +708,8 @@ export default function CreateEventModal({
             <input
               type="url"
               placeholder="https://images.unsplash.com/..."
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
+              value={profileImage}
+              onChange={(e) => setProfileImage(e.target.value)}
               className="ls-select-input"
             />
           </div>

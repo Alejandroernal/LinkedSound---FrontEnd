@@ -1,4 +1,4 @@
-export type AppPage = 'Discovery' | 'Explorer' | 'Messages' | 'Profile' | 'Login' | 'Register' | 'Validation' | 'Admin'
+export type AppPage = 'Discovery' | 'Explorer' | 'Messages' | 'Profile' | 'Login' | 'Register' | 'Validation' | 'Onboarding' | 'Admin'
 
 export type SoundCloudTrack = {
   id: string
@@ -52,27 +52,25 @@ export type UserProfile = {
   // Identificación y Registro
   id?: string
   nickname: string
-  firstName?: string
-  lastName?: string
+  firstName: string
+  lastName: string
   email?: string
   password?: string
   profileImage?: string
-  image?: string // Alias / fallback para profileImage
 
   // Perfil Profesional y Descripción
   role: string
-  interestGenres: string[]
+  interestGenres?: string[]
   description?: string
-  descript?: string // Alias / fallback para description
   match?: string
   badge?: string
   category?: string
   tags?: string[]
 
   // Enlaces y Redes Sociales
-  soundcloudUrl: string
-  spotifyUrl: string
-  instagramUrl: string
+  soundcloudUrl?: string
+  spotifyUrl?: string
+  instagramUrl?: string
   spotify?: string
   instagram?: string
   soundcloud?: string
@@ -128,9 +126,7 @@ export type EventItem = {
 
   // Descripción e imágenes
   description?: string
-  descript?: string // Alias / fallback para description
-  image?: string
-  profileImage?: string // Alias para image
+  profileImage?: string
 
   // Géneros y etiquetas
   interestGenres: string[]
@@ -166,6 +162,11 @@ export type EventItem = {
 
 // Tipo de unión para Explorer y visualización general de tarjetas
 export type ExplorerItemCard = UserProfile | EventItem
+
+// Type Guard para diferenciar Perfiles de Usuarios de Eventos
+export function isUserProfile(card: ExplorerItemCard): card is UserProfile {
+  return !('eventDate' in card) && card.itemRole !== 'Evento'
+}
 
 export type NotificationItem = {
   id: string

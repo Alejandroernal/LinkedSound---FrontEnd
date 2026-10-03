@@ -46,7 +46,9 @@ export default function TopBar({
   onSignOut,
 }: TopBarProps) {
   const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Admin User' : 'Kaelen Voss'))
-  const userRole = profile?.role ?? (isAdminSession ? 'Administrador' : 'Productor/Artista')
+  const userRole = profile?.role === 'Administrador'
+    ? 'Administrador'
+    : (profile?.category || profile?.role || (isAdminSession ? 'Administrador' : 'Productor/Artista'))
   const userProfileImage = profile?.profileImage ?? ''
 
   // Control del dropdown de notificaciones
@@ -100,7 +102,7 @@ export default function TopBar({
         <Brand />
 
         <nav className="ls-main-nav" aria-label="Main navigation">
-          {navItems.map((item) => (
+          {navItems.filter((item) => item.label !== 'Profile').map((item) => (
             <button
               key={item.label}
               type="button"

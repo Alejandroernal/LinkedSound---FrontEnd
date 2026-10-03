@@ -5,7 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import { AvatarEditorModal } from './RegisterPage'
-import type { AppPage, Profile } from '../types'
+import type { AppPage, Profile, NotificationItem } from '../types'
 
 type ProfilePageProps = {
   activePage?: AppPage
@@ -13,6 +13,11 @@ type ProfilePageProps = {
   profile: Profile
   onProfileChange: (field: keyof Profile, value: string | boolean | string[]) => void
   isAdminSession?: boolean
+  notifications?: NotificationItem[]
+  onMarkNotificationAsRead?: (id: string) => void
+  onMarkAllNotificationsAsRead?: () => void
+  onClearNotifications?: () => void
+  onSignOut?: () => void
 }
 
 type LocationSuggestion = {
@@ -53,8 +58,21 @@ const genreOptions = [
   'Lo-Fi',
 ]
 
-export default function ProfilePage({ activePage, onNavigate, profile, onProfileChange, isAdminSession }: ProfilePageProps) {
+export default function ProfilePage({
+  activePage,
+  onNavigate,
+  profile,
+  onProfileChange,
+  isAdminSession,
+  notifications,
+  onMarkNotificationAsRead,
+  onMarkAllNotificationsAsRead,
+  onClearNotifications,
+  onSignOut,
+}: ProfilePageProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [initialProfileSnapshot, setInitialProfileSnapshot] = useState<Profile | null>(null)
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [showMap, setShowMap] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
@@ -64,10 +82,99 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
   // Editor modal recortador de imagen
   const [rawImage, setRawImage] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
+  const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
+
+  const handleStartEdit = () => {
+    setInitialProfileSnapshot({ ...profile })
+    setIsEditing(true)
+    setInvalidFields({})
+  }
+
+  const handleSaveEdit = () => {
+    const errors: Record<string, boolean> = {}
+
+    if (!profile.firstName?.trim()) errors.firstName = true
+    if (!profile.lastName?.trim()) errors.lastName = true
+    if (!profile.nickname?.trim()) errors.nickname = true
+    if (!profile.email?.trim()) errors.email = true
+    if (!profile.password?.trim()) errors.password = true
+    if (!profile.location?.trim()) errors.location = true
+
+    if (Object.keys(errors).length > 0) {
+      setInvalidFields(errors)
+      return
+    }
+
+    setInvalidFields({})
+    setIsEditing(false)
+    setInitialProfileSnapshot(null)
+  }
+
+  const getInputStyle = (fieldName: string) => {
+    if (invalidFields[fieldName]) {
+      return {
+        border: '1.5px solid #ef4444',
+        boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.25)',
+        background: 'rgba(239, 68, 68, 0.06)',
+      }
+    }
+    return undefined
+  }
+
+  const renderFieldError = (fieldName: string) => {
+    if (!invalidFields[fieldName]) return null
+    return (
+      <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+        Este campo es obligatorio.
+      </small>
+    )
+  }
+
+  const handleCancelEdit = () => {
+    if (!initialProfileSnapshot) {
+      setIsEditing(false)
+      return
+    }
+
+    const hasChanges =
+      profile.firstName !== initialProfileSnapshot.firstName ||
+      profile.lastName !== initialProfileSnapshot.lastName ||
+      profile.nickname !== initialProfileSnapshot.nickname ||
+      profile.email !== initialProfileSnapshot.email ||
+      profile.password !== initialProfileSnapshot.password ||
+      profile.category !== initialProfileSnapshot.category ||
+      profile.role !== initialProfileSnapshot.role ||
+      profile.location !== initialProfileSnapshot.location ||
+      profile.description !== initialProfileSnapshot.description ||
+      profile.spotifyUrl !== initialProfileSnapshot.spotifyUrl ||
+      profile.instagramUrl !== initialProfileSnapshot.instagramUrl ||
+      profile.soundcloudUrl !== initialProfileSnapshot.soundcloudUrl ||
+      profile.profileImage !== initialProfileSnapshot.profileImage ||
+      JSON.stringify(profile.interestGenres ?? []) !== JSON.stringify(initialProfileSnapshot.interestGenres ?? [])
+
+    if (hasChanges) {
+      setShowDiscardModal(true)
+    } else {
+      setIsEditing(false)
+      setInitialProfileSnapshot(null)
+    }
+  }
+
+  const handleConfirmDiscard = () => {
+    if (initialProfileSnapshot) {
+      Object.keys(initialProfileSnapshot).forEach((key) => {
+        const k = key as keyof Profile
+        onProfileChange(k, initialProfileSnapshot[k] as any)
+      })
+    }
+    setShowDiscardModal(false)
+    setIsEditing(false)
+    setInitialProfileSnapshot(null)
+  }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -89,6 +196,13 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
 
   const handleChange = (field: keyof Profile, value: any) => {
     onProfileChange(field, value)
+    if (invalidFields[field as string] && typeof value === 'string' && value.trim()) {
+      setInvalidFields((prev) => {
+        const next = { ...prev }
+        delete next[field as string]
+        return next
+      })
+    }
   }
 
   const reverseGeocode = async (lat: number, lon: number) => {
@@ -270,6 +384,11 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
     }
   }, [showMap])
 
+  const getSpotifyUrl = () => (profile.spotifyUrl || profile.spotify || '').trim()
+  const getInstagramUrl = () => (profile.instagramUrl || profile.instagram || '').trim()
+  const getSoundcloudUrl = () => (profile.soundcloudUrl || profile.soundcloud || '').trim()
+  const getTrackSampleUrl = () => ((profile.tracks && profile.tracks[1]?.soundcloudLink) || '').trim()
+
   return (
     <div className="ls-app-shell">
       {showEditor && rawImage && (
@@ -280,7 +399,17 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
         />
       )}
 
-      <TopBar activePage={activePage} onNavigate={onNavigate} profile={profile} isAdminSession={isAdminSession} />
+      <TopBar
+        activePage={activePage}
+        onNavigate={onNavigate}
+        profile={profile}
+        isAdminSession={isAdminSession}
+        notifications={notifications}
+        onMarkNotificationAsRead={onMarkNotificationAsRead}
+        onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
+        onClearNotifications={onClearNotifications}
+        onSignOut={onSignOut}
+      />
 
       <main className="ls-page-content">
         <section className="ls-panel ls-page-panel">
@@ -316,31 +445,35 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
               </div>
             </div>
 
-            <button type="button" className="ls-primary-button" onClick={() => setIsEditing((prev) => !prev)}>
-              {isEditing ? 'Guardar cambios' : 'Editar perfil'}
-            </button>
-          </div>
-
-          <div className="ls-profile-grid">
-            <div className="ls-studio-card" style={{ gridColumn: '1 / -1', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-              <span className="ls-studio-tag" style={{ alignSelf: 'flex-start' }}>Descripcion</span>
-              {isEditing ? (
-                <textarea
-                  style={{ width: '100%', minWidth: '100%', boxSizing: 'border-box', marginTop: '12px' }}
-                  value={profile.descript ?? ''}
-                  onChange={(event) => handleChange('descript', event.target.value)}
-                />
-              ) : (
-                <p>{profile.descript}</p>
-              )}
-            </div>
+            {isEditing ? (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="button" className="ls-secondary-button" onClick={handleCancelEdit}>
+                  Cancelar
+                </button>
+                <button type="button" className="ls-primary-button" onClick={handleSaveEdit}>
+                  Guardar cambios
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="ls-primary-button" onClick={handleStartEdit}>
+                Editar perfil
+              </button>
+            )}
           </div>
 
           <div className="ls-profile-form-grid">
+            {/* 1. First Name | Last Name */}
             <div className="ls-profile-field">
               <label>First Name</label>
               {isEditing ? (
-                <input value={profile.firstName ?? ''} onChange={(event) => handleChange('firstName', event.target.value)} />
+                <>
+                  <input
+                    value={profile.firstName ?? ''}
+                    onChange={(event) => handleChange('firstName', event.target.value)}
+                    style={getInputStyle('firstName')}
+                  />
+                  {renderFieldError('firstName')}
+                </>
               ) : (
                 <span>{profile.firstName || 'Sin especificar'}</span>
               )}
@@ -349,36 +482,46 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
             <div className="ls-profile-field">
               <label>Last Name</label>
               {isEditing ? (
-                <input value={profile.lastName ?? ''} onChange={(event) => handleChange('lastName', event.target.value)} />
+                <>
+                  <input
+                    value={profile.lastName ?? ''}
+                    onChange={(event) => handleChange('lastName', event.target.value)}
+                    style={getInputStyle('lastName')}
+                  />
+                  {renderFieldError('lastName')}
+                </>
               ) : (
                 <span>{profile.lastName || 'Sin especificar'}</span>
               )}
             </div>
 
+            {/* 2. NickName | Categoría */}
             <div className="ls-profile-field">
               <label>NickName / Artistic Name</label>
               {isEditing ? (
-                <input value={profile.nickname ?? ''} onChange={(event) => handleChange('nickname', event.target.value)} />
+                <>
+                  <input
+                    value={profile.nickname ?? ''}
+                    onChange={(event) => handleChange('nickname', event.target.value)}
+                    style={getInputStyle('nickname')}
+                  />
+                  {renderFieldError('nickname')}
+                </>
               ) : (
                 <span>{profile.nickname}</span>
               )}
             </div>
 
             <div className="ls-profile-field">
-              <label>Email</label>
+              <label>Categoría</label>
               {isEditing ? (
-                <input type="email" value={profile.email ?? ''} onChange={(event) => handleChange('email', event.target.value)} />
+                <select value={profile.category ?? 'Productor'} onChange={(event) => handleChange('category', event.target.value)}>
+                  <option value="Productor">Productor</option>
+                  <option value="Artista">Artista</option>
+                  <option value="Productor/Artista">Productor/Artista</option>
+                </select>
               ) : (
-                <span>{profile.email || 'kaelen@linkedsound.app'}</span>
-              )}
-            </div>
-
-            <div className="ls-profile-field">
-              <label>Password</label>
-              {isEditing ? (
-                <input type="password" value={profile.password ?? ''} onChange={(event) => handleChange('password', event.target.value)} />
-              ) : (
-                <span>••••••••</span>
+                <span>{profile.category ?? 'Productor/Artista'}</span>
               )}
             </div>
 
@@ -398,56 +541,23 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
               </div>
             )}
 
-            <div className="ls-profile-field">
-              <label>Categoría</label>
-              {isEditing ? (
-                <select value={profile.category ?? 'Productor'} onChange={(event) => handleChange('category', event.target.value)}>
-                  <option value="Productor">Productor</option>
-                  <option value="Artista">Artista</option>
-                  <option value="Productor/Artista">Productor/Artista</option>
-                </select>
-              ) : (
-                <span>{profile.category ?? 'Productor/Artista'}</span>
-              )}
-            </div>
-
+            {/* 3. Descripción */}
             <div className="ls-profile-field wide-field">
-              <label>Intereses de género</label>
+              <label>Descripción</label>
               {isEditing ? (
-                <div className="ls-genre-selector">
-                  {genreOptions.map((genre) => {
-                    const checked = (profile.interestGenres ?? []).includes(genre)
-
-                    return (
-                      <button
-                        key={genre}
-                        type="button"
-                        className={`ls-genre-chip ${checked ? 'is-selected' : ''}`}
-                        onClick={() => {
-                          const currentList = profile.interestGenres ?? []
-                          const nextSelection = checked
-                            ? currentList.filter((item) => item !== genre)
-                            : [...currentList, genre]
-
-                          handleChange('interestGenres', nextSelection.slice(0, 6))
-                        }}
-                      >
-                        {genre}
-                      </button>
-                    )
-                  })}
-                </div>
+                <textarea
+                  style={{ width: '100%', minWidth: '100%', boxSizing: 'border-box', marginTop: '4px' }}
+                  value={profile.description ?? ''}
+                  onChange={(event) => handleChange('description', event.target.value)}
+                />
               ) : (
-                <div className="ls-genre-selector read-only">
-                  {(profile.interestGenres ?? []).map((genre) => (
-                    <span key={genre} className="ls-genre-chip read-only-chip">
-                      {genre}
-                    </span>
-                  ))}
-                </div>
+                <span style={{ display: 'block', margin: 0, color: 'rgba(255, 255, 255, 0.85)', lineHeight: 1.5 }}>
+                  {profile.description || 'Sin descripción'}
+                </span>
               )}
             </div>
 
+            {/* 4. Location / Ubicación */}
             <div className="ls-profile-field wide-field ls-location-group">
               <label>Location / Ubicación</label>
               {isEditing ? (
@@ -468,7 +578,9 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                       onBlur={() => {
                         setTimeout(() => setShowSuggestions(false), 200)
                       }}
+                      style={getInputStyle('location')}
                     />
+                    {renderFieldError('location')}
 
                     {showSuggestions && suggestions.length > 0 && (
                       <div className="ls-autocomplete-dropdown" role="listbox">
@@ -519,6 +631,80 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
               )}
             </div>
 
+            {/* 5. Intereses de género */}
+            <div className="ls-profile-field wide-field">
+              <label>Intereses de género</label>
+              {isEditing ? (
+                <div className="ls-genre-selector">
+                  {genreOptions.map((genre) => {
+                    const checked = (profile.interestGenres ?? []).includes(genre)
+
+                    return (
+                      <button
+                        key={genre}
+                        type="button"
+                        className={`ls-genre-chip ${checked ? 'is-selected' : ''}`}
+                        onClick={() => {
+                          const currentList = profile.interestGenres ?? []
+                          const nextSelection = checked
+                            ? currentList.filter((item) => item !== genre)
+                            : [...currentList, genre]
+
+                          handleChange('interestGenres', nextSelection.slice(0, 6))
+                        }}
+                      >
+                        {genre}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="ls-genre-selector read-only">
+                  {(profile.interestGenres ?? []).map((genre) => (
+                    <span key={genre} className="ls-genre-chip read-only-chip">
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 6. Email | Password */}
+            <div className="ls-profile-field">
+              <label>Email</label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="email"
+                    value={profile.email ?? ''}
+                    onChange={(event) => handleChange('email', event.target.value)}
+                    style={getInputStyle('email')}
+                  />
+                  {renderFieldError('email')}
+                </>
+              ) : (
+                <span>{profile.email || 'kaelen@linkedsound.app'}</span>
+              )}
+            </div>
+
+            <div className="ls-profile-field">
+              <label>Password</label>
+              {isEditing ? (
+                <>
+                  <input
+                    type="password"
+                    value={profile.password ?? ''}
+                    onChange={(event) => handleChange('password', event.target.value)}
+                    style={getInputStyle('password')}
+                  />
+                  {renderFieldError('password')}
+                </>
+              ) : (
+                <span>••••••••</span>
+              )}
+            </div>
+
+            {/* 7. Enlaces sociales */}
             <div className="ls-profile-field">
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <FaSpotify style={{ color: '#1DB954' }} /> Spotify
@@ -531,16 +717,19 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                     handleChange('spotify', event.target.value)
                   }}
                 />
-              ) : (
+              ) : getSpotifyUrl() && getSpotifyUrl() !== 'No vinculado' ? (
                 <a
-                  href={profile.spotifyUrl || profile.spotify}
+                  href={getSpotifyUrl()}
                   target="_blank"
                   rel="noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-
-                  {profile.spotifyUrl || profile.spotify || 'No vinculado'}
+                  {getSpotifyUrl()}
                 </a>
+              ) : (
+                <span style={{ color: 'rgba(255, 255, 255, 0.45)', cursor: 'default' }}>
+                  No vinculado
+                </span>
               )}
             </div>
 
@@ -556,16 +745,19 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                     handleChange('instagram', event.target.value)
                   }}
                 />
-              ) : (
+              ) : getInstagramUrl() && getInstagramUrl() !== 'No vinculado' ? (
                 <a
-                  href={profile.instagramUrl || profile.instagram}
+                  href={getInstagramUrl()}
                   target="_blank"
                   rel="noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-
-                  {profile.instagramUrl || profile.instagram || 'No vinculado'}
+                  {getInstagramUrl()}
                 </a>
+              ) : (
+                <span style={{ color: 'rgba(255, 255, 255, 0.45)', cursor: 'default' }}>
+                  No vinculado
+                </span>
               )}
             </div>
 
@@ -581,21 +773,25 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                     handleChange('soundcloud', event.target.value)
                   }}
                 />
-              ) : (
+              ) : getSoundcloudUrl() && getSoundcloudUrl() !== 'No vinculado' ? (
                 <a
-                  href={profile.soundcloudUrl || profile.soundcloud}
+                  href={getSoundcloudUrl()}
                   target="_blank"
                   rel="noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  {profile.soundcloudUrl || profile.soundcloud || 'No vinculado'}
+                  {getSoundcloudUrl()}
                 </a>
+              ) : (
+                <span style={{ color: 'rgba(255, 255, 255, 0.45)', cursor: 'default' }}>
+                  No vinculado
+                </span>
               )}
             </div>
 
             <div className="ls-profile-field wide-field">
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FaSoundcloud style={{ color: '#FF7700' }} /> Track o Muestra Destacada (URL de SoundCloud)
+                <FaSoundcloud style={{ color: '#FF7700' }} /> Track o Muestra Destacada
               </label>
               {isEditing ? (
                 <input
@@ -620,15 +816,56 @@ export default function ProfilePage({ activePage, onNavigate, profile, onProfile
                     handleChange('tracks', updatedTracks)
                   }}
                 />
+              ) : getTrackSampleUrl() && getTrackSampleUrl() !== 'No vinculado' ? (
+                <a
+                  href={getTrackSampleUrl()}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {getTrackSampleUrl()}
+                </a>
               ) : (
-                <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.7)' }}>
-                  {(profile.tracks && profile.tracks[1]?.soundcloudLink) || 'No se configuró una muestra adicional'}
+                <span style={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.45)', cursor: 'default' }}>
+                  No se configuró una muestra adicional
                 </span>
               )}
             </div>
           </div>
         </section>
       </main>
+
+      {/* Modal de Confirmación de Descarte de Cambios */}
+      {showDiscardModal && (
+        <div className="ls-modal-overlay">
+          <div className="ls-modal-card" style={{ width: 'min(100%, 460px)', background: '#0f1325', border: '1px solid rgba(168, 85, 247, 0.35)', borderRadius: '18px', padding: '24px' }}>
+            <div className="ls-modal-header" style={{ marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.1rem' }}>Descartar Cambios</h3>
+            </div>
+            <div className="ls-modal-body" style={{ marginBottom: '20px' }}>
+              <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                ¿Estás seguro de que deseas cancelar la edición? Los cambios realizados se perderán.
+              </p>
+            </div>
+            <div className="ls-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="ls-secondary-button"
+                onClick={() => setShowDiscardModal(false)}
+              >
+                Continuar editando
+              </button>
+              <button
+                type="button"
+                className="ls-danger-button"
+                onClick={handleConfirmDiscard}
+              >
+                Sí, descartar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

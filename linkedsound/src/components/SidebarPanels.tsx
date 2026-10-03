@@ -35,12 +35,51 @@ const PRESET_LOCATIONS: LocationSuggestion[] = [
   { label: 'Francia, paris', full: 'Francia, paris', lat: 48.8566, lon: 2.3522 },
   { label: 'Berlin, Germany', full: 'Berlin, Germany', lat: 52.52, lon: 13.405 },
   { label: 'Entre Rios, Argentina', full: 'Entre Rios, Argentina', lat: -31.741, lon: -58.514 },
+  { label: 'Trenque Lauquen, Argentina', full: 'Trenque Lauquen, Buenos Aires, Argentina', lat: -35.973, lon: -62.734 },
   { label: 'New York, USA', full: 'New York, NY, United States', lat: 40.7128, lon: -74.006 },
   { label: 'London, United Kingdom', full: 'London, England, United Kingdom', lat: 51.5074, lon: -0.1278 },
   { label: 'Los Angeles, USA', full: 'Los Angeles, CA, United States', lat: 34.0522, lon: -118.2437 },
   { label: 'Buenos Aires, Argentina', full: 'Buenos Aires, Argentina', lat: -34.6037, lon: -58.3816 },
   { label: 'Tokyo, Japan', full: 'Tokyo, Japan', lat: 35.6895, lon: 139.6917 },
 ]
+
+const KNOWN_CITIES = [
+  { label: 'Trenque Lauquen, Argentina', lat: -35.973, lon: -62.734 },
+  { label: 'Buenos Aires, Argentina', lat: -34.6037, lon: -58.3816 },
+  { label: 'Entre Ríos, Argentina', lat: -31.741, lon: -58.514 },
+  { label: 'Córdoba, Argentina', lat: -31.4201, lon: -64.1888 },
+  { label: 'Rosario, Argentina', lat: -32.9442, lon: -60.6505 },
+  { label: 'Mendoza, Argentina', lat: -32.8895, lon: -68.8458 },
+  { label: 'La Plata, Argentina', lat: -34.9214, lon: -57.9545 },
+  { label: 'Mar del Plata, Argentina', lat: -38.0055, lon: -57.5426 },
+  { label: 'Bariloche, Argentina', lat: -41.1335, lon: -71.3103 },
+  { label: 'Salta, Argentina', lat: -24.7821, lon: -65.4232 },
+  { label: 'Francia, Paris', lat: 48.8566, lon: 2.3522 },
+  { label: 'Berlin, Germany', lat: 52.52, lon: 13.405 },
+  { label: 'New York, USA', lat: 40.7128, lon: -74.006 },
+  { label: 'London, United Kingdom', lat: 51.5074, lon: -0.1278 },
+  { label: 'Los Angeles, USA', lat: 34.0522, lon: -118.2437 },
+  { label: 'Tokyo, Japan', lat: 35.6895, lon: 139.6917 },
+  { label: 'Madrid, España', lat: 40.4168, lon: -3.7038 },
+  { label: 'Barcelona, España', lat: 41.3851, lon: 2.1734 },
+]
+
+export function getNearestPlaceName(lat: number, lon: number): string {
+  let closest = KNOWN_CITIES[0]
+  let minDistance = Infinity
+
+  for (const city of KNOWN_CITIES) {
+    const dLat = city.lat - lat
+    const dLon = city.lon - lon
+    const distSq = dLat * dLat + dLon * dLon
+    if (distSq < minDistance) {
+      minDistance = distSq
+      closest = city
+    }
+  }
+
+  return closest.label
+}
 
 const collaboratorOptions = ['Productor', 'Artista', 'Productor/Artista'] as const
 
@@ -200,13 +239,41 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
   const reverseGeocode = async (lat: number, lon: number) => {
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`
       )
+      if (!response.ok) throw new Error('Geocoding request failed')
       const data = await response.json()
       const addr = data.address || {}
-      const city = addr.city || addr.town || addr.village || addr.municipality || addr.suburb || ''
-      const country = addr.country || ''
-      const label = [city, country].filter(Boolean).join(', ') || `${lat.toFixed(3)}, ${lon.toFixed(3)}`
+
+      const mainPlace =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
+        addr.suburb ||
+        addr.city_district ||
+        addr.county ||
+        addr.state_district ||
+        addr.state ||
+        addr.region ||
+        data.name ||
+        ''
+
+      const regionOrCountry = addr.state || addr.country || ''
+
+      let label = ''
+      if (mainPlace && regionOrCountry && mainPlace.toLowerCase() !== regionOrCountry.toLowerCase()) {
+        label = `${mainPlace}, ${regionOrCountry}`
+      } else if (mainPlace) {
+        label = mainPlace
+      } else if (data.display_name) {
+        const parts = data.display_name.split(',').map((s: string) => s.trim())
+        label = parts.slice(0, 2).filter(Boolean).join(', ')
+      }
+
+      if (!label || label.trim().length === 0) {
+        label = getNearestPlaceName(lat, lon)
+      }
 
       onChangeFilters?.({
         ...currentFilters,
@@ -215,9 +282,10 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
         centerLng: lon,
       })
     } catch {
+      const fallbackLabel = getNearestPlaceName(lat, lon)
       onChangeFilters?.({
         ...currentFilters,
-        locationQuery: `${lat.toFixed(3)}, ${lon.toFixed(3)}`,
+        locationQuery: fallbackLabel,
         centerLat: lat,
         centerLng: lon,
       })
@@ -649,125 +717,127 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
         )}
       </div>
 
-      {/* Genre Interests Filter (Desplegable / Popover como en Explore) */}
-      <div className="ls-filter-block" style={{ position: 'relative', marginBottom: '4px' }} ref={popoverGenreRef}>
+      {/* Genre Interests Filter (Desplegable / Popover que se abre hacia arriba) */}
+      <div className="ls-filter-block" style={{ marginBottom: '4px' }} ref={popoverGenreRef}>
         <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>
           Genre Interests (Géneros)
         </label>
 
-        <button
-          type="button"
-          className="ls-genre-popover-trigger"
-          onClick={() => {
-            setShowGenrePopover(!showGenrePopover)
-            setShowCategoryPopover(false)
-          }}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justify: 'space-between',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            background: currentFilters.selectedGenres.length > 0 ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-            border: `1px solid ${currentFilters.selectedGenres.length > 0 ? 'rgba(168, 85, 247, 0.5)' : 'rgba(255, 255, 255, 0.12)'}`,
-            color: '#ffffff',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <PiMusicNotesFill style={{ color: '#a855f7' }} />
-            <span>
-              {currentFilters.selectedGenres.length === 0
-                ? 'Todos los géneros'
-                : `${currentFilters.selectedGenres.length} género(s) seleccionado(s)`}
-            </span>
-          </div>
-          <PiCaretDownBold style={{ transform: showGenrePopover ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
-        </button>
-
-        {/* Desplegable / Popover Géneros */}
-        {showGenrePopover && (
-          <div
-            className="ls-genre-popover-dropdown"
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            className="ls-genre-popover-trigger"
+            onClick={() => {
+              setShowGenrePopover(!showGenrePopover)
+              setShowCategoryPopover(false)
+            }}
             style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              zIndex: 1000,
-              marginTop: '4px',
-              background: '#0d1021',
-              border: '1px solid rgba(168, 85, 247, 0.35)',
-              borderRadius: '10px',
-              padding: '10px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: currentFilters.selectedGenres.length > 0 ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${currentFilters.selectedGenres.length > 0 ? 'rgba(168, 85, 247, 0.5)' : 'rgba(255, 255, 255, 0.12)'}`,
+              color: '#ffffff',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e9d5ff' }}>Seleccionar Géneros</span>
-              {currentFilters.selectedGenres.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onChangeFilters?.({ ...currentFilters, selectedGenres: [] })}
-                  style={{ background: 'transparent', border: 'none', color: '#ff3c6e', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  Limpiar ({currentFilters.selectedGenres.length})
-                </button>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <PiMusicNotesFill style={{ color: '#a855f7' }} />
+              <span>
+                {currentFilters.selectedGenres.length === 0
+                  ? 'Todos los géneros'
+                  : `${currentFilters.selectedGenres.length} género(s) seleccionado(s)`}
+              </span>
             </div>
+            <PiCaretDownBold style={{ transform: showGenrePopover ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+          </button>
 
-            <div style={{ position: 'relative', marginBottom: '6px' }}>
-              <input
-                type="text"
-                placeholder="Buscar género..."
-                value={genreSearch}
-                onChange={(e) => setGenreSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  background: 'rgba(0,0,0,0.3)',
-                  color: '#fff',
-                  fontSize: '0.76rem',
-                }}
-              />
-            </div>
-
-            <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {filteredAvailableGenres.map((genre) => {
-                const isSelected = currentFilters.selectedGenres.includes(genre)
-                return (
+          {/* Desplegable / Popover Géneros (Abre estrictamente hacia arriba) */}
+          {showGenrePopover && (
+            <div
+              className="ls-genre-popover-dropdown"
+              style={{
+                position: 'absolute',
+                top: 'auto',
+                bottom: 'calc(100% + 6px)',
+                left: 0,
+                right: 0,
+                zIndex: 1000,
+                background: '#0d1021',
+                border: '1px solid rgba(168, 85, 247, 0.35)',
+                borderRadius: '10px',
+                padding: '10px',
+                boxShadow: '0 -10px 30px rgba(0,0,0,0.8)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e9d5ff' }}>Seleccionar Géneros</span>
+                {currentFilters.selectedGenres.length > 0 && (
                   <button
-                    key={genre}
                     type="button"
-                    onClick={() => toggleGenre(genre)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justify: 'space-between',
-                      padding: '5px 8px',
-                      borderRadius: '6px',
-                      background: isSelected ? 'rgba(168, 85, 247, 0.25)' : 'transparent',
-                      border: 'none',
-                      color: isSelected ? '#a855f7' : '#ffffff',
-                      cursor: 'pointer',
-                      fontSize: '0.78rem',
-                      fontWeight: isSelected ? 600 : 400,
-                      textAlign: 'left',
-                    }}
+                    onClick={() => onChangeFilters?.({ ...currentFilters, selectedGenres: [] })}
+                    style={{ background: 'transparent', border: 'none', color: '#ff3c6e', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
                   >
-                    <span>{genre}</span>
-                    {isSelected && <PiCheckBold style={{ color: '#a855f7' }} />}
+                    Limpiar ({currentFilters.selectedGenres.length})
                   </button>
-                )
-              })}
+                )}
+              </div>
+
+              <div style={{ position: 'relative', marginBottom: '6px' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar género..."
+                  value={genreSearch}
+                  onChange={(e) => setGenreSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#fff',
+                    fontSize: '0.76rem',
+                  }}
+                />
+              </div>
+
+              <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {filteredAvailableGenres.map((genre) => {
+                  const isSelected = currentFilters.selectedGenres.includes(genre)
+                  return (
+                    <button
+                      key={genre}
+                      type="button"
+                      onClick={() => toggleGenre(genre)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justify: 'space-between',
+                        padding: '5px 8px',
+                        borderRadius: '6px',
+                        background: isSelected ? 'rgba(168, 85, 247, 0.25)' : 'transparent',
+                        border: 'none',
+                        color: isSelected ? '#a855f7' : '#ffffff',
+                        cursor: 'pointer',
+                        fontSize: '0.78rem',
+                        fontWeight: isSelected ? 600 : 400,
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span>{genre}</span>
+                      {isSelected && <PiCheckBold style={{ color: '#a855f7' }} />}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

@@ -18,7 +18,7 @@ import {
 } from 'react-icons/pi'
 import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
-import { formatEventDate } from '../types'
+import { formatEventDate, isUserProfile } from '../types'
 
 type SoundCloudPreviewModalProps = {
   isOpen: boolean
@@ -48,8 +48,9 @@ export default function SoundCloudPreviewModal({
   const markerRef = useRef<maplibregl.Marker | null>(null)
 
   useEffect(() => {
-    if (card?.soundcloudUrl ?? card?.soundcloud) {
-      setActiveEmbedUrl(card.soundcloudUrl ?? card.soundcloud ?? null)
+    const mainScUrl = card?.soundcloudUrl
+    if (mainScUrl) {
+      setActiveEmbedUrl(mainScUrl)
       setActiveTrackId(null)
       setShouldAutoplay(false) // User decision: do not autoplay on modal open
     }
@@ -162,24 +163,29 @@ export default function SoundCloudPreviewModal({
 
   if (!isOpen || !card) return null
 
-  const profileName = card.nickname ?? card.nickname ?? 'Usuario'
-  const isProfile = card.isProfile !== false
+  const isProfile = isUserProfile(card)
+  const firstName = isProfile ? card.firstName : ''
+  const lastName = isProfile ? card.lastName : ''
+  const soundcloudHandle = isProfile ? card.soundcloudHandle : undefined
+  const fullName = [firstName, lastName].filter(Boolean).join(' ')
+  const profileName = card.nickname?.trim() || fullName || 'Usuario'
   const tracks: SoundCloudTrack[] = card.tracks ?? []
   const visibleTracks = tracks.slice(0, 2) // Muestra el último tema subido + 1 opcional subido por el usuario
-  const handleUrl = card.soundcloudUrl ?? card.soundcloud ?? `https://soundcloud.com/search?q=${encodeURIComponent(profileName)}`
-  const handleName = (card.soundcloudUrl ?? card.soundcloud)
-    ? (card.soundcloudUrl ?? card.soundcloud ?? '').replace(/^https?:\/\/(www\.)?soundcloud\.com\//, '')
-    : (card.soundcloudHandle ?? profileName.toLowerCase().replace(/\s+/g, ''))
+  const scUrl = card.soundcloudUrl
+  const handleUrl = scUrl || `https://soundcloud.com/search?q=${encodeURIComponent(profileName)}`
+  const handleName = scUrl
+    ? scUrl.replace(/^https?:\/\/(www\.)?soundcloud\.com\//, '')
+    : (soundcloudHandle ?? profileName.toLowerCase().replace(/\s+/g, ''))
 
-  const spotifyUrl = card.spotifyUrl ?? card.spotify
-  const instagramUrl = card.instagramUrl ?? card.instagram
+  const spotifyUrl = card.spotifyUrl
+  const instagramUrl = card.instagramUrl
 
   // Effective embed URL: user selected track or profile URL
   const embedTargetUrl = activeEmbedUrl ?? handleUrl
 
   const handleSelectTrack = (track: SoundCloudTrack) => {
     setActiveTrackId(track.id)
-    setActiveEmbedUrl(track.soundcloudLink ?? card.soundcloudUrl ?? card.soundcloud ?? null)
+    setActiveEmbedUrl(track.soundcloudLink || card.soundcloudUrl || null)
     setShouldAutoplay(true) // Start playback on explicit user action
   }
 
@@ -207,7 +213,7 @@ export default function SoundCloudPreviewModal({
 
         {!isProfile ? (
           <div className="ls-non-profile-notice" style={{ textAlign: 'left' }}>
-            {(card.image || card.profileImage) && (
+            {card.profileImage && (
               <div
                 className="ls-notice-image-wrap"
                 style={{
@@ -223,7 +229,7 @@ export default function SoundCloudPreviewModal({
                 }}
               >
                 <img
-                  src={card.image || card.profileImage}
+                  src={card.profileImage}
                   alt={profileName}
                   style={{
                     width: '100%',
@@ -327,9 +333,9 @@ export default function SoundCloudPreviewModal({
               </div>
             )}
 
-            {card.bio && (
+            {card.description && (
               <p className="ls-notice-text" style={{ fontStyle: 'italic', opacity: 0.9, marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem', textAlign: 'left' }}>
-                "{card.bio}"
+                "{card.description}"
               </p>
             )}
 
@@ -365,11 +371,18 @@ export default function SoundCloudPreviewModal({
             {/* Header / Profile info */}
             <div className="ls-sc-header">
               <div className="ls-sc-avatar-wrap">
-                <img src={card.image || card.profileImage} alt={profileName} className="ls-sc-avatar" />
+                <img src={card.profileImage} alt={profileName} className="ls-sc-avatar" />
               </div>
               <div className="ls-sc-user-info">
                 <div className="ls-sc-title-row">
-                  <h2>{profileName}</h2>
+                  <div>
+                    <h2>{profileName}</h2>
+                    {fullName && card.nickname && fullName.toLowerCase() !== card.nickname.toLowerCase() && (
+                      <span style={{ fontSize: '0.84rem', color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginTop: '2px' }}>
+                        {fullName}
+                      </span>
+                    )}
+                  </div>
                   <span className="ls-sc-match">{card.match} match</span>
                 </div>
                 <p className="ls-sc-role">
@@ -423,7 +436,7 @@ export default function SoundCloudPreviewModal({
               </div>
             </div>
 
-            <p className="ls-sc-bio">{card.descript ?? card.bio ?? card.description}</p>
+            <p className="ls-sc-bio">{card.description || ''}</p>
 
             {/* Official SoundCloud Embedded Player Widget */}
             <div className="ls-sc-embed-widget">

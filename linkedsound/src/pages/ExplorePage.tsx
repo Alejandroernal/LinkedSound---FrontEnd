@@ -24,7 +24,7 @@ import {
   PiCheckBold,
 } from 'react-icons/pi'
 import { exploreCards as initialExploreCards, type ProfileCard } from '../data/mockData'
-import { type AppPage, type Profile, type NotificationItem, formatEventDate } from '../types'
+import { type AppPage, type Profile, type NotificationItem, formatEventDate, isUserProfile } from '../types'
 
 type ExplorePageProps = {
   activePage?: AppPage
@@ -207,28 +207,16 @@ export default function ExplorePage({
                   </button>
                 </div>
 
-                {/* 2. Botón Filtro por Género (Popover) */}
-                <div className="ls-relative-popover-wrap">
-                  <button
-                    type="button"
-                    className={`ls-icon-func-btn ${activeGenre ? 'is-active' : ''}`}
-                    onClick={() => setIsGenreFilterOpen(!isGenreFilterOpen)}
-                    title={activeGenre ? `Filtrando por: ${activeGenre}` : 'Filtrar por género musical'}
-                  >
-                    <PiFunnelBold />
-                    {activeGenre && <span className="ls-icon-active-dot" />}
-                  </button>
-
-                  <GenreFilterPopover
-                    isOpen={isGenreFilterOpen}
-                    onClose={() => setIsGenreFilterOpen(false)}
-                    currentGenre={activeGenre}
-                    onSelectGenre={(genre) => {
-                      setActiveGenre(genre)
-                      setIsGenreFilterOpen(false)
-                    }}
-                  />
-                </div>
+                {/* 2. Botón Filtro por Género */}
+                <button
+                  type="button"
+                  className={`ls-icon-func-btn ${activeGenre || isGenreFilterOpen ? 'is-active' : ''}`}
+                  onClick={() => setIsGenreFilterOpen(!isGenreFilterOpen)}
+                  title={activeGenre ? `Filtrando por: ${activeGenre}` : 'Filtrar por género musical'}
+                >
+                  <PiFunnelBold />
+                  {activeGenre && <span className="ls-icon-active-dot" />}
+                </button>
 
                 {/* 3. Selector de Ordenamiento por Icono */}
                 <div className="ls-sort-icon-select-wrap">
@@ -272,15 +260,29 @@ export default function ExplorePage({
                 )}
               </div>
             </div>
+
+            {/* Panel de Filtro por Género Incorporado (Inline Panel) */}
+            <GenreFilterPopover
+              isOpen={isGenreFilterOpen}
+              onClose={() => setIsGenreFilterOpen(false)}
+              currentGenre={activeGenre}
+              onSelectGenre={(genre) => {
+                setActiveGenre(genre)
+              }}
+            />
           </div>
 
 
           <div className="ls-card-grid">
             {filteredCards.length > 0 ? (
               filteredCards.map((card, idx) => {
-                const itemRole = card.itemRole ?? (card.isProfile !== false ? 'Perfil' : 'Evento')
-                const isProfile = itemRole === 'Perfil'
+                const isProfile = isUserProfile(card)
+                const itemRole = card.itemRole ?? (isProfile ? 'Perfil' : 'Evento')
                 const cardKey = card.id ? card.id : `${card.nickname ?? 'card'}-${idx}`
+                const firstName = isProfile ? (card.firstName ?? '') : ''
+                const lastName = isProfile ? (card.lastName ?? '') : ''
+                const fullName = [firstName, lastName].filter(Boolean).join(' ')
+                const cardDisplayTitle = card.nickname?.trim() || fullName || 'Creador'
 
                 return (
                   <article
@@ -289,12 +291,12 @@ export default function ExplorePage({
                     onClick={() => setSelectedPreviewCard(card)}
                     title={
                       isProfile
-                        ? `Haz clic para ver los trabajos en SoundCloud de ${card.nickname ?? ''}`
-                        : `Ver detalles de ${card.nickname ?? ''}`
+                        ? `Haz clic para ver los trabajos en SoundCloud de ${cardDisplayTitle}`
+                        : `Ver detalles de ${cardDisplayTitle}`
                     }
                   >
                     <div className="ls-card-visual">
-                      <img src={card.image || card.profileImage} alt={card.nickname ?? 'Card Image'} />
+                      <img src={card.profileImage} alt={cardDisplayTitle} />
                       <span className="ls-card-badge">
                         {itemRole.toUpperCase()}
                       </span>
@@ -312,7 +314,14 @@ export default function ExplorePage({
                     </div>
                     <div className="ls-card-body">
                       <div className="ls-card-head">
-                        <h3>{card.nickname ?? ''}</h3>
+                        <div>
+                          <h3>{cardDisplayTitle}</h3>
+                          {isProfile && fullName && card.nickname && fullName.toLowerCase() !== card.nickname.toLowerCase() && (
+                            <span style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.6)', display: 'block', marginTop: '2px' }}>
+                              {fullName}
+                            </span>
+                          )}
+                        </div>
                         <span className="ls-match-tag">{card.match} match</span>
                       </div>
                       <p className="ls-card-role">
