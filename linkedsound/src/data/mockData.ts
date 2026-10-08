@@ -29,6 +29,7 @@ export type Conversation = {
   muted?: boolean
   blocked?: boolean
   profileImage?: string
+  location?: string
 }
 
 export type Message = {

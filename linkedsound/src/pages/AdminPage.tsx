@@ -201,7 +201,7 @@ export default function AdminPage({
         onMarkNotificationAsRead={onMarkNotificationAsRead}
         onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
         onClearNotifications={onClearNotifications}
-        onSignOut={onSignOut || onLogout}
+        onSignOut={handleSignOut}
       />
 
       <main className="ls-admin-main-content">

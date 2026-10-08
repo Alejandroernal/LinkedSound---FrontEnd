@@ -201,7 +201,7 @@ export default function ConversationSidebar({
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justify: 'center',
+                      justifyContent: 'center',
                     }}
                     title="Opciones de chat"
                   >

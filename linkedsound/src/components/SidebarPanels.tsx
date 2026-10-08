@@ -695,7 +695,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justify: 'space-between',
+                      justifyContent: 'space-between',
                       padding: '6px 10px',
                       borderRadius: '6px',
                       background: isSelected ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255, 255, 255, 0.03)',
@@ -735,7 +735,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               padding: '8px 12px',
               borderRadius: '8px',
               background: currentFilters.selectedGenres.length > 0 ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.05)',
@@ -817,7 +817,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justify: 'space-between',
+                        justifyContent: 'space-between',
                         padding: '5px 8px',
                         borderRadius: '6px',
                         background: isSelected ? 'rgba(168, 85, 247, 0.25)' : 'transparent',

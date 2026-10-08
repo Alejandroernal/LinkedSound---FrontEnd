@@ -165,7 +165,7 @@ export type ExplorerItemCard = UserProfile | EventItem
 
 // Type Guard para diferenciar Perfiles de Usuarios de Eventos
 export function isUserProfile(card: ExplorerItemCard): card is UserProfile {
-  return !('eventDate' in card) && card.itemRole !== 'Evento'
+  return !('eventDate' in card)
 }
 
 export type NotificationItem = {

@@ -4,10 +4,9 @@ import { RadarFilters, type RadarFilterState } from '../components/SidebarPanels
 import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
-import { PiFlagBold } from 'react-icons/pi'
+import SwipeCardStack from '../components/SwipeCardStack'
 import { recommendations, type ProfileCard } from '../data/mockData'
-import type { AppPage, Profile, NotificationItem, UserProfile } from '../types'
-import { isUserProfile } from '../types'
+import type { AppPage, Profile, NotificationItem } from '../types'
 
 type DashboardPageProps = {
   activePage?: AppPage
@@ -134,29 +133,19 @@ export default function DashboardPage({
     })
   }, [filters])
 
-  const currentProfile = filteredRecommendations.length > 0
-    ? filteredRecommendations[currentIndex % filteredRecommendations.length]
-    : null
-
   const handleDecision = (liked: boolean) => {
     if (filteredRecommendations.length === 0) return
-    if (liked && currentProfile) {
-      console.log(`Liked ${currentProfile.nickname}`)
+    const currentCard = filteredRecommendations[currentIndex % filteredRecommendations.length]
+    if (liked && currentCard) {
+      console.log(`Conectado con ${currentCard.nickname}`)
     }
-    setCurrentIndex((prev) => (prev + 1) % filteredRecommendations.length)
+    setCurrentIndex((prev) => prev + 1)
   }
 
   const handleResetFilters = () => {
     setFilters(initialFilters)
     setCurrentIndex(0)
   }
-
-  const isProfile = currentProfile ? isUserProfile(currentProfile) : false
-  const firstName = isProfile && currentProfile ? (currentProfile as UserProfile).firstName : ''
-  const lastName = isProfile && currentProfile ? (currentProfile as UserProfile).lastName : ''
-  const fullName = [firstName, lastName].filter(Boolean).join(' ')
-  const greenBoxTitle = currentProfile?.nickname?.trim() || fullName || 'Artista'
-  const redBoxFullName = isProfile ? fullName : currentProfile?.nickname || ''
 
   return (
     <div className="ls-app-shell">
@@ -175,99 +164,14 @@ export default function DashboardPage({
       <main className="ls-layout ls-discovery-swipe-layout">
         <section className="ls-discovery-panel">
           <div className="ls-swipe-stage">
-            {currentProfile ? (
-              <div
-                className="ls-swipe-card ls-clickable-card"
-                onClick={() => setPreviewProfile(currentProfile)}
-                title={`Ver trabajos en SoundCloud de ${greenBoxTitle}`}
-              >
-                <div className="ls-swipe-image-wrap">
-                  <img src={currentProfile.profileImage} alt={greenBoxTitle} />
-                  <span className="ls-card-badge">{currentProfile.match}</span>
-                  <div className="ls-swipe-overlay">
-                    <div>
-                      <h2>{greenBoxTitle}</h2>
-                      <p>{currentProfile.role}</p>
-                    </div>
-                    <span>{currentProfile.location}</span>
-                  </div>
-
-                  <div className="ls-swipe-actions">
-                    <button
-                      type="button"
-                      className="ls-swipe-pass"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDecision(false)
-                      }}
-                      title="Descartar"
-                    >
-                      ✕
-                    </button>
-                    <button
-                      type="button"
-                      className="ls-swipe-like"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDecision(true)
-                      }}
-                      title="Conectar"
-                    >
-                      ✓
-                    </button>
-                  </div>
-                </div>
-
-                <div className="ls-swipe-body">
-                  <div className="ls-swipe-head">
-                    <div className="ls-swipe-head-left">
-                      <span className="ls-swipe-fullname">
-                        {redBoxFullName}
-                      </span>
-                    </div>
-
-                    <div className="ls-swipe-head-right">
-                      <button
-                        type="button"
-                        className="ls-report-text-btn"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setReportingTarget(greenBoxTitle)
-                        }}
-                      >
-                        <PiFlagBold /> Reporte
-                      </button>
-                      <span className="ls-swipe-score">{currentProfile.match}</span>
-                    </div>
-                  </div>
-
-                  <p className="ls-card-desc">{currentProfile.description ?? ''}</p>
-
-                  <div className="ls-profile-interest-block">
-                    <span className="ls-interest-label">Intereses de género</span>
-                    <div className="ls-mini-tags">
-                      {(currentProfile.interestGenres ?? currentProfile.tags ?? []).map((genre) => (
-                        <span key={genre}>{genre}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="ls-swipe-card ls-empty-card">
-                <h3>No hay creadores coincidentes</h3>
-                <p>
-                  No se encontraron tarjetas que coincidan con la ubicación, categoría o géneros seleccionados en el radar.
-                </p>
-                <button
-                  type="button"
-                  className="ls-primary-button"
-                  onClick={handleResetFilters}
-                >
-                  Restablecer Filtros
-                </button>
-              </div>
-            )}
+            <SwipeCardStack
+              cards={filteredRecommendations}
+              currentIndex={currentIndex}
+              onDecision={handleDecision}
+              onPreviewProfile={(p) => setPreviewProfile(p)}
+              onReport={(name) => setReportingTarget(name)}
+              onResetFilters={handleResetFilters}
+            />
           </div>
         </section>
         <aside className="ls-sidebar">
