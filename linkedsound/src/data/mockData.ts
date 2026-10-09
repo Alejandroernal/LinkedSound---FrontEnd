@@ -1,6 +1,6 @@
-import type { AppPage, UserProfile, EventItem, ExplorerItemCard, SoundCloudTrack } from '../types'
+import type { AppPage, UserProfile, EventItem, ExplorerItemCard, SoundCloudTrack, Conversation, Message, NewMatchItem } from '../types'
 
-export type { SoundCloudTrack, EventItem, UserProfile }
+export type { SoundCloudTrack, EventItem, UserProfile, Conversation, Message, NewMatchItem }
 
 export type NavItem = {
   label: AppPage
@@ -13,38 +13,6 @@ export type FilterOption = {
 }
 
 export type ProfileCard = ExplorerItemCard
-
-
-export type Conversation = {
-  id: string
-  name: string
-  role: string
-  avatar: string
-  accent: 'purple' | 'pink' | 'cyan' | 'gold'
-  status: string
-  preview: string
-  time: string
-  unread: number
-  pinned?: boolean
-  muted?: boolean
-  blocked?: boolean
-  profileImage?: string
-  location?: string
-}
-
-export type Message = {
-  id: string
-  sender: 'me' | 'them'
-  text: string
-  time: string
-  attachment?: {
-    url: string
-    name: string
-    type: 'audio' | 'image'
-    size?: string
-    format?: string
-  }
-}
 
 export const navItems: NavItem[] = [
   { label: 'Discovery' },
@@ -460,6 +428,33 @@ export const conversations: Conversation[] = [
     time: '10 May',
     unread: 0,
     profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
+  },
+]
+
+export const initialNewMatches: NewMatchItem[] = [
+  {
+    id: 'match-mateo-sound',
+    name: 'Mateo Sound',
+    role: 'Productor',
+    location: 'Buenos Aires, Argentina',
+    match: '84%',
+    profileImage: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
+    bio: 'Productor de minimal y tech house en Buenos Aires. Enfocado en bajos sub profundos y grooves de percusión para pistas de baile.',
+    genres: ['Tech House', 'Minimal', 'Electronic'],
+    accent: 'purple',
+    date: 'Hoy',
+  },
+  {
+    id: 'match-aria-vibe',
+    name: 'Artista Vibe',
+    role: 'Artista',
+    location: 'London, UK',
+    match: '79%',
+    profileImage: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
+    bio: 'Texturas ambientales atmosféricas y loops vocales dream-pop. Creación de paisajes sonoros inmersivos para productores.',
+    genres: ['Ambient', 'Lo-Fi', 'Vocal'],
+    accent: 'pink',
+    date: 'Ayer',
   },
 ]
 

@@ -22,7 +22,6 @@ import {
   PiCalendarBold,
   PiMapPinBold,
   PiXBold,
-  PiCheckBold,
 } from 'react-icons/pi'
 import { exploreCards as initialExploreCards, type ProfileCard } from '../data/mockData'
 import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
@@ -38,6 +37,7 @@ type ExplorePageProps = {
   onClearNotifications?: () => void
   onSignOut?: () => void
   onConnectProfile?: (card: ProfileCard) => void
+  unreadMessagesCount?: number
 }
 
 export default function ExplorePage({
@@ -51,6 +51,7 @@ export default function ExplorePage({
   onClearNotifications,
   onSignOut,
   onConnectProfile,
+  unreadMessagesCount,
 }: ExplorePageProps) {
   const [cardsList, setCardsList] = useState<ProfileCard[]>(initialExploreCards)
   const [searchQuery, setSearchQuery] = useState('')
@@ -133,6 +134,7 @@ export default function ExplorePage({
         onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
         onClearNotifications={onClearNotifications}
         onSignOut={onSignOut}
+        unreadMessagesCount={unreadMessagesCount}
       />
 
       <main className="ls-page-content">
@@ -283,7 +285,6 @@ export default function ExplorePage({
                 const isProfile = isUserProfile(card)
                 const profileCard = isProfile ? (card as UserProfile) : null
                 const eventCard = !isProfile ? (card as EventItem) : null
-                const itemRole = card.itemRole ?? (isProfile ? 'Perfil' : 'Evento')
                 const cardKey = card.id ? card.id : `${card.nickname ?? 'card'}-${idx}`
                 const firstName = profileCard?.firstName ?? ''
                 const lastName = profileCard?.lastName ?? ''

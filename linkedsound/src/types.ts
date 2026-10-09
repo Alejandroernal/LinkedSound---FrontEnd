@@ -186,6 +186,50 @@ export type NotificationItem = {
   linkPage?: AppPage
 }
 
+export type Message = {
+  id: string
+  sender: 'me' | 'them'
+  text: string
+  time: string
+  attachment?: {
+    url: string
+    name: string
+    type: 'audio' | 'image'
+    size?: string
+    format?: string
+  }
+}
+
+export type Conversation = {
+  id: string
+  name: string
+  role: string
+  avatar: string
+  accent: 'purple' | 'pink' | 'cyan' | 'gold'
+  status: string
+  preview: string
+  time: string
+  unread: number
+  pinned?: boolean
+  muted?: boolean
+  blocked?: boolean
+  profileImage?: string
+  location?: string
+}
+
+export type NewMatchItem = {
+  id: string
+  name: string
+  role: string
+  location: string
+  match: string
+  profileImage: string
+  bio?: string
+  genres?: string[]
+  accent: 'purple' | 'pink' | 'cyan' | 'gold'
+  date: string
+}
+
 // Función helper para formatear fechas a DD/MM/YYYY
 export function formatEventDate(dateStr?: string): string {
   if (!dateStr) return ''

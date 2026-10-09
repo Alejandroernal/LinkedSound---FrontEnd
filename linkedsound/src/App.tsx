@@ -133,7 +133,7 @@ function App() {
   // Estado global para mensajes y conversaciones matcheadas
   const [conversationsList, setConversationsList] = useState<Conversation[]>(initialConversations)
   const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
-  const [activeChatId, setActiveChatId] = useState<string>('luna-sol')
+  const [activeChatId, setActiveChatId] = useState<string>('')
   const [matchedCard, setMatchedCard] = useState<ProfileCard | null>(null)
 
   const activeNotifications = isAdminLoggedIn ? adminNotifs : userNotifs
@@ -298,6 +298,8 @@ function App() {
     }
   }
 
+  const unreadMessagesCount = conversationsList.reduce((acc, c) => acc + (c.unread || 0), 0)
+
   // Props comunes para la TopBar a través de páginas
   const topBarProps = {
     notifications: activeNotifications,
@@ -305,6 +307,7 @@ function App() {
     onMarkAllNotificationsAsRead: handleMarkAllNotificationsAsRead,
     onClearNotifications: handleClearNotifications,
     onSignOut: handleSignOut,
+    unreadMessagesCount,
   }
 
   return (

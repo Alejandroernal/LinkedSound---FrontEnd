@@ -11,7 +11,7 @@ import {
   PiCheckCircleBold,
   PiTrashBold
 } from 'react-icons/pi'
-import { navItems } from '../data/mockData'
+import { navItems, conversations as defaultConversations } from '../data/mockData'
 import type { AppPage, Profile, NotificationItem } from '../types'
 
 type TopBarProps = {
@@ -24,6 +24,7 @@ type TopBarProps = {
   onMarkAllNotificationsAsRead?: () => void
   onClearNotifications?: () => void
   onSignOut?: () => void
+  unreadMessagesCount?: number
 }
 
 const navIcons: Record<string, React.ReactNode> = {
@@ -44,6 +45,7 @@ export default function TopBar({
   onMarkAllNotificationsAsRead,
   onClearNotifications,
   onSignOut,
+  unreadMessagesCount,
 }: TopBarProps) {
   const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Admin User' : 'Kaelen Voss'))
   const userRole = profile?.role === 'Administrador'
@@ -62,6 +64,8 @@ export default function TopBar({
   const profileRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter((n) => !n.read).length
+  const fallbackUnreadMessages = defaultConversations.filter((c) => c.unread > 0).reduce((acc, c) => acc + (c.unread || 0), 0)
+  const totalUnreadMessages = unreadMessagesCount ?? fallbackUnreadMessages
 
   // Cerrar menús al hacer click fuera
   useEffect(() => {
@@ -103,17 +107,26 @@ export default function TopBar({
 
         {!isAdminSession && (
           <nav className="ls-main-nav" aria-label="Main navigation">
-            {navItems.filter((item) => item.label !== 'Profile').map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                className={`ls-nav-item ${activePage === item.label ? 'is-active' : ''}`}
-                onClick={() => onNavigate?.(item.label)}
-              >
-                <span className="ls-nav-icon">{navIcons[item.label] ?? '•'}</span>
-                <span className="ls-nav-label">{item.label}</span>
-              </button>
-            ))}
+            {navItems.filter((item) => item.label !== 'Profile').map((item) => {
+              const isMessages = item.label === 'Messages'
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  className={`ls-nav-item ${activePage === item.label ? 'is-active' : ''}`}
+                  onClick={() => onNavigate?.(item.label)}
+                  style={{ position: 'relative' }}
+                >
+                  <span className="ls-nav-icon">{navIcons[item.label] ?? '•'}</span>
+                  <span className="ls-nav-label">{item.label}</span>
+                  {isMessages && totalUnreadMessages > 0 && (
+                    <span className="ls-notif-badge" style={{ top: '0px', right: '0.000010px', zIndex: 5 }}>
+                      {totalUnreadMessages > 9 ? '9+' : totalUnreadMessages}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </nav>
         )}
 

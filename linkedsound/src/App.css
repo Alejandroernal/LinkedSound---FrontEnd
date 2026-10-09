@@ -109,7 +109,8 @@ button {
   justify-content: center;
   gap: 12px;
   flex-wrap: nowrap;
-  overflow-x: auto;
+  padding: 4px 6px;
+  overflow: visible;
   scrollbar-width: none;
   min-width: 0;
 }

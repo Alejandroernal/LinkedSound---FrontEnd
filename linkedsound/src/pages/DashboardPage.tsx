@@ -19,13 +19,7 @@ type DashboardPageProps = {
   onClearNotifications?: () => void
   onSignOut?: () => void
   onConnectProfile?: (card: ProfileCard) => void
-}
-
-const initialFilters: RadarFilterState = {
-  locationQuery: '',
-  selectedCategories: [],
-  selectedGenres: [],
-  radius: 500,
+  unreadMessagesCount?: number
 }
 
 const LOCATION_COORDINATES: Record<string, { lat: number; lon: number }> = {
@@ -93,6 +87,7 @@ export default function DashboardPage({
   onClearNotifications,
   onSignOut,
   onConnectProfile,
+  unreadMessagesCount,
 }: DashboardPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
@@ -221,6 +216,7 @@ export default function DashboardPage({
         onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
         onClearNotifications={onClearNotifications}
         onSignOut={onSignOut}
+        unreadMessagesCount={unreadMessagesCount}
       />
 
       <main className="ls-layout ls-discovery-swipe-layout">

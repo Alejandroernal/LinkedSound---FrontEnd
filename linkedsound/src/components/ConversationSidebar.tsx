@@ -8,13 +8,17 @@ import {
   PiBroomBold,
   PiUserMinusBold,
   PiDotsThreeVerticalBold,
+  PiSparkleFill,
 } from 'react-icons/pi'
-import type { Conversation, Message } from '../data/mockData'
+import type { Conversation, Message, NewMatchItem } from '../data/mockData'
 
 type ConversationSidebarProps = {
   conversations: Conversation[]
-  activeId: string
-  onSelect: (id: string) => void
+  newMatches: NewMatchItem[]
+  activeId: string | null
+  selectedMatchId: string | null
+  onSelectConversation: (id: string) => void
+  onSelectNewMatch: (id: string) => void
   messagesMap?: Record<string, Message[]>
   onTogglePin?: (id: string) => void
   onToggleMute?: (id: string) => void
@@ -25,8 +29,11 @@ type ConversationSidebarProps = {
 
 export default function ConversationSidebar({
   conversations,
+  newMatches,
   activeId,
-  onSelect,
+  selectedMatchId,
+  onSelectConversation,
+  onSelectNewMatch,
   messagesMap,
   onTogglePin,
   onToggleMute,
@@ -35,7 +42,7 @@ export default function ConversationSidebar({
   onUnmatch,
 }: ConversationSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterTab, setFilterTab] = useState<'all' | 'new'>('all')
+  const [filterTab, setFilterTab] = useState<'matches' | 'unread' | 'chats'>('chats')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -52,7 +59,7 @@ export default function ConversationSidebar({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [openMenuId])
 
-  const newMatchesCount = conversations.filter((c) => c.unread > 0).length
+  const unreadCount = conversations.filter((c) => c.unread > 0).length
 
   // Sort: Pinned conversations first
   const sortedConversations = [...conversations].sort((a, b) => {
@@ -62,12 +69,10 @@ export default function ConversationSidebar({
   })
 
   const filteredConversations = sortedConversations.filter((conv) => {
-    // Tab filter
-    if (filterTab === 'new' && conv.unread === 0) {
+    if (filterTab === 'unread' && conv.unread === 0) {
       return false
     }
 
-    // Search query filter
     const query = searchQuery.trim().toLowerCase()
     if (!query) return true
 
@@ -75,7 +80,6 @@ export default function ConversationSidebar({
     const matchesPreview = conv.preview.toLowerCase().includes(query)
     const matchesRole = conv.role.toLowerCase().includes(query)
 
-    // Also check if any message text in this conversation matches
     const conversationMessages = messagesMap ? messagesMap[conv.id] : undefined
     const matchesMessages = conversationMessages?.some((m) =>
       m.text.toLowerCase().includes(query)
@@ -84,12 +88,22 @@ export default function ConversationSidebar({
     return matchesName || matchesPreview || matchesRole || matchesMessages
   })
 
+  const filteredNewMatches = newMatches.filter((match) => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return true
+    return (
+      match.name.toLowerCase().includes(query) ||
+      match.role.toLowerCase().includes(query) ||
+      match.location.toLowerCase().includes(query)
+    )
+  })
+
   return (
-    <aside className="ls-messages-sidebar">
-      <div className="ls-message-search" style={{ position: 'relative' }}>
+    <aside className="ls-messages-sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <div className="ls-message-search" style={{ position: 'relative', flexShrink: 0 }}>
         <input
           type="text"
-          placeholder="Search conversations, stems, tags..."
+          placeholder="Buscar chat, nombre, rol..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -110,25 +124,81 @@ export default function ConversationSidebar({
         )}
       </div>
 
-      <div className="ls-message-filters">
+      <div className="ls-message-filters" style={{ flexShrink: 0, gap: '4px', padding: '10px 12px', flexWrap: 'wrap' }}>
         <button
           type="button"
-          className={filterTab === 'new' ? 'is-active' : ''}
-          onClick={() => setFilterTab('new')}
+          className={filterTab === 'matches' ? 'is-active' : ''}
+          onClick={() => setFilterTab('matches')}
+          style={{ fontSize: '0.76rem', padding: '6px 10px' }}
         >
-          New matches ({newMatchesCount})
+          Nuevos Matches ({newMatches.length})
         </button>
         <button
           type="button"
-          className={filterTab === 'all' ? 'is-active' : ''}
-          onClick={() => setFilterTab('all')}
+          className={filterTab === 'unread' ? 'is-active' : ''}
+          onClick={() => setFilterTab('unread')}
+          style={{ fontSize: '0.76rem', padding: '6px 10px' }}
         >
-          View all
+          Mensajes Nuevos ({unreadCount})
+        </button>
+        <button
+          type="button"
+          className={filterTab === 'chats' ? 'is-active' : ''}
+          onClick={() => setFilterTab('chats')}
+          style={{ fontSize: '0.76rem', padding: '6px 10px' }}
+        >
+          Mis Chats ({conversations.length})
         </button>
       </div>
 
-      <div className="ls-conversation-list">
-        {filteredConversations.length > 0 ? (
+      <div
+        className="ls-conversation-list"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: '10px 10px 16px',
+        }}
+      >
+        {filterTab === 'matches' ? (
+          filteredNewMatches.length > 0 ? (
+            filteredNewMatches.map((match) => (
+              <div
+                key={match.id}
+                className={`ls-conversation-item ${selectedMatchId === match.id ? 'is-selected' : ''}`}
+                onClick={() => onSelectNewMatch(match.id)}
+                role="button"
+                tabIndex={0}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className={`ls-avatar ${match.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
+                  <img
+                    src={match.profileImage}
+                    alt={match.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  />
+                </div>
+                <div className="ls-conversation-copy">
+                  <div className="ls-conversation-head">
+                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <PiSparkleFill style={{ color: '#ec4899', fontSize: '0.8rem' }} />
+                      {match.name}
+                    </strong>
+                    <span style={{ color: '#c084fc', fontWeight: 600 }}>{match.match}</span>
+                  </div>
+                  <div className="ls-conversation-meta">
+                    <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>Sin conversación previa</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: '24px 12px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.85rem' }}>
+              No tienes nuevos matches pendientes.
+            </div>
+          )
+        ) : filteredConversations.length > 0 ? (
           filteredConversations.map((conversation) => {
             const convMessages = messagesMap ? messagesMap[conversation.id] : undefined
             const lastMsg = convMessages && convMessages.length > 0 ? convMessages[convMessages.length - 1] : null
@@ -143,10 +213,10 @@ export default function ConversationSidebar({
               <div
                 key={conversation.id}
                 className={`ls-conversation-item ${activeId === conversation.id ? 'is-selected' : ''}`}
-                onClick={() => onSelect(conversation.id)}
+                onClick={() => onSelectConversation(conversation.id)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
-                    onSelect(conversation.id)
+                    onSelectConversation(conversation.id)
                   }
                 }}
                 role="button"

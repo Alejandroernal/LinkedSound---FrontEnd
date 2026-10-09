@@ -19,6 +19,7 @@ type ProfilePageProps = {
   onMarkAllNotificationsAsRead?: () => void
   onClearNotifications?: () => void
   onSignOut?: () => void
+  unreadMessagesCount?: number
 }
 
 type LocationSuggestion = {
@@ -431,6 +432,7 @@ export default function ProfilePage({
         onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
         onClearNotifications={onClearNotifications}
         onSignOut={onSignOut}
+        unreadMessagesCount={unreadMessagesCount}
       />
 
       <main className="ls-page-content">
