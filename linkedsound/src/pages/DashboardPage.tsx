@@ -18,6 +18,7 @@ type DashboardPageProps = {
   onMarkAllNotificationsAsRead?: () => void
   onClearNotifications?: () => void
   onSignOut?: () => void
+  onConnectProfile?: (card: ProfileCard) => void
 }
 
 const initialFilters: RadarFilterState = {
@@ -60,6 +61,7 @@ export default function DashboardPage({
   onMarkAllNotificationsAsRead,
   onClearNotifications,
   onSignOut,
+  onConnectProfile,
 }: DashboardPageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
@@ -137,7 +139,11 @@ export default function DashboardPage({
     if (filteredRecommendations.length === 0) return
     const currentCard = filteredRecommendations[currentIndex % filteredRecommendations.length]
     if (liked && currentCard) {
-      console.log(`Conectado con ${currentCard.nickname}`)
+      if (onConnectProfile) {
+        onConnectProfile(currentCard)
+      } else {
+        console.log(`Conectado con ${currentCard.nickname}`)
+      }
     }
     setCurrentIndex((prev) => prev + 1)
   }

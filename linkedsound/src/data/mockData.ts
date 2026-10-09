@@ -146,6 +146,7 @@ export const recommendations: ProfileCard[] = [
     description: 'Warm vocals with cinematic melodic hooks.',
     badge: 'Artist',
     isProfile: true,
+    preLiked: false,
     soundcloudHandle: 'lunasol_official',
     tracks: [
       {
@@ -182,6 +183,7 @@ export const recommendations: ProfileCard[] = [
     description: 'HardTrap Specialist, Producer, Artist.',
     badge: 'Producer',
     isProfile: true,
+    preLiked: true,
     soundcloudHandle: 'goldennnnnnnnnnnnnnn',
     tracks: [
       {
@@ -218,6 +220,7 @@ export const recommendations: ProfileCard[] = [
     description: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
     badge: 'Artist',
     isProfile: true,
+    preLiked: true,
     soundcloudHandle: 'elena-rostova',
     tracks: [
       {
@@ -502,7 +505,7 @@ export const mockReports: import('../types').UserReport[] = [
     reason: 'Derechos de autor / Audio no autorizado en evento',
     details: 'Subió un evento promocionando música que no cuenta con licencias para su emisión.',
     date: '2026-09-28 14:15',
-    status: 'Reviewed',
+    status: 'Pending',
     severity: 'Medium',
     origin: 'Explorer',
     targetType: 'Evento',
@@ -547,11 +550,14 @@ export const mockReports: import('../types').UserReport[] = [
 ]
 
 export const mockActivity: import('../types').UserActivityLog[] = [
-  { id: 'ACT-01', user: 'Kaelen Voss', action: 'Inicio de sesión exitoso', timestamp: 'Hace 5 minutos', ip: '192.168.1.45', device: 'Chrome / Windows', module: 'Sistema' },
-  { id: 'ACT-02', user: 'Alex Vibe', action: 'Actualizó su foto de perfil y SoundCloud link', timestamp: 'Hace 12 minutos', ip: '185.220.101.4', device: 'Firefox / MacOS', module: 'Perfil' },
-  { id: 'ACT-03', user: 'Circuito Nocturno', action: 'Creó nuevo artículo de evento en Explorer', timestamp: 'Hace 30 minutos', ip: '190.45.12.88', device: 'Safari / iOS', module: 'Explorer' },
-  { id: 'ACT-04', user: 'Luna Beats', action: 'Modificó biografía e interés de géneros', timestamp: 'Hace 45 minutos', ip: '200.89.44.12', device: 'Chrome / Android', module: 'Perfil' },
-  { id: 'ACT-05', user: 'CyberPulse', action: 'Publicó artículo "Synth Lab Sessions" en Explorer', timestamp: 'Hace 2 horas', ip: '181.12.90.11', device: 'Edge / Windows', module: 'Explorer' },
+  { id: 'ACT-01', user: 'Administrador (Admin)', action: 'Cambió estado de usuario "Mark Studio" a Suspendido. Motivo: Múltiples reportes por lenguaje ofensivo.', timestamp: 'Hace 2 minutos', exactTimestamp: '09/10/2026 00:11:05', ip: '127.0.0.1', device: 'Chrome / Windows (Admin)', module: 'Sistema' },
+  { id: 'ACT-02', user: 'Administrador (Admin)', action: 'Resolvió el reporte REP-103 sobre "Mark Studio". Comentario: Advertencia enviada.', timestamp: 'Hace 4 minutos', exactTimestamp: '09/10/2026 00:09:20', ip: '127.0.0.1', device: 'Chrome / Windows (Admin)', module: 'Sistema' },
+  { id: 'ACT-03', user: 'Kaelen Voss', action: 'Inicio de sesión exitoso', timestamp: 'Hace 5 minutos', exactTimestamp: '09/10/2026 00:08:15', ip: '192.168.1.45', device: 'Chrome / Windows', module: 'Sistema' },
+  { id: 'ACT-04', user: 'Alex Vibe', action: 'Actualizó su foto de perfil y enlace de SoundCloud', timestamp: 'Hace 12 minutos', exactTimestamp: '09/10/2026 00:01:40', ip: '185.220.101.4', device: 'Firefox / MacOS', module: 'Perfil' },
+  { id: 'ACT-05', user: 'Circuito Nocturno', action: 'Creó nuevo artículo de evento en Explorer', timestamp: 'Hace 30 minutos', exactTimestamp: '08/10/2026 23:43:10', ip: '190.45.12.88', device: 'Safari / iOS', module: 'Explorer' },
+  { id: 'ACT-06', user: 'Luna Beats', action: 'Modificó biografía e interés de géneros', timestamp: 'Hace 45 minutos', exactTimestamp: '08/10/2026 23:28:00', ip: '200.89.44.12', device: 'Chrome / Android', module: 'Perfil' },
+  { id: 'ACT-07', user: 'Administrador (Admin)', action: 'Dio de baja evento "Industrial Noise Showcase". Motivo: Infracción de derechos de autor.', timestamp: 'Hace 1 hora', exactTimestamp: '08/10/2026 23:13:50', ip: '127.0.0.1', device: 'Chrome / Windows (Admin)', module: 'Explorer' },
+  { id: 'ACT-08', user: 'CyberPulse', action: 'Publicó artículo "Synth Lab Sessions" en Explorer', timestamp: 'Hace 2 horas', exactTimestamp: '08/10/2026 22:13:00', ip: '181.12.90.11', device: 'Edge / Windows', module: 'Explorer' },
 ]
 
 export const mockUsers: import('../types').UserProfile[] = [
@@ -640,15 +646,15 @@ export const mockExplorerItems: import('../types').ExplorerItem[] = [
   },
   {
     id: 'EXP-02',
-    title: 'LunaSol Acoustic Duo',
-    type: 'Perfil',
+    title: 'LunaSol Acoustic Live Session',
+    type: 'Evento',
     owner: 'Luna Beats',
     location: 'Buenos Aires, Argentina',
     genres: ['Acoustic', 'Vocal', 'Alt Pop'],
     status: 'Active',
     createdDate: '2026-09-20',
     views: 890,
-    description: 'Proyecto duo de música acústica con paisajes sonoros de lo-fi.'
+    description: 'Sesión acústica en vivo con paisajes sonoros lo-fi y voces en directo.'
   },
   {
     id: 'EXP-03',
@@ -679,7 +685,7 @@ export const mockExplorerItems: import('../types').ExplorerItem[] = [
 export const userNotifications: import('../types').NotificationItem[] = [
   {
     id: 'notif-1',
-    title: '¡Nuevo Match Musical! 🎵',
+    title: 'Nuevo Match Musical',
     message: 'Has conectado con Luna Sol. Puedes enviarle un mensaje para iniciar una colaboración.',
     timestamp: 'Hace 10 min',
     read: false,
@@ -688,7 +694,7 @@ export const userNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'notif-2',
-    title: 'Nuevo mensaje recibido 💬',
+    title: 'Nuevo mensaje recibido',
     message: 'Metro Boomin: "I can get your mix ready by Friday."',
     timestamp: 'Hace 25 min',
     read: false,
@@ -697,7 +703,7 @@ export const userNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'notif-3',
-    title: 'Bienvenido a LinkedSound ✨',
+    title: 'Bienvenido a LinkedSound',
     message: 'Tu perfil ha sido verificado con éxito. Comienza a descubrir productores cerca de ti.',
     timestamp: 'Hace 2 horas',
     read: true,
@@ -709,7 +715,7 @@ export const userNotifications: import('../types').NotificationItem[] = [
 export const adminNotifications: import('../types').NotificationItem[] = [
   {
     id: 'adm-notif-1',
-    title: '⚠️ Nuevo reporte pendiente',
+    title: 'Nuevo reporte pendiente',
     message: 'Kaelen Voss reportó a Alex Vibe por "Spam / Mensajes no solicitados".',
     timestamp: 'Hace 5 min',
     read: false,
@@ -718,7 +724,7 @@ export const adminNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'adm-notif-2',
-    title: '⚠️ Reporte de derechos de autor',
+    title: 'Reporte de derechos de autor',
     message: 'Se ha registrado un reporte de severidad Alta sobre Synthwave Night Festival.',
     timestamp: 'Hace 40 min',
     read: false,
@@ -727,7 +733,7 @@ export const adminNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'adm-notif-3',
-    title: '🛡️ Estado del Sistema',
+    title: 'Estado del Sistema',
     message: 'El sistema de moderación automática revisó 12 publicaciones recientes sin infracciones.',
     timestamp: 'Hace 3 horas',
     read: true,

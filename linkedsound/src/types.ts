@@ -17,7 +17,7 @@ export type UserReport = {
   reason: string
   details: string
   date: string
-  status: 'Pending' | 'Reviewed' | 'Resolved' | 'Dismissed'
+  status: 'Pending' | 'Resolved' | 'Dismissed'
   severity: 'Low' | 'Medium' | 'High'
   origin: 'Discovery' | 'Explorer'
   targetType: 'Perfil' | 'Evento'
@@ -29,6 +29,7 @@ export type UserActivityLog = {
   user: string
   action: string
   timestamp: string
+  exactTimestamp?: string
   ip: string
   device: string
   module: 'Perfil' | 'Explorer' | 'Sistema'
@@ -101,9 +102,13 @@ export type UserProfile = {
   allowEdit?: boolean
   allowPostRegister?: boolean
   teamDecision?: string
+  statusJustification?: string
   validationRule?: string
   eliminationPolicy?: string
   finalAction?: string
+
+  // Estado de Match recíproco previo
+  preLiked?: boolean
 }
 
 // Backward compatibility alias
@@ -158,6 +163,9 @@ export type EventItem = {
   spotifyUrl?: string
   instagramUrl?: string
   tracks?: SoundCloudTrack[]
+
+  // Estado de Match recíproco previo
+  preLiked?: boolean
 }
 
 // Tipo de unión para Explorer y visualización general de tarjetas

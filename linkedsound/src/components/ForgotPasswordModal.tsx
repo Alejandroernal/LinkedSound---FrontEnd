@@ -272,18 +272,18 @@ export default function ForgotPasswordModal({
               <div>
                 <h3 style={{ margin: 0 }}>Código de Verificación</h3>
                 <p className="ls-report-subtitle">
-                  Código enviado a <strong>{email}</strong>
+                  Código de 6 dígitos enviado a <strong>{email}</strong>
                 </p>
               </div>
             </div>
 
             <p style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.9rem', lineHeight: '1.5', margin: '1rem 0' }}>
-              Ingresa el código de seguridad recibido en tu bandeja de entrada o carpeta de correo no deseado.
+              Ingresa el código de seguridad de 6 dígitos recibido en tu bandeja de entrada o carpeta de correo no deseado.
             </p>
 
             <div className="ls-form-group">
               <label htmlFor="verification-code" className="ls-form-label">
-                Código de Verificación
+                Código de Verificación (6 dígitos)
               </label>
               <input
                 type="text"
@@ -297,10 +297,10 @@ export default function ForgotPasswordModal({
                   if (error) setError('')
                 }}
                 style={{
-                  letterSpacing: '2px',
+                  letterSpacing: '3px',
                   fontWeight: 600,
                   textAlign: 'center',
-                  fontSize: '1.1rem',
+                  fontSize: '1.2rem',
                   borderColor: error ? '#ef4444' : undefined
                 }}
               />
@@ -422,9 +422,25 @@ export default function ForgotPasswordModal({
                   {showPassword ? <PiEyeSlashBold /> : <PiEyeBold />}
                 </button>
               </div>
-              <small style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.74rem', marginTop: '6px', display: 'block' }}>
-                Mínimo 8 caracteres con al menos 1 mayúscula, 1 minúscula y 1 número.
+              <small style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.74rem', marginTop: '6px', display: 'block' }}>
+                Requisitos: Mínimo 8 caracteres con al menos 1 mayúscula, 1 minúscula y 1 número.
               </small>
+
+              {/* Indicadores dinámicos de contraseña */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: newPassword.length >= 8 ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: newPassword.length >= 8 ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${newPassword.length >= 8 ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  8+ caracteres
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: /[A-Z]/.test(newPassword) ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: /[A-Z]/.test(newPassword) ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${/[A-Z]/.test(newPassword) ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  1 Mayúscula
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: /[a-z]/.test(newPassword) ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: /[a-z]/.test(newPassword) ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${/[a-z]/.test(newPassword) ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  1 Minúscula
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: /[0-9]/.test(newPassword) ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: /[0-9]/.test(newPassword) ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${/[0-9]/.test(newPassword) ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  1 Número
+                </span>
+              </div>
             </div>
 
             <div className="ls-form-group">

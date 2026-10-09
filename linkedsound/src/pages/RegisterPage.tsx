@@ -124,7 +124,7 @@ export function AvatarEditorModal({
       <div className="ls-av-modal" onClick={e => e.stopPropagation()}>
 
         <div className="ls-av-modal__header">
-          <span>Edit image</span>
+          <span>Editar foto de perfil</span>
           <button className="ls-av-modal__close" onClick={onCancel}>✕</button>
         </div>
 
@@ -151,8 +151,8 @@ export function AvatarEditorModal({
         </div>
 
         <div className="ls-av-modal__actions">
-          <button className="ls-av-btn ls-av-btn--cancel" onClick={onCancel}>Cancel</button>
-          <button className="ls-av-btn ls-av-btn--apply" onClick={handleApply}>Apply</button>
+          <button className="ls-av-btn ls-av-btn--cancel" onClick={onCancel}>Cancelar</button>
+          <button className="ls-av-btn ls-av-btn--apply" onClick={handleApply}>Aplicar</button>
         </div>
       </div>
     </div>
@@ -172,10 +172,16 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
   const [showEditor, setShowEditor] = useState(false)
   const [showPhotoActions, setShowPhotoActions] = useState(false)
   const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null)
+  const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
+
   const selectedGenres = profile?.interestGenres ?? []
 
   const handleFieldChange = (field: keyof Profile, value: string | string[]) => {
     onProfileChange?.(field, value)
+    if (invalidFields[field as string]) {
+      setInvalidFields(prev => ({ ...prev, [field as string]: false }))
+    }
+    if (errorModalMsg) setErrorModalMsg(null)
   }
 
   const handleFileInput = (file: File) => {
@@ -199,31 +205,51 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
     const em = profile?.email?.trim() || ''
     const pw = profile?.password?.trim() || ''
 
+    const errors: Record<string, boolean> = {}
+
+    if (!fn) errors.firstName = true
+    if (!ln) errors.lastName = true
+    if (!em) errors.email = true
+    if (!pw) errors.password = true
+
     if (!fn || !ln || !em || !pw) {
+      setInvalidFields(errors)
       setErrorModalMsg('Por favor completa los campos obligatorios: Nombre, Apellido, Correo electrónico y Contraseña.')
       return
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(em)) {
+      setInvalidFields({ email: true })
       setErrorModalMsg('Por favor ingresa un correo electrónico válido (ejemplo: usuario@dominio.com).')
       return
     }
 
     if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw)) {
+      setInvalidFields({ password: true })
       setErrorModalMsg('La contraseña no cumple con los requisitos de seguridad: Mínimo 8 caracteres, incluir al menos 1 letra mayúscula, 1 minúscula y 1 número.')
       return
     }
 
     if (selectedGenres.length < 3) {
-      setErrorModalMsg('Debes seleccionar un mínimo de 3 géneros musicales según las especificaciones del SRS para continuar con el registro.')
+      setInvalidFields({ genres: true })
+      setErrorModalMsg('Debes seleccionar un mínimo de 3 géneros musicales de interés para continuar.')
       return
     }
 
+    setInvalidFields({})
+    setErrorModalMsg(null)
     onNavigate?.('Onboarding')
   }
 
   const currentAvatar = profile?.profileImage ?? rawImage
+
+  // Requisitos de contraseña para indicadores dinámicos
+  const currentPw = profile?.password ?? ''
+  const pwHasMinLen = currentPw.length >= 8
+  const pwHasUpper = /[A-Z]/.test(currentPw)
+  const pwHasLower = /[a-z]/.test(currentPw)
+  const pwHasNum = /[0-9]/.test(currentPw)
 
   return (
     <>
@@ -279,13 +305,29 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
               <div className="ls-two-col" style={{ gap: '10px' }}>
                 <label>
                   Nombre *
-                  <input type="text" value={profile?.firstName ?? ''} placeholder="Nombre"
-                    onChange={e => handleFieldChange('firstName', e.target.value)} />
+                  <input
+                    type="text"
+                    value={profile?.firstName ?? ''}
+                    placeholder="Nombre"
+                    onChange={e => handleFieldChange('firstName', e.target.value)}
+                    style={{
+                      borderColor: invalidFields.firstName ? '#ef4444' : undefined,
+                      background: invalidFields.firstName ? 'rgba(239, 68, 68, 0.05)' : undefined
+                    }}
+                  />
                 </label>
                 <label>
                   Apellido *
-                  <input type="text" value={profile?.lastName ?? ''} placeholder="Apellido"
-                    onChange={e => handleFieldChange('lastName', e.target.value)} />
+                  <input
+                    type="text"
+                    value={profile?.lastName ?? ''}
+                    placeholder="Apellido"
+                    onChange={e => handleFieldChange('lastName', e.target.value)}
+                    style={{
+                      borderColor: invalidFields.lastName ? '#ef4444' : undefined,
+                      background: invalidFields.lastName ? 'rgba(239, 68, 68, 0.05)' : undefined
+                    }}
+                  />
                 </label>
               </div>
             </div>
@@ -315,17 +357,49 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
 
             <label>
               Correo electrónico *
-              <input type="email" value={profile?.email ?? ''} placeholder="correo@ejemplo.com"
-                onChange={e => handleFieldChange('email', e.target.value)} />
+              <input
+                type="email"
+                value={profile?.email ?? ''}
+                placeholder="correo@ejemplo.com"
+                onChange={e => handleFieldChange('email', e.target.value)}
+                style={{
+                  borderColor: invalidFields.email ? '#ef4444' : undefined,
+                  background: invalidFields.email ? 'rgba(239, 68, 68, 0.05)' : undefined
+                }}
+              />
             </label>
 
             <label>
               Contraseña *
-              <input type="password" value={profile?.password ?? ''} placeholder="Crea una contraseña segura"
-                onChange={e => handleFieldChange('password', e.target.value)} />
-              <small style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.74rem', marginTop: '4px', display: 'block' }}>
-                Mínimo 8 caracteres con al menos 1 mayúscula, 1 minúscula y 1 número.
+              <input
+                type="password"
+                value={profile?.password ?? ''}
+                placeholder="Crea una contraseña segura"
+                onChange={e => handleFieldChange('password', e.target.value)}
+                style={{
+                  borderColor: invalidFields.password ? '#ef4444' : undefined,
+                  background: invalidFields.password ? 'rgba(239, 68, 68, 0.05)' : undefined
+                }}
+              />
+              <small style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.74rem', marginTop: '4px', display: 'block' }}>
+                Requisitos: Mínimo 8 caracteres con al menos 1 mayúscula, 1 minúscula y 1 número.
               </small>
+
+              {/* Indicadores dinámicos de contraseña */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: pwHasMinLen ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: pwHasMinLen ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${pwHasMinLen ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  8+ caracteres
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: pwHasUpper ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: pwHasUpper ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${pwHasUpper ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  1 Mayúscula
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: pwHasLower ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: pwHasLower ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${pwHasLower ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  1 Minúscula
+                </span>
+                <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', background: pwHasNum ? 'rgba(39, 174, 96, 0.18)' : 'rgba(255, 255, 255, 0.06)', color: pwHasNum ? '#34d399' : 'rgba(255, 255, 255, 0.45)', border: `1px solid ${pwHasNum ? 'rgba(52, 211, 153, 0.35)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  1 Número
+                </span>
+              </div>
             </label>
 
             <label>
@@ -337,7 +411,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
               >
                 <option value="Productor">Productor</option>
                 <option value="Artista">Artista</option>
-                <option value="Productor y Artista">Productor y Artista</option>
+                <option value="Productor y Artista">Productor y Artista (Ambos)</option>
               </select>
             </label>
 
@@ -351,7 +425,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                   style={{ width: '100%' }}
                 />
               </div>
-              <div className="ls-genre-selector genre-selector">
+              <div className="ls-genre-selector genre-selector" style={{ borderColor: invalidFields.genres ? '#ef4444' : undefined }}>
                 {AVAILABLE_GENRES.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).length === 0 ? (
                   <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', padding: '12px 0', textAlign: 'center', gridColumn: '1 / -1' }}>
                     No se encontraron géneros musicales que coincidan con "{genreSearch}".
@@ -379,6 +453,26 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                 Seleccionados: {selectedGenres.length} {selectedGenres.length < 3 ? '(Se requieren al menos 3)' : '(Válido)'}
               </small>
             </div>
+
+            {errorModalMsg && (
+              <div
+                style={{
+                  margin: '10px 0 14px',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  color: '#fca5a5',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <PiWarningOctagonBold style={{ fontSize: '1.2rem', color: '#ef4444', flexShrink: 0 }} />
+                <span>{errorModalMsg}</span>
+              </div>
+            )}
 
             <button type="submit" className="ls-primary-button ls-auth-button">
               Continuar

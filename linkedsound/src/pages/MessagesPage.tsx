@@ -27,6 +27,12 @@ type MessagesPageProps = {
   onMarkAllNotificationsAsRead?: () => void
   onClearNotifications?: () => void
   onSignOut?: () => void
+  conversationsList?: Conversation[]
+  setConversationsList?: React.Dispatch<React.SetStateAction<Conversation[]>>
+  messagesMap?: Record<string, Message[]>
+  setMessagesMap?: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>
+  activeId?: string
+  setActiveId?: (id: string) => void
 }
 
 export default function MessagesPage({
@@ -39,10 +45,26 @@ export default function MessagesPage({
   onMarkAllNotificationsAsRead,
   onClearNotifications,
   onSignOut,
+  conversationsList: propConversationsList,
+  setConversationsList: propSetConversationsList,
+  messagesMap: propMessagesMap,
+  setMessagesMap: propSetMessagesMap,
+  activeId: propActiveId,
+  setActiveId: propSetActiveId,
 }: MessagesPageProps) {
-  const [conversationsList, setConversationsList] = useState<Conversation[]>(initialConversations)
-  const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
-  const [activeId, setActiveId] = useState('luna-sol')
+  const [localConversationsList, setLocalConversationsList] = useState<Conversation[]>(initialConversations)
+  const [localMessagesMap, setLocalMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
+  const [localActiveId, setLocalActiveId] = useState('luna-sol')
+
+  const conversationsList = propConversationsList ?? localConversationsList
+  const setConversationsList = propSetConversationsList ?? setLocalConversationsList
+
+  const messagesMap = propMessagesMap ?? localMessagesMap
+  const setMessagesMap = propSetMessagesMap ?? setLocalMessagesMap
+
+  const activeId = propActiveId ?? localActiveId
+  const setActiveId = propSetActiveId ?? setLocalActiveId
+
   const [unmatchingTarget, setUnmatchingTarget] = useState<Conversation | null>(null)
   const [inspectedProfileCard, setInspectedProfileCard] = useState<ProfileCard | null>(null)
 

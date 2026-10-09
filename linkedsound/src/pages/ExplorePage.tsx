@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useDebounce } from '../hooks/useDebounce'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
@@ -36,6 +37,7 @@ type ExplorePageProps = {
   onMarkAllNotificationsAsRead?: () => void
   onClearNotifications?: () => void
   onSignOut?: () => void
+  onConnectProfile?: (card: ProfileCard) => void
 }
 
 export default function ExplorePage({
@@ -48,9 +50,11 @@ export default function ExplorePage({
   onMarkAllNotificationsAsRead,
   onClearNotifications,
   onSignOut,
+  onConnectProfile,
 }: ExplorePageProps) {
   const [cardsList, setCardsList] = useState<ProfileCard[]>(initialExploreCards)
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const [activeGenre, setActiveGenre] = useState('')
   const [itemRoleFilter, setItemRoleFilter] = useState<'Todos' | 'Perfil' | 'Evento'>('Todos')
   const [sortBy, setSortBy] = useState<'match' | 'name' | 'role'>('match')
@@ -89,7 +93,7 @@ export default function ExplorePage({
       }
 
       // Filter by search text
-      const query = searchQuery.trim().toLowerCase()
+      const query = debouncedSearchQuery.trim().toLowerCase()
       if (!query) return true
 
       const inName = cardName.toLowerCase().includes(query)
@@ -396,9 +400,13 @@ export default function ExplorePage({
                                 className="ls-card-btn-action like"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  setSelectedPreviewCard(card)
+                                  if (onConnectProfile) {
+                                    onConnectProfile(card)
+                                  } else {
+                                    setSelectedPreviewCard(card)
+                                  }
                                 }}
-                                title="Ver Perfil / Match"
+                                title="Conectar / Match"
                               >
                                 <PiCheckBold />
                               </button>

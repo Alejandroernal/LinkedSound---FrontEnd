@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { AppPage } from '../types'
 import ForgotPasswordModal from '../components/ForgotPasswordModal'
-import { PiXBold, PiWarningOctagonBold } from 'react-icons/pi'
+import { PiWarningOctagonBold } from 'react-icons/pi'
 
 type LoginPageProps = {
   onNavigate?: (page: AppPage) => void
@@ -21,28 +21,37 @@ export default function LoginPage({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
-  const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState(false)
+  const [passwordError, setPasswordError] = useState(false)
 
   const handleSignIn = () => {
     const trimmedEmail = email.trim().toLowerCase()
     const trimmedPassword = password.trim()
 
+    setEmailError(false)
+    setPasswordError(false)
+    setErrorMsg(null)
+
     // 1. Validar campos requeridos
     if (!trimmedEmail || !trimmedPassword) {
-      setErrorModalMsg('Por favor ingresa tu correo electrónico y contraseña para ingresar.')
+      if (!trimmedEmail) setEmailError(true)
+      if (!trimmedPassword) setPasswordError(true)
+      setErrorMsg('Por favor ingresa tu correo electrónico y contraseña para ingresar.')
       return
     }
 
     // 2. Validar formato de correo electrónico
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(trimmedEmail)) {
-      setErrorModalMsg('Por favor ingresa una dirección de correo electrónico válida (ej. usuario@dominio.com).')
+      setEmailError(true)
+      setErrorMsg('Por favor ingresa una dirección de correo electrónico válida (ej. usuario@dominio.com).')
       return
     }
 
     // 3. Comprobar si son credenciales de Administrador
     const isAdminCreds =
-      (trimmedEmail === 'admin@linkedsound.app' || trimmedEmail.includes('admin')) &&
+      trimmedEmail === 'admin@linkedsound.app' &&
       (trimmedPassword === 'adminpassword123' || trimmedPassword === 'admin123')
 
     if (isAdminCreds) {
@@ -56,24 +65,32 @@ export default function LoginPage({
       (trimmedEmail === 'kaelen@linkedsound.app' && trimmedPassword === 'password123') ||
       (registeredEmail && trimmedEmail === registeredEmail.toLowerCase() && registeredPassword && trimmedPassword === registeredPassword)
 
-    if (isNormalUserCreds || trimmedEmail.endsWith('@linkedsound.app')) {
+    if (isNormalUserCreds) {
       onLoginAsUser?.(trimmedEmail)
       onNavigate?.('Discovery')
       return
     }
 
     // 5. Credenciales incorrectas (Mensaje genérico sin revelar cuál falló)
-    setErrorModalMsg('El correo electrónico o la contraseña ingresados son incorrectos.')
+    setEmailError(true)
+    setPasswordError(true)
+    setErrorMsg('El correo electrónico o la contraseña ingresados son incorrectos.')
   }
 
   const handleDemoUser = () => {
     setEmail('kaelen@linkedsound.app')
     setPassword('password123')
+    setErrorMsg(null)
+    setEmailError(false)
+    setPasswordError(false)
   }
 
   const handleDemoAdmin = () => {
     setEmail('admin@linkedsound.app')
     setPassword('adminpassword123')
+    setErrorMsg(null)
+    setEmailError(false)
+    setPasswordError(false)
   }
 
   return (
@@ -96,8 +113,16 @@ export default function LoginPage({
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (errorMsg) setErrorMsg(null)
+                if (emailError) setEmailError(false)
+              }}
               placeholder="usuario@linkedsound.app o admin@linkedsound.app"
+              style={{
+                borderColor: emailError ? '#ef4444' : undefined,
+                background: emailError ? 'rgba(239, 68, 68, 0.05)' : undefined
+              }}
             />
           </label>
 
@@ -106,8 +131,16 @@ export default function LoginPage({
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (errorMsg) setErrorMsg(null)
+                if (passwordError) setPasswordError(false)
+              }}
               placeholder="Ingresa tu contraseña"
+              style={{
+                borderColor: passwordError ? '#ef4444' : undefined,
+                background: passwordError ? 'rgba(239, 68, 68, 0.05)' : undefined
+              }}
             />
           </label>
 
@@ -171,6 +204,26 @@ export default function LoginPage({
             </button>
           </div>
 
+          {errorMsg && (
+            <div
+              style={{
+                margin: '10px 0 14px',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                color: '#fca5a5',
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <PiWarningOctagonBold style={{ fontSize: '1.2rem', color: '#ef4444', flexShrink: 0 }} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           <button
             type="submit"
             className="ls-primary-button ls-auth-button"
@@ -189,43 +242,6 @@ export default function LoginPage({
           </button>
         </div>
       </div>
-
-      {/* Modal de Validación / Error de Autenticación */}
-      {errorModalMsg && (
-        <div className="ls-modal-overlay" onClick={() => setErrorModalMsg(null)}>
-          <div className="ls-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px' }}>
-            <button type="button" className="ls-modal-close" onClick={() => setErrorModalMsg(null)} aria-label="Cerrar">
-              <PiXBold />
-            </button>
-            <div className="ls-report-header" style={{ marginBottom: '16px' }}>
-              <div className="ls-report-badge-icon" style={{ background: 'rgba(255, 60, 110, 0.15)', color: '#ff3c6e', border: '1px solid rgba(255, 60, 110, 0.3)' }}>
-                <PiWarningOctagonBold style={{ fontSize: '1.4rem' }} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, color: '#fff' }}>Error de autenticación</h3>
-                <p className="ls-report-subtitle" style={{ margin: '4px 0 0' }}>
-                  Verifica tus credenciales
-                </p>
-              </div>
-            </div>
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '20px' }}>
-              <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', lineHeight: '1.4' }}>
-                {errorModalMsg}
-              </p>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                className="ls-primary-button"
-                onClick={() => setErrorModalMsg(null)}
-                style={{ width: '100%' }}
-              >
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <ForgotPasswordModal
         isOpen={isForgotPasswordOpen}

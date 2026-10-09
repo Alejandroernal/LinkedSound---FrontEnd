@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { FaSoundcloud, FaSpotify, FaInstagram } from 'react-icons/fa6'
+import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold } from 'react-icons/pi'
 import type { AppPage, Profile } from '../types'
 
 type ValidationPageProps = {
@@ -241,39 +242,46 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     const centerLon = initialPreset ? initialPreset.lon : 13.405
     const centerLat = initialPreset ? initialPreset.lat : 52.520
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-      center: [centerLon, centerLat],
-      zoom: 10,
-    })
+    let timer: ReturnType<typeof setTimeout> | null = null
 
-    map.addControl(new maplibregl.FullscreenControl())
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
-    const timer = setTimeout(() => map.resize(), 150)
+    try {
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center: [centerLon, centerLat],
+        zoom: 10,
+        renderWorldCopies: false,
+      })
 
-    markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
-      .setLngLat([centerLon, centerLat])
-      .addTo(map)
+      map.addControl(new maplibregl.FullscreenControl())
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
+      timer = setTimeout(() => map.resize(), 150)
 
-    map.on('click', (event) => {
-      const { lng, lat } = event.lngLat
+      markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
+        .setLngLat([centerLon, centerLat])
+        .addTo(map)
 
-      if (markerRef.current) {
-        markerRef.current.setLngLat([lng, lat])
-      } else {
-        markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
-          .setLngLat([lng, lat])
-          .addTo(map)
-      }
+      map.on('click', (event) => {
+        const { lng, lat } = event.lngLat
 
-      reverseGeocode(lat, lng)
-    })
+        if (markerRef.current) {
+          markerRef.current.setLngLat([lng, lat])
+        } else {
+          markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+            .setLngLat([lng, lat])
+            .addTo(map)
+        }
 
-    mapRef.current = map
+        reverseGeocode(lat, lng)
+      })
+
+      mapRef.current = map
+    } catch (err) {
+      console.error('Error initializing map:', err)
+    }
 
     return () => {
-      clearTimeout(timer)
+      if (timer) clearTimeout(timer)
       if (mapRef.current) {
         markerRef.current?.remove()
         markerRef.current = null
@@ -316,7 +324,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
           <div className="ls-brand-mark">L</div>
           <div>
             <div className="ls-brand-name">LinkedSound</div>
-            <small>complete your onboarding</small>
+            <small>completa tu perfil</small>
           </div>
         </div>
 
@@ -461,52 +469,186 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
               </span>
             </div>
 
-            <div className="ls-map-actions-row">
-              <button
-                type="button"
-                className="ls-map-toggle-btn"
-                onClick={() => setShowMap((prev) => !prev)}
+            {!showMap && (
+              <div className="ls-map-actions-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  className="ls-map-toggle-btn"
+                  onClick={() => setShowMap(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <PiMapPinBold />
+                  Elegir en mapa
+                </button>
+                {(isLocating || isSearching) && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#c084fc' }}>
+                    <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', display: 'inline-block' }} />
+                    <span>{isLocating ? 'Obteniendo ubicación...' : 'Buscando...'}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {showMap && (
+              <div
+                className="ls-map-wrapper"
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  marginTop: '10px',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(168, 85, 247, 0.35)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
               >
-                {showMap ? 'Ocultar mapa' : 'Elegir en mapa'}
-              </button>
-              <button
-                type="button"
-                className="ls-map-toggle-btn"
-                style={{ background: 'rgba(0, 229, 255, 0.12)', borderColor: 'rgba(0, 229, 255, 0.3)', color: '#00e5ff' }}
-                onClick={handleUseCurrentLocation}
-              >
-                Usar mi ubicación actual
-              </button>
-              {isLocating && (
-                <div className="ls-map-status-spinner-wrap">
-                  <span className="ls-spinner" />
-                  <span>Obteniendo ubicación...</span>
+                <div
+                  ref={mapContainerRef}
+                  className="ls-map-container"
+                  style={{ width: '100%', height: '260px', borderRadius: '12px', marginTop: 0 }}
+                />
+
+                {/* Overlay controles flotantes superior izquierdo */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '10px',
+                    zIndex: 10,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    alignItems: 'center',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowMap(false)}
+                    style={{
+                      pointerEvents: 'auto',
+                      background: 'rgba(15, 19, 37, 0.88)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#fff',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <PiEyeSlashBold />
+                    Ocultar mapa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    disabled={isLocating}
+                    style={{
+                      pointerEvents: 'auto',
+                      background: 'rgba(15, 19, 37, 0.88)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(0, 229, 255, 0.45)',
+                      color: '#00e5ff',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <PiNavigationArrowBold />
+                    {isLocating ? 'Detectando...' : 'Usar mi ubicación actual'}
+                  </button>
                 </div>
-              )}
-              {isSearching && (
-                <div className="ls-map-status-spinner-wrap">
-                  <span className="ls-spinner" />
-                  <span>Buscando ciudad...</span>
+
+                {/* Overlay estado/carga superior derecho */}
+                {(isLocating || isSearching) && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      zIndex: 10,
+                      background: 'rgba(15, 19, 37, 0.92)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(168, 85, 247, 0.5)',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
+                    }}
+                  >
+                    <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
+                    <span>{isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}</span>
+                  </div>
+                )}
+
+                {/* Overlay sugerencia inferior izquierdo */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '10px',
+                    zIndex: 10,
+                    background: 'rgba(15, 19, 37, 0.8)',
+                    backdropFilter: 'blur(6px)',
+                    WebkitBackdropFilter: 'blur(6px)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: '0.72rem',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  Haz clic en el mapa para marcar tu posición
                 </div>
-              )}
-              {showMap && <span className="ls-map-hint">Haz clic en el mapa para marcar tu posición</span>}
+              </div>
+            )}
+          </div>
+
+          <div className="ls-validation-box" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '12px', padding: '14px 16px', margin: '16px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+              <span className="ls-status-indicator" style={{ width: '10px', height: '10px', borderRadius: '50%', background: soundcloud ? '#27ae60' : '#f59e0b', display: 'inline-block' }} />
+              <strong style={{ fontSize: '0.9rem', color: '#fff' }}>
+                {soundcloud ? 'Perfil Listo para Discovery' : 'Vinculación de Música Opcional (RF-01 / RF-08)'}
+              </strong>
             </div>
-
-            {showMap && <div ref={mapContainerRef} className="ls-map-container" />}
+            <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.4 }}>
+              {soundcloud
+                ? '¡Excelente! Tu cuenta o muestra de SoundCloud ha sido vinculada y tu perfil estará activo en Discovery.'
+                : 'Vincular SoundCloud no es un requisito bloqueante para completar tu registro. Puedes omitir este paso ahora y tu perfil se activará en las recomendaciones de Discovery cuando cargues tu música desde la edición de tu perfil.'}
+            </p>
           </div>
 
-          <div className="ls-validation-box">
-            <span className="ls-status-indicator" style={{ background: soundcloud ? '#27ae60' : '#f59e0b' }} />
-            {soundcloud
-              ? 'Perfil listo: Cuenta de SoundCloud vinculada.'
-              : 'Perfil pendiente de vincular música: Tu perfil se activará en Discovery al cargar SoundCloud desde la edición de perfil.'}
-          </div>
-
-          <button type="button" className="ls-primary-button ls-auth-button" onClick={handleValidate}>
+          <button type="button" className="ls-primary-button ls-auth-button" onClick={handleValidate} style={{ width: '100%', marginBottom: '10px' }}>
             Finalizar Configuración
           </button>
 
-          <button type="button" className="ls-skip-button" onClick={handleSkip}>
+          <button
+            type="button"
+            className="ls-secondary-button"
+            onClick={handleSkip}
+            style={{ width: '100%', border: '1px dashed rgba(255, 255, 255, 0.25)', color: 'rgba(255, 255, 255, 0.85)' }}
+          >
             Omitir por ahora (Continuar más tarde)
           </button>
         </div>

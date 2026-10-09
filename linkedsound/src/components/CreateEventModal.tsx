@@ -8,7 +8,9 @@ import {
   PiTicketBold,
   PiSparkleBold,
   PiCheckBold,
-  PiWarningBold
+  PiWarningBold,
+  PiEyeSlashBold,
+  PiNavigationArrowBold
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 
@@ -258,32 +260,39 @@ export default function CreateEventModal({
     // Limpiar residuos en el contenedor antes de crear la instancia única
     mapContainerRef.current.innerHTML = ''
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-      center: [13.405, 52.52],
-      zoom: 10,
-    })
+    let timer: ReturnType<typeof setTimeout> | null = null
 
-    map.addControl(new maplibregl.FullscreenControl())
-    const timer = setTimeout(() => map.resize(), 150)
+    try {
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center: [13.405, 52.52],
+        zoom: 10,
+        renderWorldCopies: false,
+      })
 
-    map.on('click', (e) => {
-      const { lng, lat } = e.lngLat
-      if (markerRef.current) {
-        markerRef.current.setLngLat([lng, lat])
-      } else {
-        markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
-          .setLngLat([lng, lat])
-          .addTo(map)
-      }
-      reverseGeocode(lat, lng)
-    })
+      map.addControl(new maplibregl.FullscreenControl())
+      timer = setTimeout(() => map.resize(), 150)
 
-    mapRef.current = map
+      map.on('click', (e) => {
+        const { lng, lat } = e.lngLat
+        if (markerRef.current) {
+          markerRef.current.setLngLat([lng, lat])
+        } else {
+          markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
+            .setLngLat([lng, lat])
+            .addTo(map)
+        }
+        reverseGeocode(lat, lng)
+      })
+
+      mapRef.current = map
+    } catch (err) {
+      console.error('Error initializing map:', err)
+    }
 
     return () => {
-      clearTimeout(timer)
+      if (timer) clearTimeout(timer)
       if (mapRef.current) {
         markerRef.current?.remove()
         markerRef.current = null
@@ -597,32 +606,159 @@ export default function CreateEventModal({
                 </div>
               )}
 
-              <div className="ls-map-actions-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  className="ls-map-toggle-btn"
-                  onClick={() => setShowMap((prev) => !prev)}
-                >
-                  {showMap ? 'Ocultar mapa' : 'Elegir en mapa'}
-                </button>
-                <button
-                  type="button"
-                  className="ls-map-toggle-btn"
-                  style={{ background: 'rgba(0, 229, 255, 0.12)', borderColor: 'rgba(0, 229, 255, 0.3)', color: '#00e5ff' }}
-                  onClick={handleUseCurrentLocation}
-                >
-                  Usar mi ubicación actual
-                </button>
-                {isLocating && <span className="ls-map-status">Buscando dirección...</span>}
-                {isSearching && <span className="ls-map-status">Buscando ciudades...</span>}
-              </div>
+              {!showMap && (
+                <div className="ls-map-actions-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    className="ls-map-toggle-btn"
+                    onClick={() => setShowMap(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <PiMapPinBold />
+                    Elegir en mapa
+                  </button>
+                  {(isLocating || isSearching) && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#c084fc' }}>
+                      <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', display: 'inline-block' }} />
+                      <span>{isLocating ? 'Obteniendo ubicación...' : 'Buscando...'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {showMap && (
                 <div
-                  ref={mapContainerRef}
-                  className="ls-map-container"
-                  style={{ width: '100%', height: '240px', borderRadius: '12px', overflow: 'hidden', marginTop: '10px' }}
-                />
+                  className="ls-map-wrapper"
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    marginTop: '10px',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(168, 85, 247, 0.35)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                  }}
+                >
+                  <div
+                    ref={mapContainerRef}
+                    className="ls-map-container"
+                    style={{ width: '100%', height: '240px', borderRadius: '12px', marginTop: 0 }}
+                  />
+
+                  {/* Overlay controles flotantes superior izquierdo */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      left: '10px',
+                      zIndex: 10,
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      alignItems: 'center',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShowMap(false)}
+                      style={{
+                        pointerEvents: 'auto',
+                        background: 'rgba(15, 19, 37, 0.88)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        color: '#fff',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <PiEyeSlashBold />
+                      Ocultar mapa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentLocation}
+                      disabled={isLocating}
+                      style={{
+                        pointerEvents: 'auto',
+                        background: 'rgba(15, 19, 37, 0.88)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(0, 229, 255, 0.45)',
+                        color: '#00e5ff',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <PiNavigationArrowBold />
+                      {isLocating ? 'Detectando...' : 'Usar mi ubicación actual'}
+                    </button>
+                  </div>
+
+                  {/* Overlay estado/carga superior derecho */}
+                  {(isLocating || isSearching) && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        zIndex: 10,
+                        background: 'rgba(15, 19, 37, 0.92)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(168, 85, 247, 0.5)',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
+                      }}
+                    >
+                      <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
+                      <span>{isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}</span>
+                    </div>
+                  )}
+
+                  {/* Overlay sugerencia inferior izquierdo */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '10px',
+                      left: '10px',
+                      zIndex: 10,
+                      background: 'rgba(15, 19, 37, 0.8)',
+                      backdropFilter: 'blur(6px)',
+                      WebkitBackdropFilter: 'blur(6px)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '0.72rem',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    Haz clic en el mapa para marcar tu posición
+                  </div>
+                </div>
               )}
             </div>
           </div>

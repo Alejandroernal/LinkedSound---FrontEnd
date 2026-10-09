@@ -278,7 +278,7 @@ export default function SwipeCardStack({
                   onReport(greenBoxTitle)
                 }}
               >
-                <PiFlagBold /> Reporte
+                <PiFlagBold /> Reportar
               </button>
               <span className="ls-swipe-score">{currentCard.match}</span>
             </div>

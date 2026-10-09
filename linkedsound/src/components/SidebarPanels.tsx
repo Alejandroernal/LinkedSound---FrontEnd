@@ -193,29 +193,34 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
     // Instancia única limpia
     mapContainerRef.current.innerHTML = ''
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-      center: initialCenter,
-      zoom: 11,
-    })
+    try {
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center: initialCenter,
+        zoom: 11,
+        renderWorldCopies: false,
+      })
 
-    const marker = new maplibregl.Marker({ color: '#a855f7' })
-      .setLngLat(initialCenter)
-      .addTo(map)
+      const marker = new maplibregl.Marker({ color: '#a855f7' })
+        .setLngLat(initialCenter)
+        .addTo(map)
 
-    markerRef.current = marker
-    mapRef.current = map
+      markerRef.current = marker
+      mapRef.current = map
 
-    // Clic directo sobre el mapa ubica el pin y actualiza el filtro de ubicación
-    map.on('click', (e) => {
-      const { lng, lat } = e.lngLat
-      if (markerRef.current) {
-        markerRef.current.setLngLat([lng, lat])
-      }
-      map.flyTo({ center: [lng, lat], zoom: 12 })
-      reverseGeocode(lat, lng)
-    })
+      // Clic directo sobre el mapa ubica el pin y actualiza el filtro de ubicación
+      map.on('click', (e) => {
+        const { lng, lat } = e.lngLat
+        if (markerRef.current) {
+          markerRef.current.setLngLat([lng, lat])
+        }
+        map.flyTo({ center: [lng, lat], zoom: 12 })
+        reverseGeocode(lat, lng)
+      })
+    } catch (err) {
+      console.error('Error initializing map:', err)
+    }
 
     const timer = setTimeout(() => {
       if (mapRef.current) mapRef.current.resize()
@@ -546,27 +551,6 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
           )}
         </div>
 
-        {/* Chips de ubicaciones rápidas (Opciones de cambio de ubicación) */}
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
-          {PRESET_LOCATIONS.slice(0, 4).map((preset) => (
-            <button
-              key={preset.label}
-              type="button"
-              onClick={() => selectSuggestion(preset)}
-              style={{
-                padding: '3px 8px',
-                borderRadius: '6px',
-                fontSize: '0.68rem',
-                background: currentFilters.locationQuery === preset.label ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255,255,255,0.06)',
-                border: `1px solid ${currentFilters.locationQuery === preset.label ? '#a855f7' : 'rgba(255,255,255,0.1)'}`,
-                color: currentFilters.locationQuery === preset.label ? '#fff' : 'rgba(255,255,255,0.7)',
-                cursor: 'pointer'
-              }}
-            >
-              {preset.label.split(',')[0]}
-            </button>
-          ))}
-        </div>
 
         {/* Embedded Interactive Map for Radar (Compact: 105px height) */}
         <div style={{ marginTop: '6px' }}>

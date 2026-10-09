@@ -140,14 +140,22 @@ export default function ConversationSidebar({
               : conversation.preview
 
             return (
-              <button
+              <div
                 key={conversation.id}
-                type="button"
                 className={`ls-conversation-item ${activeId === conversation.id ? 'is-selected' : ''}`}
                 onClick={() => onSelect(conversation.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    onSelect(conversation.id)
+                  }
+                }}
+                role="button"
+                tabIndex={0}
                 style={{
                   opacity: conversation.blocked ? 0.6 : 1,
                   position: 'relative',
+                  zIndex: openMenuId === conversation.id ? 100 : 1,
+                  cursor: 'pointer',
                 }}
               >
                 {conversation.profileImage ? (
@@ -231,7 +239,8 @@ export default function ConversationSidebar({
                       <button
                         type="button"
                         className="ls-menu-option"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           onTogglePin?.(conversation.id)
                           setOpenMenuId(null)
                         }}
@@ -256,7 +265,8 @@ export default function ConversationSidebar({
                       <button
                         type="button"
                         className="ls-menu-option"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           onToggleMute?.(conversation.id)
                           setOpenMenuId(null)
                         }}
@@ -281,7 +291,8 @@ export default function ConversationSidebar({
                       <button
                         type="button"
                         className="ls-menu-option"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           onClearChat?.(conversation.id)
                           setOpenMenuId(null)
                         }}
@@ -306,7 +317,8 @@ export default function ConversationSidebar({
                       <button
                         type="button"
                         className="ls-menu-option"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           onToggleBlock?.(conversation.id)
                           setOpenMenuId(null)
                         }}
@@ -331,7 +343,8 @@ export default function ConversationSidebar({
                       <button
                         type="button"
                         className="ls-menu-option danger"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           onUnmatch?.(conversation)
                           setOpenMenuId(null)
                         }}
@@ -355,7 +368,7 @@ export default function ConversationSidebar({
                     </div>
                   )}
                 </div>
-              </button>
+              </div>
             )
           })
         ) : (

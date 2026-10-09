@@ -91,25 +91,30 @@ export default function SoundCloudPreviewModal({
 
       mapContainerRef.current.innerHTML = ''
 
-      const map = new maplibregl.Map({
-        container: mapContainerRef.current,
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-        center: coords,
-        zoom: zoomLevel,
-      })
+      try {
+        const map = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+          center: coords,
+          zoom: zoomLevel,
+          renderWorldCopies: false,
+        })
 
-      const marker = new maplibregl.Marker({ color: '#a855f7' })
-        .setLngLat(coords)
-        .addTo(map)
+        const marker = new maplibregl.Marker({ color: '#a855f7' })
+          .setLngLat(coords)
+          .addTo(map)
 
-      markerRef.current = marker
-      mapRef.current = map
+        markerRef.current = marker
+        mapRef.current = map
 
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.resize()
-        }
-      }, 150)
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.resize()
+          }
+        }, 150)
+      } catch (err) {
+        console.error('Error initializing map:', err)
+      }
     }
 
     // 1. Si el ítem tiene coordenadas explícitas asignadas en creación o backend
