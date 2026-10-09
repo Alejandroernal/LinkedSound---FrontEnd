@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { PiXBold, PiHandshakeBold, PiChatTeardropTextBold, PiBriefcaseBold } from 'react-icons/pi'
+import { PiXBold, PiChatTeardropTextBold, PiBriefcaseBold } from 'react-icons/pi'
+import { ImLink } from 'react-icons/im'
 import type { ProfileCard } from '../data/mockData'
 
 type MatchModalProps = {
@@ -69,7 +70,7 @@ export default function MatchModal({
           </div>
 
           <div className="ls-match-music-pulse" title="Conexión Profesional">
-            <PiHandshakeBold />
+            <ImLink />
           </div>
 
           <div className="ls-match-avatar-box">
