@@ -25,19 +25,50 @@ const initialFilters: RadarFilterState = {
   locationQuery: '',
   selectedCategories: [],
   selectedGenres: [],
-  radius: 50,
+  radius: 500,
 }
 
 const LOCATION_COORDINATES: Record<string, { lat: number; lon: number }> = {
   'francia, paris': { lat: 48.8566, lon: 2.3522 },
+  'paris': { lat: 48.8566, lon: 2.3522 },
   'berlin, germany': { lat: 52.52, lon: 13.405 },
+  'berlin': { lat: 52.52, lon: 13.405 },
   'entre rios, argentina': { lat: -31.741, lon: -58.514 },
+  'entre rios': { lat: -31.741, lon: -58.514 },
+  'entre ríos': { lat: -31.741, lon: -58.514 },
   'trenque lauquen, argentina': { lat: -35.973, lon: -62.734 },
   'trenque lauquen': { lat: -35.973, lon: -62.734 },
   'new york, ny': { lat: 40.7128, lon: -74.006 },
+  'new york': { lat: 40.7128, lon: -74.006 },
   'london, uk': { lat: 51.5074, lon: -0.1278 },
+  'london': { lat: 51.5074, lon: -0.1278 },
   'tokyo, japan': { lat: 35.6895, lon: 139.6917 },
+  'tokyo': { lat: 35.6895, lon: 139.6917 },
   'buenos aires, argentina': { lat: -34.6037, lon: -58.3816 },
+  'buenos aires': { lat: -34.6037, lon: -58.3816 },
+  'los angeles, usa': { lat: 34.0522, lon: -118.2437 },
+  'los angeles': { lat: 34.0522, lon: -118.2437 },
+  'madrid, españa': { lat: 40.4168, lon: -3.7038 },
+  'madrid': { lat: 40.4168, lon: -3.7038 },
+  'barcelona, españa': { lat: 41.3851, lon: 2.1734 },
+  'barcelona': { lat: 41.3851, lon: 2.1734 },
+  'córdoba, argentina': { lat: -31.4201, lon: -64.1888 },
+  'córdoba': { lat: -31.4201, lon: -64.1888 },
+  'rosario, argentina': { lat: -32.9442, lon: -60.6505 },
+  'rosario': { lat: -32.9442, lon: -60.6505 },
+  'mendoza, argentina': { lat: -32.8895, lon: -68.8458 },
+  'mendoza': { lat: -32.8895, lon: -68.8458 },
+}
+
+export function getCoordinatesForLocation(locStr?: string): { lat: number; lon: number } | null {
+  if (!locStr || !locStr.trim()) return null
+  const normalized = locStr.toLowerCase().trim()
+  for (const [key, coords] of Object.entries(LOCATION_COORDINATES)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return coords
+    }
+  }
+  return null
 }
 
 function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -66,20 +97,38 @@ export default function DashboardPage({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
   const [previewProfile, setPreviewProfile] = useState<ProfileCard | null>(null)
-  const [filters, setFilters] = useState<RadarFilterState>(initialFilters)
+  const [filters, setFilters] = useState<RadarFilterState>(() => {
+    const profileCoords = getCoordinatesForLocation(profile?.location)
+    return {
+      locationQuery: '',
+      centerLat: profileCoords?.lat,
+      centerLng: profileCoords?.lon,
+      selectedCategories: [],
+      selectedGenres: [],
+      radius: 500,
+    }
+  })
 
   const filteredRecommendations = useMemo(() => {
     let centerLat = filters.centerLat
     let centerLng = filters.centerLng
 
     if ((centerLat === undefined || centerLng === undefined) && filters.locationQuery.trim()) {
-      const q = filters.locationQuery.trim().toLowerCase()
-      for (const [key, coords] of Object.entries(LOCATION_COORDINATES)) {
-        if (q.includes(key) || key.includes(q)) {
-          centerLat = coords.lat
-          centerLng = coords.lon
-          break
-        }
+      const coords = getCoordinatesForLocation(filters.locationQuery)
+      if (coords) {
+        centerLat = coords.lat
+        centerLng = coords.lon
+      }
+    }
+
+    if (centerLat === undefined || centerLng === undefined) {
+      const coords = getCoordinatesForLocation(profile?.location)
+      if (coords) {
+        centerLat = coords.lat
+        centerLng = coords.lon
+      } else {
+        centerLat = 52.52
+        centerLng = 13.405
       }
     }
 
@@ -88,7 +137,7 @@ export default function DashboardPage({
       if (filters.locationQuery.trim()) {
         const query = filters.locationQuery.trim().toLowerCase()
         const loc = (card.location ?? '').toLowerCase()
-        if (!loc.includes(query) && centerLat === undefined) return false
+        if (!loc.includes(query) && filters.centerLat === undefined) return false
       }
 
       // 2. Distance radius filter in kilometers
@@ -97,19 +146,18 @@ export default function DashboardPage({
         let cardLng = card.longitude
 
         if (cardLat === undefined || cardLng === undefined) {
-          const cLoc = (card.location ?? '').toLowerCase()
-          for (const [key, coords] of Object.entries(LOCATION_COORDINATES)) {
-            if (cLoc.includes(key) || key.includes(cLoc)) {
-              cardLat = coords.lat
-              cardLng = coords.lon
-              break
-            }
+          const coords = getCoordinatesForLocation(card.location)
+          if (coords) {
+            cardLat = coords.lat
+            cardLng = coords.lon
           }
         }
 
         if (cardLat !== undefined && cardLng !== undefined) {
           const distance = getDistanceKm(centerLat, centerLng, cardLat, cardLng)
           if (distance > filters.radius) return false
+        } else {
+          return false
         }
       }
 
@@ -149,7 +197,15 @@ export default function DashboardPage({
   }
 
   const handleResetFilters = () => {
-    setFilters(initialFilters)
+    const profileCoords = getCoordinatesForLocation(profile?.location)
+    setFilters({
+      locationQuery: '',
+      centerLat: profileCoords?.lat,
+      centerLng: profileCoords?.lon,
+      selectedCategories: [],
+      selectedGenres: [],
+      radius: 500,
+    })
     setCurrentIndex(0)
   }
 

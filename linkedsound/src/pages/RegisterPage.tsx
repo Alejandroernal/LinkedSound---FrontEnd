@@ -170,7 +170,6 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
   const [genreSearch, setGenreSearch] = useState('')
   const [rawImage, setRawImage] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
-  const [showPhotoActions, setShowPhotoActions] = useState(false)
   const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
 
@@ -280,11 +279,11 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
 
               {/* Circle preview */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <button
-                  type="button"
+                <label
+                  htmlFor="av-file-input"
                   className="ls-av-circle"
-                  onClick={() => setShowPhotoActions(prev => !prev)}
-                  title="Haz clic para desplegar opciones de foto"
+                  title="Haz clic para cargar foto de perfil"
+                  style={{ cursor: 'pointer', display: 'flex' }}
                 >
                   {currentAvatar ? (
                     <img src={currentAvatar} alt="Avatar" className="ls-av-circle__img" />
@@ -296,9 +295,18 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                       </svg>
                     </div>
                   )}
-                </button>
-                <input id="av-file-input" type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFileInput(f) }} />
+                </label>
+                <input
+                  id="av-file-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) handleFileInput(f)
+                    e.target.value = ''
+                  }}
+                />
               </div>
 
               {/* Inputs First Name & Last Name al lado */}
@@ -331,23 +339,6 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                 </label>
               </div>
             </div>
-
-            {/* Opciones desplegables de foto al hacer clic sobre el círculo */}
-            {showPhotoActions && (
-              <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '10px 14px', borderRadius: '12px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <label className="ls-av-upload-btn" htmlFor="av-file-input" style={{ cursor: 'pointer', margin: 0 }}>
-                  Elegir foto
-                </label>
-                {currentAvatar && rawImage && (
-                  <button type="button" className="ls-av-edit-btn" onClick={() => setShowEditor(true)}>
-                    Editar encuadre
-                  </button>
-                )}
-                <span className="ls-av-hint" style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                  Formato JPG, PNG o WEBP
-                </span>
-              </div>
-            )}
 
             <label>
               Nombre artístico / Apodo

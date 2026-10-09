@@ -51,8 +51,8 @@ export default function AdminPage({
   const [activities, setActivities] = useState<UserActivityLog[]>(mockActivity)
 
   // Filtros y búsquedas (Con Debounce)
-  const [reportOriginFilter, setReportOriginFilter] = useState<'All' | 'Discovery' | 'Explorer'>('All')
-  const [reportStatusFilter, setReportStatusFilter] = useState<'All' | 'Pending' | 'Resolved' | 'Dismissed'>('All')
+  const [reportTargetTypeFilter, setReportTargetTypeFilter] = useState<'All' | 'Perfil' | 'Evento'>('All')
+  const [reportStatusFilter, setReportStatusFilter] = useState<'All' | 'Pending' | 'Resolved' | 'Dismissed'>('Pending')
   
   const [userSearchTerm, setUserSearchTerm] = useState('')
   const debouncedUserSearchTerm = useDebounce(userSearchTerm, 300)
@@ -94,9 +94,13 @@ export default function AdminPage({
   // Estado para Modales de Resolución y Desestimación con Comentario Obligatorio
   const [resolvingReport, setResolvingReport] = useState<UserReport | null>(null)
   const [resolveComment, setResolveComment] = useState('')
+  const [resolveError, setResolveError] = useState('')
 
   const [dismissingReport, setDismissingReport] = useState<UserReport | null>(null)
   const [dismissComment, setDismissComment] = useState('')
+  const [dismissError, setDismissError] = useState('')
+
+  const [deleteEventError, setDeleteEventError] = useState('')
 
   const [notificationToast, setNotificationToast] = useState<{ message: string; targetUser: string } | null>(null)
 
@@ -129,36 +133,43 @@ export default function AdminPage({
   const handleOpenResolveModal = (report: UserReport) => {
     setResolvingReport(report)
     setResolveComment(report.adminComment ?? '')
+    setResolveError('')
   }
 
   const handleConfirmResolve = (e: React.FormEvent) => {
     e.preventDefault()
     if (!resolvingReport) return
 
-    const updatedComment = resolveComment.trim() || 'El reporte fue revisado y resuelto satisfactoriamente por el equipo de administración.'
+    const comment = resolveComment.trim()
+    if (!comment) {
+      setResolveError('Por favor ingresa un comentario o justificación de resolución para continuar.')
+      return
+    }
+    setResolveError('')
 
     setReports(prev => prev.map(r => {
       if (r.id === resolvingReport.id) {
         return {
           ...r,
           status: 'Resolved',
-          adminComment: updatedComment,
+          adminComment: comment,
         }
       }
       return r
     }))
 
     // Registrar en Log de Auditoría
-    logAdminAction(`Resolvió el reporte ${resolvingReport.id} sobre "${resolvingReport.reportedUser}". Comentario: "${updatedComment}"`, 'Sistema')
+    logAdminAction(`Resolvió el reporte ${resolvingReport.id} sobre "${resolvingReport.reportedUser}". Comentario: "${comment}"`, 'Sistema')
 
     // Notificar al usuario denunciante
     setNotificationToast({
-      message: `Tu reporte ${resolvingReport.id} ha sido resuelto. Comentario del Administrador: "${updatedComment}"`,
+      message: `Tu reporte ${resolvingReport.id} ha sido resuelto. Comentario del Administrador: "${comment}"`,
       targetUser: resolvingReport.reporterUser,
     })
 
     setResolvingReport(null)
     setResolveComment('')
+    setResolveError('')
 
     setTimeout(() => {
       setNotificationToast(null)
@@ -168,13 +179,18 @@ export default function AdminPage({
   const handleOpenDismissModal = (report: UserReport) => {
     setDismissingReport(report)
     setDismissComment(report.adminComment ?? '')
+    setDismissError('')
   }
 
   const handleConfirmDismiss = (e: React.FormEvent) => {
     e.preventDefault()
     if (!dismissingReport) return
     const comment = dismissComment.trim()
-    if (!comment) return
+    if (!comment) {
+      setDismissError('Es obligatorio ingresar un motivo o comentario de desestimación para continuar.')
+      return
+    }
+    setDismissError('')
 
     setReports(prev => prev.map(r => {
       if (r.id === dismissingReport.id) {
@@ -198,6 +214,7 @@ export default function AdminPage({
 
     setDismissingReport(null)
     setDismissComment('')
+    setDismissError('')
 
     setTimeout(() => {
       setNotificationToast(null)
@@ -261,7 +278,14 @@ export default function AdminPage({
     e.preventDefault()
     if (!deletingExplorerItem) return
 
-    const fullMotive = `${eventDeleteReason}${eventDeleteDetails.trim() ? `: ${eventDeleteDetails.trim()}` : ''}`
+    const details = eventDeleteDetails.trim()
+    if (!details) {
+      setDeleteEventError('Es obligatorio ingresar detalles adicionales de la baja para mantener el registro administrativo.')
+      return
+    }
+    setDeleteEventError('')
+
+    const fullMotive = `${eventDeleteReason}${details ? `: ${details}` : ''}`
     
     setExplorerItems(prev => prev.filter(item => item.id !== deletingExplorerItem.id))
 
@@ -276,6 +300,7 @@ export default function AdminPage({
     setDeletingExplorerItem(null)
     setEventDeleteReason('Contenido inapropiado / Infracción de normas')
     setEventDeleteDetails('')
+    setDeleteEventError('')
 
     setTimeout(() => {
       setNotificationToast(null)
@@ -332,7 +357,7 @@ export default function AdminPage({
 
   // Filtros aplicados & Paginación
   const filteredReports = reports.filter(r => {
-    if (reportOriginFilter !== 'All' && r.origin !== reportOriginFilter) return false
+    if (reportTargetTypeFilter !== 'All' && r.targetType !== reportTargetTypeFilter) return false
     if (reportStatusFilter !== 'All' && r.status !== reportStatusFilter) return false
     return true
   })
@@ -502,7 +527,7 @@ export default function AdminPage({
             <div className="ls-admin-card-header">
               <div>
                 <h3 className="ls-admin-panel-title">Todos los Reportes de la Plataforma</h3>
-                <p className="ls-admin-panel-subtitle">Filtra por estado (Pendiente / Resuelto / Desestimado) u origen (Discovery / Explorer).</p>
+                <p className="ls-admin-panel-subtitle">Filtra por estado (Pendiente / Resuelto / Desestimado) o tipo (Perfil / Evento).</p>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -522,18 +547,18 @@ export default function AdminPage({
                   ))}
                 </div>
 
-                {/* Filtro por origen */}
+                {/* Filtro por tipo (Perfil / Evento) */}
                 <div className="ls-admin-filter-group">
-                  {(['All', 'Discovery', 'Explorer'] as const).map(orig => (
+                  {(['All', 'Perfil', 'Evento'] as const).map(type => (
                     <button
-                      key={orig}
+                      key={type}
                       onClick={() => {
-                        setReportOriginFilter(orig)
+                        setReportTargetTypeFilter(type)
                         setReportsPage(1)
                       }}
-                      className={`ls-admin-filter-btn ${reportOriginFilter === orig ? 'active' : ''}`}
+                      className={`ls-admin-filter-btn ${reportTargetTypeFilter === type ? 'active' : ''}`}
                     >
-                      {orig === 'All' ? 'Todos los Orígenes' : orig}
+                      {type === 'All' ? 'Todos los Tipos' : type === 'Perfil' ? 'Perfil' : 'Evento'}
                     </button>
                   ))}
                 </div>
@@ -1472,7 +1497,10 @@ export default function AdminPage({
               </h3>
               <button
                 type="button"
-                onClick={() => setResolvingReport(null)}
+                onClick={() => {
+                  setResolvingReport(null)
+                  setResolveError('')
+                }}
                 className="ls-admin-modal-close-btn"
               >
                 <PiXBold />
@@ -1483,7 +1511,7 @@ export default function AdminPage({
               Ingresa el comentario de resolución que se asociará al reporte e informará a <strong>{resolvingReport.reporterUser}</strong>.
             </p>
 
-            <form onSubmit={handleConfirmResolve} className="ls-admin-modal-flex-form resolve-form-gap">
+            <form noValidate onSubmit={handleConfirmResolve} className="ls-admin-modal-flex-form resolve-form-gap">
               <div className="ls-admin-resolve-callout">
                 <strong>Motivo denunciado:</strong> {resolvingReport.reason}<br />
                 <strong>Reportado:</strong> {resolvingReport.reportedUser} | <strong>Denunciante:</strong> {resolvingReport.reporterUser}
@@ -1492,19 +1520,47 @@ export default function AdminPage({
               <label className="ls-admin-form-label bold-label">
                 Comentario de resolución del Administrador:
                 <textarea
-                  required
                   placeholder="Ej: Se ha revisado el caso y sancionado al usuario acorde a los términos de la plataforma."
                   value={resolveComment}
-                  onChange={(e) => setResolveComment(e.target.value)}
+                  onChange={(e) => {
+                    setResolveComment(e.target.value)
+                    if (resolveError && e.target.value.trim()) setResolveError('')
+                  }}
                   rows={4}
                   className="ls-admin-form-textarea green-outline"
+                  style={{
+                    borderColor: resolveError ? '#ef4444' : undefined,
+                    boxShadow: resolveError ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : undefined
+                  }}
                 />
               </label>
+
+              {resolveError && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    color: '#fca5a5',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <PiWarningOctagonBold style={{ fontSize: '1.1rem', flexShrink: 0 }} />
+                  <span>{resolveError}</span>
+                </div>
+              )}
 
               <div className="ls-admin-form-actions resolve-margin">
                 <button
                   type="button"
-                  onClick={() => setResolvingReport(null)}
+                  onClick={() => {
+                    setResolvingReport(null)
+                    setResolveError('')
+                  }}
                   className="ls-admin-btn-cancel"
                 >
                   Cancelar
@@ -1531,7 +1587,10 @@ export default function AdminPage({
               </h3>
               <button
                 type="button"
-                onClick={() => setDismissingReport(null)}
+                onClick={() => {
+                  setDismissingReport(null)
+                  setDismissError('')
+                }}
                 className="ls-admin-modal-close-btn"
               >
                 <PiXBold />
@@ -1542,7 +1601,7 @@ export default function AdminPage({
               Es obligatorio ingresar un motivo o comentario de desestimación. Este mensaje se notificará al denunciante (<strong>{dismissingReport.reporterUser}</strong>).
             </p>
 
-            <form onSubmit={handleConfirmDismiss} className="ls-admin-modal-flex-form resolve-form-gap">
+            <form noValidate onSubmit={handleConfirmDismiss} className="ls-admin-modal-flex-form resolve-form-gap">
               <div className="ls-admin-resolve-callout" style={{ borderColor: 'rgba(255, 60, 110, 0.3)' }}>
                 <strong>Motivo denunciado:</strong> {dismissingReport.reason}<br />
                 <strong>Reportado:</strong> {dismissingReport.reportedUser} | <strong>Denunciante:</strong> {dismissingReport.reporterUser}
@@ -1551,20 +1610,47 @@ export default function AdminPage({
               <label className="ls-admin-form-label bold-label">
                 Comentario de desestimación (Obligatorio):
                 <textarea
-                  required
                   placeholder="Ej: Tras la revisión, se determinó que la publicación no infringe los términos y condiciones de la comunidad."
                   value={dismissComment}
-                  onChange={(e) => setDismissComment(e.target.value)}
+                  onChange={(e) => {
+                    setDismissComment(e.target.value)
+                    if (dismissError && e.target.value.trim()) setDismissError('')
+                  }}
                   rows={4}
                   className="ls-admin-form-textarea"
-                  style={{ borderColor: 'rgba(255, 60, 110, 0.5)' }}
+                  style={{
+                    borderColor: dismissError ? '#ef4444' : 'rgba(255, 60, 110, 0.5)',
+                    boxShadow: dismissError ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : undefined
+                  }}
                 />
               </label>
+
+              {dismissError && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    color: '#fca5a5',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <PiWarningOctagonBold style={{ fontSize: '1.1rem', flexShrink: 0 }} />
+                  <span>{dismissError}</span>
+                </div>
+              )}
 
               <div className="ls-admin-form-actions resolve-margin">
                 <button
                   type="button"
-                  onClick={() => setDismissingReport(null)}
+                  onClick={() => {
+                    setDismissingReport(null)
+                    setDismissError('')
+                  }}
                   className="ls-admin-btn-cancel"
                 >
                   Cancelar
@@ -1591,7 +1677,10 @@ export default function AdminPage({
               </h3>
               <button
                 type="button"
-                onClick={() => setDeletingExplorerItem(null)}
+                onClick={() => {
+                  setDeletingExplorerItem(null)
+                  setDeleteEventError('')
+                }}
                 className="ls-admin-modal-close-btn"
               >
                 <PiXBold />
@@ -1602,7 +1691,7 @@ export default function AdminPage({
               ¿Desea dar de baja permanentemente el evento <strong>{deletingExplorerItem.title}</strong> de <strong>{deletingExplorerItem.owner}</strong>?
             </p>
 
-            <form onSubmit={handleConfirmDeleteExplorerItem} className="ls-admin-modal-flex-form resolve-form-gap">
+            <form noValidate onSubmit={handleConfirmDeleteExplorerItem} className="ls-admin-modal-flex-form resolve-form-gap">
               <label className="ls-admin-form-label bold-label">
                 Motivo de la Baja:
                 <select
@@ -1621,20 +1710,47 @@ export default function AdminPage({
               <label className="ls-admin-form-label bold-label">
                 Detalles Adicionales de la Baja (Obligatorio para trazabilidad):
                 <textarea
-                  required
                   placeholder="Detalla la razón específica de la baja del evento para mantener el registro administrativo..."
                   value={eventDeleteDetails}
-                  onChange={e => setEventDeleteDetails(e.target.value)}
+                  onChange={e => {
+                    setEventDeleteDetails(e.target.value)
+                    if (deleteEventError && e.target.value.trim()) setDeleteEventError('')
+                  }}
                   rows={3}
                   className="ls-admin-form-textarea"
-                  style={{ borderColor: 'rgba(255, 60, 110, 0.5)' }}
+                  style={{
+                    borderColor: deleteEventError ? '#ef4444' : 'rgba(255, 60, 110, 0.5)',
+                    boxShadow: deleteEventError ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : undefined
+                  }}
                 />
               </label>
+
+              {deleteEventError && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    color: '#fca5a5',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <PiWarningOctagonBold style={{ fontSize: '1.1rem', flexShrink: 0 }} />
+                  <span>{deleteEventError}</span>
+                </div>
+              )}
 
               <div className="ls-admin-form-actions resolve-margin">
                 <button
                   type="button"
-                  onClick={() => setDeletingExplorerItem(null)}
+                  onClick={() => {
+                    setDeletingExplorerItem(null)
+                    setDeleteEventError('')
+                  }}
                   className="ls-admin-btn-cancel"
                 >
                   Cancelar

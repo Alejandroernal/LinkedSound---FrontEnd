@@ -629,7 +629,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
               <span className="ls-status-indicator" style={{ width: '10px', height: '10px', borderRadius: '50%', background: soundcloud ? '#27ae60' : '#f59e0b', display: 'inline-block' }} />
               <strong style={{ fontSize: '0.9rem', color: '#fff' }}>
-                {soundcloud ? 'Perfil Listo para Discovery' : 'Vinculación de Música Opcional (RF-01 / RF-08)'}
+                {soundcloud ? 'Perfil Listo para Discovery' : ''}
               </strong>
             </div>
             <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.4 }}>

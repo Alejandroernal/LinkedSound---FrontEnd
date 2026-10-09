@@ -95,11 +95,11 @@ export default function MessagesPage({
       const lastName = nameParts.slice(1).join(' ') || 'Artista'
       const cleanHandle = activeConversation.name.toLowerCase().replace(/\s+/g, '')
 
-      setInspectedProfileCard({
+      const fallbackCard: ProfileCard = {
         firstName,
         lastName,
         nickname: activeConversation.name,
-        role: activeConversation.role || 'Productor/Artista',
+        role: activeConversation.role || 'Productor y Artista',
         location: activeConversation.location || 'LinkedSound HQ',
         profileImage: activeConversation.profileImage || 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
         isProfile: true,
@@ -123,7 +123,9 @@ export default function MessagesPage({
             soundcloudLink: `https://soundcloud.com/${cleanHandle}`,
           },
         ],
-      })
+      }
+
+      setInspectedProfileCard(fallbackCard)
     }
   }
 

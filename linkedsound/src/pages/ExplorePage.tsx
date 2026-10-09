@@ -25,7 +25,7 @@ import {
   PiCheckBold,
 } from 'react-icons/pi'
 import { exploreCards as initialExploreCards, type ProfileCard } from '../data/mockData'
-import { type AppPage, type Profile, type NotificationItem, formatEventDate, isUserProfile } from '../types'
+import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
 
 type ExplorePageProps = {
   activePage?: AppPage
@@ -176,7 +176,7 @@ export default function ExplorePage({
                     onClick={() => setSearchQuery('')}
                     title="Limpiar texto de búsqueda"
                   >
-                    ✕
+                    <PiXBold />
                   </button>
                 )}
               </div>
@@ -281,33 +281,66 @@ export default function ExplorePage({
             {filteredCards.length > 0 ? (
               filteredCards.map((card, idx) => {
                 const isProfile = isUserProfile(card)
+                const profileCard = isProfile ? (card as UserProfile) : null
+                const eventCard = !isProfile ? (card as EventItem) : null
                 const itemRole = card.itemRole ?? (isProfile ? 'Perfil' : 'Evento')
                 const cardKey = card.id ? card.id : `${card.nickname ?? 'card'}-${idx}`
-                const firstName = isProfile ? (card.firstName ?? '') : ''
-                const lastName = isProfile ? (card.lastName ?? '') : ''
+                const firstName = profileCard?.firstName ?? ''
+                const lastName = profileCard?.lastName ?? ''
                 const fullName = [firstName, lastName].filter(Boolean).join(' ')
-                const cardDisplayTitle = card.nickname?.trim() || fullName || 'Creador'
+                const cardDisplayTitle = card.nickname?.trim() || (isProfile ? (fullName || 'Creador') : (eventCard?.title?.trim() || 'Evento'))
+
+                const hasSoundCloud = isProfile && Boolean(
+                  profileCard?.soundcloudUrl?.trim() ||
+                  profileCard?.soundcloud?.trim() ||
+                  profileCard?.soundcloudHandle?.trim() ||
+                  (profileCard?.tracks && profileCard.tracks.length > 0)
+                )
+
+                const MIN_DESC_CHARS_PROFILE = 139
+                const MAX_DESC_CHARS_PROFILE = 210
+                const MAX_DESC_CHARS_EVENT = 85
+
+                let rawDesc = card.description?.trim() || ''
+
+                if (isProfile) {
+                  if (rawDesc.length < MIN_DESC_CHARS_PROFILE) {
+                    const defaultComplement = ' Artista y productor musical colaborando en la plataforma LinkedSound para crear experiencias sonoras innovadoras y conectar con talentos globales.'
+                    rawDesc = rawDesc ? `${rawDesc}${defaultComplement}` : defaultComplement.trim()
+                  }
+                } else if (!rawDesc) {
+                  rawDesc = 'Evento musical destacado en LinkedSound.'
+                }
+
+                const maxChars = isProfile ? MAX_DESC_CHARS_PROFILE : MAX_DESC_CHARS_EVENT
+                const displayDesc = rawDesc.length > maxChars
+                  ? `${rawDesc.slice(0, maxChars).trim()}...`
+                  : rawDesc
 
                 return (
                   <article
                     key={cardKey}
-                    className={`ls-recommend-card ls-clickable-card ${isProfile ? 'has-soundcloud' : ''}`}
+                    className={`ls-recommend-card ls-clickable-card ${isProfile ? 'is-profile-card' : 'is-event-card'} ${isProfile && hasSoundCloud ? 'has-soundcloud' : ''}`}
                     onClick={() => setSelectedPreviewCard(card)}
                     title={
                       isProfile
-                        ? `Haz clic para ver los trabajos en SoundCloud de ${cardDisplayTitle}`
+                        ? (hasSoundCloud
+                            ? `Haz clic para ver los trabajos en SoundCloud de ${cardDisplayTitle}`
+                            : `Ver perfil de ${cardDisplayTitle}`)
                         : `Ver detalles de ${cardDisplayTitle}`
                     }
                   >
                     <div className="ls-card-visual">
                       <img src={card.profileImage} alt={cardDisplayTitle} />
                       <span className="ls-card-badge">
-                        {itemRole.toUpperCase()}
+                        {isProfile ? (card.role ?? 'Perfil').toUpperCase() : 'EVENTO'}
                       </span>
                       {isProfile ? (
-                        <span className="ls-sc-card-indicator" title="SoundCloud vinculado">
-                          <PiSoundcloudLogoFill /> SoundCloud
-                        </span>
+                        hasSoundCloud && (
+                          <span className="ls-sc-card-indicator" title="SoundCloud vinculado">
+                            <PiSoundcloudLogoFill /> SoundCloud
+                          </span>
+                        )
                       ) : (
                         <span
                           className={`ls-sc-card-indicator ${card.isFinished ? 'is-finished' : 'is-active-event'}`}
@@ -321,30 +354,17 @@ export default function ExplorePage({
                         <div>
                           <h3>{cardDisplayTitle}</h3>
                           {isProfile && fullName && card.nickname && fullName.toLowerCase() !== card.nickname.toLowerCase() && (
-                            <span style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.6)', display: 'block', marginTop: '2px' }}>
+                            <span className="ls-card-fullname-pill">
                               {fullName}
                             </span>
                           )}
                         </div>
                         <span className="ls-match-tag">{card.match} match</span>
                       </div>
-                      <p className="ls-card-role">
-                        {card.role} {card.location && `• ${card.location}`}
-                      </p>
-
-                      {/* En perfiles: Caja de Track / Muestra destacada */}
-                      {isProfile && (
-                        <div className="ls-card-track-sample-box">
-                          <PiSoundcloudLogoFill className="ls-card-track-sc-icon" />
-                          <div className="ls-card-track-info">
-                            <span className="ls-card-track-label">
-                              Track / Muestra SoundCloud
-                            </span>
-                            <span className="ls-card-track-title">
-                              {card.tracks && card.tracks[0]?.title ? card.tracks[0].title : 'Última producción de catálogo'}
-                            </span>
-                          </div>
-                        </div>
+                      {!isProfile && (
+                        <p className="ls-card-role">
+                          {card.role} {card.location && `• ${card.location}`}
+                        </p>
                       )}
 
                       {/* En eventos: Caja de Fecha, Hora y Venue */}
@@ -368,51 +388,23 @@ export default function ExplorePage({
                         </div>
                       )}
 
-                      <p className="ls-card-desc">{card.description ?? ''}</p>
+                      {isProfile && (
+                        <p className="ls-card-desc is-profile-desc">{displayDesc}</p>
+                      )}
                       <div className="ls-card-footer-row">
-                        {(card.interestGenres ?? card.tags ?? []).length > 0 ? (
+                        {(card.interestGenres ?? card.tags ?? []).slice(0, 3).length > 0 ? (
                           <div className="ls-mini-tags ls-card-mini-tags-wrap">
-                            {(card.interestGenres ?? card.tags ?? []).map((tag) => (
-                              <span key={tag}>{tag}</span>
-                            ))}
+                            {(card.interestGenres ?? card.tags ?? [])
+                              .slice(0, 3)
+                              .map((tag) => (
+                                <span key={tag}>{tag}</span>
+                              ))}
                           </div>
                         ) : (
                           <div className="ls-card-tags-spacer" />
                         )}
 
                         <div className="ls-card-action-group">
-                          {isProfile && (
-                            <>
-                              <button
-                                type="button"
-                                className="ls-card-btn-action pass"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setRejectingTarget(card)
-                                }}
-                                title="Descartar Perfil"
-                              >
-                                <PiXBold />
-                              </button>
-
-                              <button
-                                type="button"
-                                className="ls-card-btn-action like"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  if (onConnectProfile) {
-                                    onConnectProfile(card)
-                                  } else {
-                                    setSelectedPreviewCard(card)
-                                  }
-                                }}
-                                title="Conectar / Match"
-                              >
-                                <PiCheckBold />
-                              </button>
-                            </>
-                          )}
-
                           <button
                             type="button"
                             className="ls-card-btn-action report"
@@ -423,6 +415,7 @@ export default function ExplorePage({
                             title={isProfile ? `Reportar Perfil ${card.nickname ?? ''}` : `Reportar Evento ${card.nickname ?? ''}`}
                           >
                             <PiFlagBold />
+                            <span>Reportar</span>
                           </button>
                         </div>
                       </div>
@@ -456,6 +449,8 @@ export default function ExplorePage({
         isOpen={Boolean(selectedPreviewCard)}
         card={selectedPreviewCard}
         onClose={() => setSelectedPreviewCard(null)}
+        onConnectProfile={onConnectProfile}
+        onDiscardProfile={(cardToDiscard) => setRejectingTarget(cardToDiscard)}
       />
 
       {/* Report Modal */}

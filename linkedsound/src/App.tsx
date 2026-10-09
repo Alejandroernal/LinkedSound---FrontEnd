@@ -50,7 +50,7 @@ const DEFAULT_DEMO_USER_PROFILE: Profile = {
   role: 'Usuario',
   category: 'Productor',
   location: 'Berlin, Germany',
-  description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
+  description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals. Specialized in dark synthwave, electronic arrangements, and immersive audio production.',
   interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
   tags: ['Synthwave', 'Analog', 'Live', 'Night Drive'],
   spotifyUrl: 'https://open.spotify.com/artist/kaelenvoss',
@@ -201,7 +201,7 @@ function App() {
     role: 'Administrador',
     category: 'Productor',
     location: 'LinkedSound HQ',
-    description: 'Administrador del sistema LinkedSound. Gestión de usuarios y moderación de contenidos.',
+    description: 'Administrador del sistema LinkedSound. Encargado de la gestión integral de usuarios, moderación activa de contenidos comunitarios y supervisión de la plataforma musical.',
     interestGenres: ['Synthwave', 'DarkElectro', 'Cyberpunk'],
     tags: ['Admin', 'Mod', 'System'],
     spotifyUrl: 'https://spotify.com',
@@ -487,7 +487,7 @@ function App() {
         />
       </Routes>
 
-      {/* Modal de Celebración de Match (Tinder-Style) */}
+      {/* Modal de Conexión Profesional (Match de Colaboración) */}
       <MatchModal
         isOpen={Boolean(matchedCard)}
         matchedCard={matchedCard}

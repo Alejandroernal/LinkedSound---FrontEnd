@@ -60,13 +60,13 @@ export const defaultUserProfile: UserProfile = {
   nickname: 'Kaelen Voss',
   email: 'kaelen@linkedsound.app',
   password: 'password123',
-  role: 'Productor/Artista',
+  role: 'Productor',
   interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
   soundcloudUrl: 'https://soundcloud.com/kaelen-voss',
   spotifyUrl: 'https://open.spotify.com/artist/kaelenvoss',
   instagramUrl: 'https://instagram.com/kaelenvoss',
   location: 'Berlin, Germany',
-  description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals.',
+  description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals. Specialized in dark synthwave, electronic arrangements, and immersive audio production.',
   allowEdit: true,
   allowPostRegister: true,
   teamDecision: 'Permitir cambiar el rol (Productor/Artista) después del alta, y si eso recalcula los matches generados por afinidad. -> Sí, permite cambiar el rol y recalcularía matches.',
@@ -98,7 +98,7 @@ export const recommendations: ProfileCard[] = [
     firstName: 'Kylian',
     lastName: 'Mbappé',
     nickname: 'Kylian Dictador',
-    role: 'Productor/Artista',
+    role: 'Productor y Artista',
     location: 'Francia, paris',
     interestGenres: ['ModularSynth', 'Live', 'Drone'],
     soundcloudUrl: 'https://soundcloud.com/jesus-922347355',
@@ -107,7 +107,7 @@ export const recommendations: ProfileCard[] = [
     profileImage:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk3D-J2lE2LLanWoFeEkrMec5OB_tRjxzqgg_Y9w7iNXOUAjPCWDTrICZ8&s=10',
     match: '22%',
-    description: 'Analog textures and harsh synth design.',
+    description: 'Analog textures and harsh synth design for electronic music productions. Specializing in dark modular synthesizer performance, industrial rhythms, and raw sonic experimentation.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'jesus-922347355',
@@ -143,7 +143,7 @@ export const recommendations: ProfileCard[] = [
     profileImage:
       'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
     match: '96%',
-    description: 'Warm vocals with cinematic melodic hooks.',
+    description: 'Warm vocals with cinematic melodic hooks. Crafting hypnotic vocal textures, ambient loops, and lush indie pop harmonies for producers around the world looking for stem tracks.',
     badge: 'Artist',
     isProfile: true,
     preLiked: false,
@@ -171,7 +171,7 @@ export const recommendations: ProfileCard[] = [
     firstName: 'Facundo',
     lastName: 'Doro',
     nickname: 'Golden Boy',
-    role: 'Productor/Artista',
+    role: 'Productor y Artista',
     location: 'Entre Rios, Argentina',
     interestGenres: ['HardTrap', 'Producer', 'Artist'],
     soundcloudUrl: 'https://soundcloud.com/goldennnnnnnnnnnnnnn',
@@ -180,7 +180,7 @@ export const recommendations: ProfileCard[] = [
     profileImage:
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-sWJbrWmlA-PfqSy_6YhFu-bsy0Lz8zK8Vy-p36sVb6kM3qgCeWhDIUNI&s=10',
     match: '100%',
-    description: 'HardTrap Specialist, Producer, Artist.',
+    description: 'HardTrap Specialist, Producer and Sound Designer based in Argentina. Crafting heavy 808 sub-bass, aggressive festival traps, underground beats, and high-impact electronic anthems.',
     badge: 'Producer',
     isProfile: true,
     preLiked: true,
@@ -217,7 +217,7 @@ export const recommendations: ProfileCard[] = [
     profileImage:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
     match: '91%',
-    description: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines.',
+    description: 'Ethereal Gothic vocals layered over heavy retro-futuristic basslines. Blending darkwave aesthetics, synthpop leads, and haunting vocal melodies for electronic music collaborations.',
     badge: 'Artist',
     isProfile: true,
     preLiked: true,
@@ -246,7 +246,7 @@ export const recommendations: ProfileCard[] = [
     profileImage:
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80',
     match: '88%',
-    description: 'Futuristic Cyberpunk beats and distorted industrial basslines.',
+    description: 'Futuristic Cyberpunk beats and distorted industrial basslines. Specialized in heavy EBM rhythms, dark synth design, cinematic sound effects, and high-energy electronic soundscapes.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'marcus-cyber',
@@ -274,7 +274,7 @@ export const recommendations: ProfileCard[] = [
     profileImage:
       'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
     match: '84%',
-    description: 'Groovy underground minimal & tech house producer based in BA.',
+    description: 'Groovy underground minimal & tech house producer based in BA. Focused on deep sub basslines, hypnotic percussion loops, and club-ready electronic dance tracks for underground sets.',
     badge: 'Producer',
     isProfile: true,
     soundcloudHandle: 'mateosound',
@@ -302,7 +302,7 @@ export const recommendations: ProfileCard[] = [
     profileImage:
       'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
     match: '79%',
-    description: 'Atmospheric ambient textures and dream-pop vocal loops.',
+    description: 'Atmospheric ambient textures and dream-pop vocal loops. Creating immersive soundscapes, relaxed lo-fi vibes, and emotive vocal lines for modern producers and electronic songwriters.',
     badge: 'Artist',
     isProfile: true,
     soundcloudHandle: 'ariavibe',
@@ -428,7 +428,7 @@ export const conversations: Conversation[] = [
   {
     id: 'golden-boy',
     name: 'Golden Boy',
-    role: 'Productor/Artista',
+    role: 'Productor y Artista',
     avatar: 'GB',
     accent: 'gold',
     status: 'Online',
@@ -550,14 +550,11 @@ export const mockReports: import('../types').UserReport[] = [
 ]
 
 export const mockActivity: import('../types').UserActivityLog[] = [
-  { id: 'ACT-01', user: 'Administrador (Admin)', action: 'Cambió estado de usuario "Mark Studio" a Suspendido. Motivo: Múltiples reportes por lenguaje ofensivo.', timestamp: 'Hace 2 minutos', exactTimestamp: '09/10/2026 00:11:05', ip: '127.0.0.1', device: 'Chrome / Windows (Admin)', module: 'Sistema' },
-  { id: 'ACT-02', user: 'Administrador (Admin)', action: 'Resolvió el reporte REP-103 sobre "Mark Studio". Comentario: Advertencia enviada.', timestamp: 'Hace 4 minutos', exactTimestamp: '09/10/2026 00:09:20', ip: '127.0.0.1', device: 'Chrome / Windows (Admin)', module: 'Sistema' },
-  { id: 'ACT-03', user: 'Kaelen Voss', action: 'Inicio de sesión exitoso', timestamp: 'Hace 5 minutos', exactTimestamp: '09/10/2026 00:08:15', ip: '192.168.1.45', device: 'Chrome / Windows', module: 'Sistema' },
-  { id: 'ACT-04', user: 'Alex Vibe', action: 'Actualizó su foto de perfil y enlace de SoundCloud', timestamp: 'Hace 12 minutos', exactTimestamp: '09/10/2026 00:01:40', ip: '185.220.101.4', device: 'Firefox / MacOS', module: 'Perfil' },
-  { id: 'ACT-05', user: 'Circuito Nocturno', action: 'Creó nuevo artículo de evento en Explorer', timestamp: 'Hace 30 minutos', exactTimestamp: '08/10/2026 23:43:10', ip: '190.45.12.88', device: 'Safari / iOS', module: 'Explorer' },
-  { id: 'ACT-06', user: 'Luna Beats', action: 'Modificó biografía e interés de géneros', timestamp: 'Hace 45 minutos', exactTimestamp: '08/10/2026 23:28:00', ip: '200.89.44.12', device: 'Chrome / Android', module: 'Perfil' },
-  { id: 'ACT-07', user: 'Administrador (Admin)', action: 'Dio de baja evento "Industrial Noise Showcase". Motivo: Infracción de derechos de autor.', timestamp: 'Hace 1 hora', exactTimestamp: '08/10/2026 23:13:50', ip: '127.0.0.1', device: 'Chrome / Windows (Admin)', module: 'Explorer' },
-  { id: 'ACT-08', user: 'CyberPulse', action: 'Publicó artículo "Synth Lab Sessions" en Explorer', timestamp: 'Hace 2 horas', exactTimestamp: '08/10/2026 22:13:00', ip: '181.12.90.11', device: 'Edge / Windows', module: 'Explorer' },
+  { id: 'ACT-01', user: 'Kaelen Voss', action: 'Inicio de sesión exitoso', timestamp: 'Hace 5 minutos', ip: '192.168.1.45', device: 'Chrome / Windows', module: 'Sistema' },
+  { id: 'ACT-02', user: 'Alex Vibe', action: 'Actualizó su foto de perfil y SoundCloud link', timestamp: 'Hace 12 minutos', ip: '185.220.101.4', device: 'Firefox / MacOS', module: 'Perfil' },
+  { id: 'ACT-03', user: 'Circuito Nocturno', action: 'Creó nuevo artículo de evento en Explorer', timestamp: 'Hace 30 minutos', ip: '190.45.12.88', device: 'Safari / iOS', module: 'Explorer' },
+  { id: 'ACT-04', user: 'Luna Beats', action: 'Modificó biografía e interés de géneros', timestamp: 'Hace 45 minutos', ip: '200.89.44.12', device: 'Chrome / Android', module: 'Perfil' },
+  { id: 'ACT-05', user: 'CyberPulse', action: 'Publicó artículo "Synth Lab Sessions" en Explorer', timestamp: 'Hace 2 horas', ip: '181.12.90.11', device: 'Edge / Windows', module: 'Explorer' },
 ]
 
 export const mockUsers: import('../types').UserProfile[] = [
@@ -576,7 +573,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/kaelen',
     instagramUrl: 'https://instagram.com/kaelen',
     soundcloudUrl: 'https://soundcloud.com/kaelen',
-    description: 'Building cinematic soundscapes with modular synths.'
+    description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals. Specialized in dark synthwave, electronic arrangements, and immersive audio production.'
   },
   {
     id: 'USR-02',
@@ -593,7 +590,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/alexvibe',
     instagramUrl: 'https://instagram.com/alexvibe',
     soundcloudUrl: 'https://soundcloud.com/alexvibe',
-    description: 'Tech house & minimal DJ.'
+    description: 'Tech house and minimal DJ based in Madrid. Delivering energetic underground sets, crisp synth grooves, and rhythm-driven electronic music for club sessions across Europe.'
   },
   {
     id: 'USR-03',
@@ -601,7 +598,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     firstName: 'Luna',
     lastName: 'Rios',
     email: 'luna.beats@sound.com',
-    role: 'Productor/Artista',
+    role: 'Productor y Artista',
     location: 'Buenos Aires, Argentina',
     status: 'Active',
     joinedDate: '2026-05-10',
@@ -610,7 +607,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/lunabeats',
     instagramUrl: 'https://instagram.com/lunabeats',
     soundcloudUrl: 'https://soundcloud.com/lunabeats',
-    description: 'Chilled beats & atmospheric sounds.'
+    description: 'Chilled lo-fi beats, atmospheric soundscapes, and relaxing ambient compositions. Producing organic percussion, warm acoustic samples, and soothing melodic textures for chillout sessions.'
   },
   {
     id: 'USR-04',
@@ -627,7 +624,7 @@ export const mockUsers: import('../types').UserProfile[] = [
     spotifyUrl: 'https://spotify.com/artist/markstudio',
     instagramUrl: 'https://instagram.com/markstudio',
     soundcloudUrl: 'https://soundcloud.com/markstudio',
-    description: 'Audio engineer & mixing master.'
+    description: 'Audio engineer and mixing master with years of experience. Providing professional mastering, stem mixing, industrial sound design, and crisp track production for underground artists.'
   },
 ]
 
@@ -646,15 +643,15 @@ export const mockExplorerItems: import('../types').ExplorerItem[] = [
   },
   {
     id: 'EXP-02',
-    title: 'LunaSol Acoustic Live Session',
-    type: 'Evento',
+    title: 'LunaSol Acoustic Duo',
+    type: 'Perfil',
     owner: 'Luna Beats',
     location: 'Buenos Aires, Argentina',
     genres: ['Acoustic', 'Vocal', 'Alt Pop'],
     status: 'Active',
     createdDate: '2026-09-20',
     views: 890,
-    description: 'Sesión acústica en vivo con paisajes sonoros lo-fi y voces en directo.'
+    description: 'Proyecto duo de música acústica con paisajes sonoros de lo-fi. Creación de arreglos acústicos y atmósferas envolventes para colaboraciones comunitarias en la plataforma.'
   },
   {
     id: 'EXP-03',
@@ -685,7 +682,7 @@ export const mockExplorerItems: import('../types').ExplorerItem[] = [
 export const userNotifications: import('../types').NotificationItem[] = [
   {
     id: 'notif-1',
-    title: 'Nuevo Match Musical',
+    title: '¡Nuevo Match Musical! 🎵',
     message: 'Has conectado con Luna Sol. Puedes enviarle un mensaje para iniciar una colaboración.',
     timestamp: 'Hace 10 min',
     read: false,
@@ -694,7 +691,7 @@ export const userNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'notif-2',
-    title: 'Nuevo mensaje recibido',
+    title: 'Nuevo mensaje recibido 💬',
     message: 'Metro Boomin: "I can get your mix ready by Friday."',
     timestamp: 'Hace 25 min',
     read: false,
@@ -703,7 +700,7 @@ export const userNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'notif-3',
-    title: 'Bienvenido a LinkedSound',
+    title: 'Bienvenido a LinkedSound ✨',
     message: 'Tu perfil ha sido verificado con éxito. Comienza a descubrir productores cerca de ti.',
     timestamp: 'Hace 2 horas',
     read: true,
@@ -715,7 +712,7 @@ export const userNotifications: import('../types').NotificationItem[] = [
 export const adminNotifications: import('../types').NotificationItem[] = [
   {
     id: 'adm-notif-1',
-    title: 'Nuevo reporte pendiente',
+    title: '⚠️ Nuevo reporte pendiente',
     message: 'Kaelen Voss reportó a Alex Vibe por "Spam / Mensajes no solicitados".',
     timestamp: 'Hace 5 min',
     read: false,
@@ -724,7 +721,7 @@ export const adminNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'adm-notif-2',
-    title: 'Reporte de derechos de autor',
+    title: '⚠️ Reporte de derechos de autor',
     message: 'Se ha registrado un reporte de severidad Alta sobre Synthwave Night Festival.',
     timestamp: 'Hace 40 min',
     read: false,
@@ -733,7 +730,7 @@ export const adminNotifications: import('../types').NotificationItem[] = [
   },
   {
     id: 'adm-notif-3',
-    title: 'Estado del Sistema',
+    title: '🛡️ Estado del Sistema',
     message: 'El sistema de moderación automática revisó 12 publicaciones recientes sin infracciones.',
     timestamp: 'Hace 3 horas',
     read: true,

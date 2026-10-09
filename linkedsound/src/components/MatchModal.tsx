@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { PiXBold, PiMusicNotesPlusBold, PiChatTeardropTextBold, PiSparkleBold } from 'react-icons/pi'
+import { PiXBold, PiHandshakeBold, PiChatTeardropTextBold, PiBriefcaseBold } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 
 type MatchModalProps = {
@@ -53,11 +53,11 @@ export default function MatchModal({
 
         <div className="ls-match-modal-header">
           <div className="ls-match-sparkle-badge">
-            <PiSparkleBold /> MATCH EN LINKEDSOUND
+            <PiBriefcaseBold /> CONEXIÓN PROFESIONAL
           </div>
-          <h2>¡ES UN MATCH!</h2>
+          <h2>¡NUEVO MATCH PROFESIONAL!</h2>
           <p>
-            A ti y a <strong>{cardName}</strong> os ha gustado el perfil del otro.
+            Tú y <strong>{cardName}</strong> coinciden en perfil profesional y afinidad para colaborar en proyectos musicales.
           </p>
         </div>
 
@@ -68,8 +68,8 @@ export default function MatchModal({
             <span className="ls-match-avatar-label">Tú</span>
           </div>
 
-          <div className="ls-match-music-pulse" title="Conexión Musical">
-            <PiMusicNotesPlusBold />
+          <div className="ls-match-music-pulse" title="Conexión Profesional">
+            <PiHandshakeBold />
           </div>
 
           <div className="ls-match-avatar-box">
@@ -82,7 +82,7 @@ export default function MatchModal({
         <div className="ls-match-info-card">
           <h4>{cardName}</h4>
           <p>{cardRole} • {matchedCard.location || 'LinkedSound Network'}</p>
-          <span className="ls-match-percent-tag">{matchedCard.match || '95%'} Match de afinidad</span>
+          <span className="ls-match-percent-tag">{matchedCard.match || '95%'} Afinidad laboral</span>
         </div>
 
         {/* Modal Buttons */}
@@ -92,17 +92,18 @@ export default function MatchModal({
             className="ls-primary-button ls-match-btn-chat"
             onClick={() => onOpenChat(matchedCard)}
           >
-            <PiChatTeardropTextBold /> Enviar Mensaje
+            <PiChatTeardropTextBold /> Iniciar Conversación
           </button>
           <button
             type="button"
             className="ls-secondary-button"
             onClick={onClose}
           >
-            Seguir Descubriendo
+            Continuar Explorando
           </button>
         </div>
       </div>
     </div>
   )
 }
+

@@ -101,31 +101,21 @@ export default function TopBar({
       <header className="ls-header">
         <Brand />
 
-        <nav className="ls-main-nav" aria-label="Main navigation">
-          {navItems.filter((item) => item.label !== 'Profile').map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className={`ls-nav-item ${activePage === item.label ? 'is-active' : ''}`}
-              onClick={() => onNavigate?.(item.label)}
-            >
-              <span className="ls-nav-icon">{navIcons[item.label] ?? '•'}</span>
-              <span className="ls-nav-label">{item.label}</span>
-            </button>
-          ))}
-
-          {/* Pestaña visible permanentemente en la barra superior si la sesión es de Administrador */}
-          {isAdminSession && (
-            <button
-              type="button"
-              className={`ls-nav-item ls-admin-nav-pill ${activePage === 'Admin' ? 'is-active' : ''}`}
-              onClick={() => onNavigate?.('Admin')}
-            >
-              <span className="ls-nav-icon">{navIcons['Admin']}</span>
-              <span className="ls-nav-label">Admin Panel</span>
-            </button>
-          )}
-        </nav>
+        {!isAdminSession && (
+          <nav className="ls-main-nav" aria-label="Main navigation">
+            {navItems.filter((item) => item.label !== 'Profile').map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className={`ls-nav-item ${activePage === item.label ? 'is-active' : ''}`}
+                onClick={() => onNavigate?.(item.label)}
+              >
+                <span className="ls-nav-icon">{navIcons[item.label] ?? '•'}</span>
+                <span className="ls-nav-label">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
         <div className="ls-topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '14px', justifySelf: 'end' }}>
           {/* BOTÓN / DROPDOWN DE NOTIFICACIONES */}
@@ -182,7 +172,7 @@ export default function TopBar({
                 <div className="ls-notif-list">
                   {notifications.length === 0 ? (
                     <div className="ls-notif-empty">
-                      <p>No tienes notificaciones pendientes 🎉</p>
+                      <p>No tienes notificaciones pendientes</p>
                     </div>
                   ) : (
                     notifications.map((item) => (

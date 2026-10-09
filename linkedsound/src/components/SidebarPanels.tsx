@@ -164,30 +164,13 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
     }
   }, [showCategoryPopover, showGenrePopover])
 
-  // Inicializar / actualizar mapa de localización en el Radar
+  // Inicializar mapa de localización en el Radar (redireccionando a la ubicación actual sin aplicar filtro a las tarjetas)
   useEffect(() => {
     if (!mapContainerRef.current) return
 
     let initialCenter: [number, number] = [13.405, 52.52] // Default Berlin
     if (currentFilters.centerLng !== undefined && currentFilters.centerLat !== undefined) {
       initialCenter = [currentFilters.centerLng, currentFilters.centerLat]
-    } else if (navigator.geolocation && !currentFilters.locationQuery) {
-      // Intentar obtener ubicación actual si no hay filtro establecido
-      handleUseCurrentLocation()
-    }
-
-    // Actualizar mapa existente
-    if (mapRef.current) {
-      mapRef.current.flyTo({ center: initialCenter, zoom: 11 })
-      if (markerRef.current) {
-        markerRef.current.setLngLat(initialCenter)
-      } else {
-        markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
-          .setLngLat(initialCenter)
-          .addTo(mapRef.current)
-      }
-      mapRef.current.resize()
-      return
     }
 
     // Instancia única limpia
@@ -208,6 +191,30 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
 
       markerRef.current = marker
       mapRef.current = map
+
+      // Redirección automática a la ubicación actual del usuario
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords
+            if (mapRef.current) {
+              mapRef.current.flyTo({ center: [longitude, latitude], zoom: 12 })
+              if (markerRef.current) {
+                markerRef.current.setLngLat([longitude, latitude])
+              }
+            }
+            onChangeFilters?.({
+              ...currentFilters,
+              centerLat: latitude,
+              centerLng: longitude,
+            })
+          },
+          (err) => {
+            console.warn('Geolocation error or denied:', err)
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        )
+      }
 
       // Clic directo sobre el mapa ubica el pin y actualiza el filtro de ubicación
       map.on('click', (e) => {
@@ -239,6 +246,21 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
       }
     }
   }, [])
+
+  // Redireccionar el mapa cuando el usuario aplique algún filtro de ubicación
+  useEffect(() => {
+    if (mapRef.current && currentFilters.centerLat !== undefined && currentFilters.centerLng !== undefined) {
+      const coords: [number, number] = [currentFilters.centerLng, currentFilters.centerLat]
+      mapRef.current.flyTo({ center: coords, zoom: 12 })
+      if (markerRef.current) {
+        markerRef.current.setLngLat(coords)
+      } else {
+        markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
+          .setLngLat(coords)
+          .addTo(mapRef.current)
+      }
+    }
+  }, [currentFilters.centerLat, currentFilters.centerLng])
 
   // Geocodificación inversa tras clic en el mapa
   const reverseGeocode = async (lat: number, lon: number) => {

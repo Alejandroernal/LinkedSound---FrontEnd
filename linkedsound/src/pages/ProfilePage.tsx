@@ -104,6 +104,11 @@ export default function ProfilePage({
     if (!profile.email?.trim()) errors.email = true
     if (!profile.password?.trim()) errors.password = true
     if (!profile.location?.trim()) errors.location = true
+    
+    const descTrimmed = profile.description?.trim() || ''
+    if (!descTrimmed || descTrimmed.length < 139) {
+      errors.description = true
+    }
 
     if (Object.keys(errors).length > 0) {
       setInvalidFields(errors)
@@ -128,6 +133,14 @@ export default function ProfilePage({
 
   const renderFieldError = (fieldName: string) => {
     if (!invalidFields[fieldName]) return null
+    if (fieldName === 'description') {
+      const currentLen = profile.description?.trim().length || 0
+      return (
+        <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+          La descripción es obligatoria y debe tener como mínimo 139 caracteres (actual: {currentLen}).
+        </small>
+      )
+    }
     return (
       <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
         Este campo es obligatorio.
@@ -552,13 +565,34 @@ export default function ProfilePage({
 
             {/* 3. Descripción */}
             <div className="ls-profile-field wide-field">
-              <label>Descripción</label>
+              <label>Descripción (mínimo 139 caracteres)</label>
               {isEditing ? (
-                <textarea
-                  style={{ width: '100%', minWidth: '100%', boxSizing: 'border-box', marginTop: '4px' }}
-                  value={profile.description ?? ''}
-                  onChange={(event) => handleChange('description', event.target.value)}
-                />
+                <>
+                  <textarea
+                    style={{
+                      width: '100%',
+                      minWidth: '100%',
+                      boxSizing: 'border-box',
+                      marginTop: '4px',
+                      ...getInputStyle('description'),
+                    }}
+                    value={profile.description ?? ''}
+                    onChange={(event) => handleChange('description', event.target.value)}
+                    placeholder="Escribe tu biografía musical detallada (mínimo 139 caracteres)..."
+                  />
+                  {renderFieldError('description')}
+                  <small
+                    style={{
+                      color: (profile.description?.trim().length || 0) < 139 ? '#ef4444' : '#10b981',
+                      fontSize: '0.78rem',
+                      marginTop: '4px',
+                      display: 'block',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Caracteres: {profile.description?.trim().length || 0} / 139 mínimo
+                  </small>
+                </>
               ) : (
                 <span style={{ display: 'block', margin: 0, color: 'rgba(255, 255, 255, 0.85)', lineHeight: 1.5 }}>
                   {profile.description || 'Sin descripción'}

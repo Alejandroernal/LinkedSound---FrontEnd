@@ -3,6 +3,7 @@ import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   PiXBold,
+  PiCheckBold,
   PiPlayFill,
   PiArrowSquareOutBold,
   PiSoundcloudLogoFill,
@@ -24,6 +25,8 @@ type SoundCloudPreviewModalProps = {
   isOpen: boolean
   card: ProfileCard | null
   onClose: () => void
+  onConnectProfile?: (card: ProfileCard) => void
+  onDiscardProfile?: (card: ProfileCard) => void
 }
 
 const PRESET_COORDINATES: Record<string, [number, number]> = {
@@ -39,6 +42,8 @@ export default function SoundCloudPreviewModal({
   isOpen,
   card,
   onClose,
+  onConnectProfile,
+  onDiscardProfile,
 }: SoundCloudPreviewModalProps) {
   const [activeEmbedUrl, setActiveEmbedUrl] = useState<string | null>(null)
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null)
@@ -394,19 +399,20 @@ export default function SoundCloudPreviewModal({
                   {card.role} {card.location && `• ${card.location}`}
                 </p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '6px' }}>
-                  <div className="ls-sc-handle-pill">
-                    <PiSoundcloudLogoFill className="ls-sc-orange-icon" />
-                    <span>soundcloud.com/{handleName}</span>
+                  {handleUrl && (
                     <a
                       href={handleUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ls-sc-external-link"
-                      title="Abrir perfil en SoundCloud"
+                      className="ls-sc-handle-pill"
+                      style={{ color: '#FF5500', textDecoration: 'none' }}
+                      title="Abrir SoundCloud"
                     >
+                      <PiSoundcloudLogoFill style={{ color: '#FF5500' }} />
+                      <span>SoundCloud</span>
                       <PiArrowSquareOutBold />
                     </a>
-                  </div>
+                  )}
 
                   {spotifyUrl && (
                     <a
@@ -541,16 +547,70 @@ export default function SoundCloudPreviewModal({
               )}
             </div>
 
-            {/* Footer action link */}
-            <div className="ls-sc-modal-footer">
-              <a
-                href={handleUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ls-sc-full-profile-btn"
-              >
-                <PiSoundcloudLogoFill /> Abrir perfil oficial en SoundCloud <PiArrowSquareOutBold />
-              </a>
+            {/* Footer action link & match action buttons */}
+            <div className="ls-sc-modal-footer" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                <button
+                  type="button"
+                  className="ls-card-btn-action pass"
+                  onClick={() => {
+                    if (onDiscardProfile && card) {
+                      onDiscardProfile(card)
+                    }
+                    onClose()
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '44px',
+                    borderRadius: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    color: '#fca5a5',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  title="Descartar Perfil"
+                >
+                  <PiXBold style={{ fontSize: '1.15rem' }} /> Descartar
+                </button>
+
+                <button
+                  type="button"
+                  className="ls-card-btn-action like"
+                  onClick={() => {
+                    if (onConnectProfile && card) {
+                      onConnectProfile(card)
+                    }
+                    onClose()
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '44px',
+                    borderRadius: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    background: 'linear-gradient(135deg, #a855f7, #8b5cf6)',
+                    border: 'none',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  title="Conectar / Aceptar Match"
+                >
+                  <PiCheckBold style={{ fontSize: '1.15rem' }} /> Conectar Match
+                </button>
+              </div>
             </div>
           </div>
         )}

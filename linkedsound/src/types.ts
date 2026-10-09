@@ -60,7 +60,7 @@ export type UserProfile = {
   profileImage?: string
 
   // Perfil Profesional y Descripción
-  role: string
+  role?: 'Productor' | 'Artista' | 'Productor y Artista' | 'Administrador' | string
   interestGenres?: string[]
   description?: string
   match?: string
