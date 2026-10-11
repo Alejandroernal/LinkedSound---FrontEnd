@@ -71,6 +71,7 @@ export default function ProfilePage({
   onMarkAllNotificationsAsRead,
   onClearNotifications,
   onSignOut,
+  unreadMessagesCount,
 }: ProfilePageProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [initialProfileSnapshot, setInitialProfileSnapshot] = useState<Profile | null>(null)

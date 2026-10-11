@@ -367,7 +367,7 @@ export default function AdminPage({
   const filteredUsers = users.filter(u =>
     u.nickname.toLowerCase().includes(debouncedUserSearchTerm.toLowerCase()) ||
     u.email?.toLowerCase().includes(debouncedUserSearchTerm.toLowerCase()) ||
-    u.role.toLowerCase().includes(debouncedUserSearchTerm.toLowerCase())
+    u.role?.toLowerCase().includes(debouncedUserSearchTerm.toLowerCase())
   )
   const totalUsersPages = Math.ceil(filteredUsers.length / pageSize) || 1
   const paginatedUsers = filteredUsers.slice((usersPage - 1) * pageSize, usersPage * pageSize)

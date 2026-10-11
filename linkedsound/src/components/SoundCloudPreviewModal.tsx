@@ -176,16 +176,12 @@ export default function SoundCloudPreviewModal({
   const isProfile = isUserProfile(card)
   const firstName = isProfile ? card.firstName : ''
   const lastName = isProfile ? card.lastName : ''
-  const soundcloudHandle = isProfile ? card.soundcloudHandle : undefined
   const fullName = [firstName, lastName].filter(Boolean).join(' ')
   const profileName = card.nickname?.trim() || fullName || 'Usuario'
   const tracks: SoundCloudTrack[] = card.tracks ?? []
   const visibleTracks = tracks.slice(0, 2) // Muestra el último tema subido + 1 opcional subido por el usuario
   const scUrl = card.soundcloudUrl
   const handleUrl = scUrl || `https://soundcloud.com/search?q=${encodeURIComponent(profileName)}`
-  const handleName = scUrl
-    ? scUrl.replace(/^https?:\/\/(www\.)?soundcloud\.com\//, '')
-    : (soundcloudHandle ?? profileName.toLowerCase().replace(/\s+/g, ''))
 
   const spotifyUrl = card.spotifyUrl
   const instagramUrl = card.instagramUrl
@@ -473,7 +469,7 @@ export default function SoundCloudPreviewModal({
               <div className="ls-sc-section-title">
                 <div className="ls-sc-title-left">
                   <PiMusicNotesFill className="ls-sc-orange-icon" />
-                  <h3>Producciones y Trabajos Vinculados (Última actividad)</h3>
+                  <h3>Ultimas Actividades Musicales</h3>
                 </div>
                 <span className="ls-sc-track-count">
                   {visibleTracks.length > 0 ? `${visibleTracks.length} tema${visibleTracks.length > 1 ? 's' : ''}` : 'Sin trabajos'}
