@@ -50,7 +50,7 @@ export default function TopBar({
   const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Admin User' : 'Kaelen Voss'))
   const userRole = profile?.role === 'Administrador'
     ? 'Administrador'
-    : (profile?.category || profile?.role || (isAdminSession ? 'Administrador' : 'Productor/Artista'))
+    : (profile?.role || profile?.category || (isAdminSession ? 'Administrador' : 'Productor y Artista'))
   const userProfileImage = profile?.profileImage ?? ''
 
   // Control del dropdown de notificaciones

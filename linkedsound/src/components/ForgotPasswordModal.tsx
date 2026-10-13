@@ -33,6 +33,7 @@ export default function ForgotPasswordModal({
   const [newPassword, setNewPassword] = useState<string>('')
   const [confirmPassword, setConfirmPassword] = useState<string>('')
   const [showPassword, setShowPassword] = useState<boolean>(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [resendCountdown, setResendCountdown] = useState<number>(0)
@@ -44,6 +45,8 @@ export default function ForgotPasswordModal({
       setCode('')
       setNewPassword('')
       setConfirmPassword('')
+      setShowPassword(false)
+      setShowConfirmPassword(false)
       setError('')
       setIsLoading(false)
     }
@@ -447,20 +450,43 @@ export default function ForgotPasswordModal({
               <label htmlFor="confirm-password" className="ls-form-label">
                 Confirmar Contraseña
               </label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="confirm-password"
-                className="ls-select-input"
-                placeholder="Repite tu nueva contraseña"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value)
-                  if (error) setError('')
-                }}
-                style={{
-                  borderColor: error ? '#ef4444' : undefined
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirm-password"
+                  className="ls-select-input"
+                  placeholder="Repite tu nueva contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value)
+                    if (error) setError('')
+                  }}
+                  style={{
+                    paddingRight: '38px',
+                    borderColor: error ? '#ef4444' : undefined
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0
+                  }}
+                  aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showConfirmPassword ? <PiEyeSlashBold /> : <PiEyeBold />}
+                </button>
+              </div>
             </div>
 
             {error && (

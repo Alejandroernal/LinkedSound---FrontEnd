@@ -464,19 +464,19 @@ export default function ProfilePage({
                 )
               )}
               <div>
-                <span className="ls-studio-tag">{profile.category ?? profile.role}</span>
+                <span className="ls-studio-tag">{profile.role || profile.category || 'Productor y Artista'}</span>
                 <h2>{profile.nickname}</h2>
                 <p>{profile.location}</p>
               </div>
             </div>
 
             {isEditing ? (
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button type="button" className="ls-secondary-button" onClick={handleCancelEdit}>
-                  Cancelar
-                </button>
+              <div className="ls-profile-edit-actions">
                 <button type="button" className="ls-primary-button" onClick={handleSaveEdit}>
                   Guardar cambios
+                </button>
+                <button type="button" className="ls-secondary-button" onClick={handleCancelEdit}>
+                  Cancelar
                 </button>
               </div>
             ) : (
@@ -520,7 +520,7 @@ export default function ProfilePage({
               )}
             </div>
 
-            {/* 2. NickName | Categoría */}
+            {/* 2. NickName | Rol */}
             <div className="ls-profile-field">
               <label>NickName / Artistic Name</label>
               {isEditing ? (
@@ -538,15 +538,21 @@ export default function ProfilePage({
             </div>
 
             <div className="ls-profile-field">
-              <label>Categoría</label>
+              <label>Rol</label>
               {isEditing ? (
-                <select value={profile.category ?? 'Productor'} onChange={(event) => handleChange('category', event.target.value)}>
+                <select
+                  value={profile.role || profile.category || 'Productor y Artista'}
+                  onChange={(event) => {
+                    handleChange('role', event.target.value)
+                    handleChange('category', event.target.value)
+                  }}
+                >
                   <option value="Productor">Productor</option>
                   <option value="Artista">Artista</option>
-                  <option value="Productor/Artista">Productor/Artista</option>
+                  <option value="Productor y Artista">Productor y Artista</option>
                 </select>
               ) : (
-                <span>{profile.category ?? 'Productor/Artista'}</span>
+                <span>{profile.role || profile.category || 'Productor y Artista'}</span>
               )}
             </div>
 
@@ -660,9 +666,8 @@ export default function ProfilePage({
                         Elegir en mapa
                       </button>
                       {(isLocating || isSearching) && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#c084fc' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px' }} title={isLocating ? 'Obteniendo ubicación...' : 'Buscando...'} aria-label="Cargando">
                           <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', display: 'inline-block' }} />
-                          <span>{isLocating ? 'Obteniendo ubicación...' : 'Buscando...'}</span>
                         </div>
                       )}
                     </div>
@@ -764,19 +769,17 @@ export default function ProfilePage({
                             backdropFilter: 'blur(8px)',
                             WebkitBackdropFilter: 'blur(8px)',
                             border: '1px solid rgba(168, 85, 247, 0.5)',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            color: '#fff',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
+                            padding: '8px',
+                            borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            justifyContent: 'center',
                             boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
                           }}
+                          title={isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}
+                          aria-label="Cargando ubicación"
                         >
-                          <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
-                          <span>{isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}</span>
+                          <span className="ls-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
                         </div>
                       )}
 

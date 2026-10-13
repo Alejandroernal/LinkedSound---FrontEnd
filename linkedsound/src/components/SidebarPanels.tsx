@@ -81,7 +81,7 @@ export function getNearestPlaceName(lat: number, lon: number): string {
   return closest.label
 }
 
-const collaboratorOptions = ['Productor', 'Artista', 'Productor/Artista'] as const
+const collaboratorOptions = ['Productor', 'Artista', 'Productor y Artista'] as const
 
 const availableGenres = [
   'Tech House',

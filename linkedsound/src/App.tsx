@@ -47,8 +47,8 @@ const DEFAULT_DEMO_USER_PROFILE: Profile = {
   nickname: 'Kaelen Voss',
   email: 'kaelen@linkedsound.app',
   password: 'password123',
-  role: 'Usuario',
-  category: 'Productor',
+  role: 'Productor y Artista',
+  category: 'Productor y Artista',
   location: 'Berlin, Germany',
   description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals. Specialized in dark synthwave, electronic arrangements, and immersive audio production.',
   interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
@@ -68,8 +68,8 @@ const EMPTY_REGISTER_PROFILE: Profile = {
   email: '',
   password: '',
   role: 'Productor y Artista',
-  category: 'Productor',
-  location: 'Berlin, Germany',
+  category: 'Productor y Artista',
+  location: '',
   description: '',
   interestGenres: [],
   tags: [],
@@ -117,14 +117,17 @@ function App() {
   const [registeredUser, setRegisteredUser] = useState<Profile | null>(getInitialRegisteredUser)
   const isAdminLoggedIn = authSession.isLoggedIn && authSession.role === 'admin'
 
-  // Profile starts empty for registration, or initialized with registered / demo user if logged in
+  // Profile starts with registered or demo user if logged in, or fallback
   const [profile, setProfile] = useState<Profile>(() => {
     const storedReg = getInitialRegisteredUser()
     if (storedReg) return storedReg
     const initialSession = getInitialAuthSession()
     if (initialSession.isLoggedIn && initialSession.role === 'user') return DEFAULT_DEMO_USER_PROFILE
-    return EMPTY_REGISTER_PROFILE
+    return DEFAULT_DEMO_USER_PROFILE
   })
+
+  // Borrador de registro independiente para evitar datos precargados
+  const [registrationDraft, setRegistrationDraft] = useState<Profile>(EMPTY_REGISTER_PROFILE)
 
   // Estado de notificaciones para usuario normal y administrador
   const [userNotifs, setUserNotifs] = useState<NotificationItem[]>(defaultUserNotifs)
@@ -177,18 +180,42 @@ function App() {
       setProfile(DEFAULT_DEMO_USER_PROFILE)
     } else if (email && registeredUser && registeredUser.email && email.toLowerCase() === registeredUser.email.toLowerCase()) {
       setProfile(registeredUser)
-    } else if (profile.email) {
-      // Complete registration: persist registered user
-      setRegisteredUser(profile)
-      localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify(profile))
+    } else if (registeredUser) {
+      setProfile(registeredUser)
+    } else {
+      setProfile(DEFAULT_DEMO_USER_PROFILE)
     }
+  }
+
+  const handleRegistrationDraftChange = (field: keyof Profile, value: any) => {
+    setRegistrationDraft((prev) => {
+      if (field === 'role') {
+        return { ...prev, role: value, category: value }
+      }
+      return { ...prev, [field]: value }
+    })
+  }
+
+  const handleRegisterComplete = () => {
+    const finalProfile: Profile = {
+      ...registrationDraft,
+      role: registrationDraft.role || 'Productor y Artista',
+      category: registrationDraft.role || registrationDraft.category || 'Productor y Artista',
+    }
+    setRegisteredUser(finalProfile)
+    localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify(finalProfile))
+    setProfile(finalProfile)
+    const session: AuthSession = { isLoggedIn: true, role: 'user' }
+    setAuthSession(session)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+    navigate('/discovery')
   }
 
   const handleSignOut = () => {
     setAuthSession({ isLoggedIn: false, role: null })
     localStorage.removeItem(STORAGE_KEY)
-    // Clear registration draft so next registration starts empty
-    setProfile(registeredUser || EMPTY_REGISTER_PROFILE)
+    // Borrador de registro limpio para el próximo alta
+    setRegistrationDraft(EMPTY_REGISTER_PROFILE)
     navigate('/login')
   }
 
@@ -199,7 +226,7 @@ function App() {
     email: 'admin@linkedsound.app',
     password: 'adminpassword123',
     role: 'Administrador',
-    category: 'Productor',
+    category: 'Productor y Artista',
     location: 'LinkedSound HQ',
     description: 'Administrador del sistema LinkedSound. Encargado de la gestión integral de usuarios, moderación activa de contenidos comunitarios y supervisión de la plataforma musical.',
     interestGenres: ['Synthwave', 'DarkElectro', 'Cyberpunk'],
@@ -220,6 +247,9 @@ function App() {
     } else {
       setProfile((prev) => {
         const updated = { ...prev, [field]: value }
+        if (field === 'role') {
+          updated.category = value
+        }
         if (registeredUser && registeredUser.email && prev.email === registeredUser.email) {
           setRegisteredUser(updated)
           localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify(updated))
@@ -230,6 +260,9 @@ function App() {
   }
 
   const handleNavigate = (page: AppPage) => {
+    if (page === 'Register') {
+      setRegistrationDraft(EMPTY_REGISTER_PROFILE)
+    }
     navigate(pagePaths[page])
   }
 
@@ -262,7 +295,7 @@ function App() {
         const newConv: Conversation = {
           id: convId,
           name: cardName,
-          role: card.role || (card.isProfile !== false ? 'Productor/Artista' : 'Evento'),
+          role: card.role || (card.isProfile !== false ? 'Productor y Artista' : 'Evento'),
           avatar: cardName.substring(0, 2).toUpperCase(),
           accent: 'purple',
           status: 'Conectado (Match)',
@@ -328,8 +361,8 @@ function App() {
                 onNavigate={handleNavigate}
                 onLoginAsAdmin={handleLoginAsAdmin}
                 onLoginAsUser={handleLoginAsUser}
-                registeredEmail={registeredUser?.email || profile.email}
-                registeredPassword={registeredUser?.password || profile.password}
+                registeredEmail={registeredUser?.email}
+                registeredPassword={registeredUser?.password}
               />
             )
           }
@@ -346,8 +379,8 @@ function App() {
             ) : (
               <RegisterPage
                 onNavigate={handleNavigate}
-                profile={profile}
-                onProfileChange={handleProfileChange}
+                profile={registrationDraft}
+                onProfileChange={handleRegistrationDraftChange}
               />
             )
           }
@@ -361,9 +394,9 @@ function App() {
             ) : (
               <ValidationPage
                 onNavigate={handleNavigate}
-                profile={profile}
-                onProfileChange={handleProfileChange}
-                onRegisterComplete={() => handleLoginAsUser(profile.email)}
+                profile={registrationDraft}
+                onProfileChange={handleRegistrationDraftChange}
+                onRegisterComplete={handleRegisterComplete}
               />
             )
           }

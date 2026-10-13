@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { AppPage } from '../types'
 import ForgotPasswordModal from '../components/ForgotPasswordModal'
-import { PiWarningOctagonBold } from 'react-icons/pi'
+import { PiWarningOctagonBold, PiEyeBold, PiEyeSlashBold } from 'react-icons/pi'
 
 type LoginPageProps = {
   onNavigate?: (page: AppPage) => void
@@ -20,6 +20,7 @@ export default function LoginPage({
 }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [emailError, setEmailError] = useState(false)
@@ -128,20 +129,45 @@ export default function LoginPage({
 
           <label>
             Contraseña *
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                if (errorMsg) setErrorMsg(null)
-                if (passwordError) setPasswordError(false)
-              }}
-              placeholder="Ingresa tu contraseña"
-              style={{
-                borderColor: passwordError ? '#ef4444' : undefined,
-                background: passwordError ? 'rgba(239, 68, 68, 0.05)' : undefined
-              }}
-            />
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                autoComplete="current-password"
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (errorMsg) setErrorMsg(null)
+                  if (passwordError) setPasswordError(false)
+                }}
+                placeholder="Ingresa tu contraseña"
+                style={{
+                  width: '100%',
+                  paddingRight: '42px',
+                  borderColor: passwordError ? '#ef4444' : undefined,
+                  background: passwordError ? 'rgba(239, 68, 68, 0.05)' : undefined
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0
+                }}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <PiEyeSlashBold style={{ fontSize: '1.15rem' }} /> : <PiEyeBold style={{ fontSize: '1.15rem' }} />}
+              </button>
+            </div>
           </label>
 
           {/* Seleccion rápida de demo */}

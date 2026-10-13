@@ -1,6 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { AppPage, Profile } from '../types'
-import { PiXBold, PiWarningOctagonBold } from 'react-icons/pi'
+import {
+  PiWarningOctagonBold,
+  PiEyeBold,
+  PiEyeSlashBold,
+  PiCaretDownBold,
+} from 'react-icons/pi'
 
 const AVAILABLE_GENRES = [
   'Synthwave', 'Electronic', 'Dark Pop', 'Hip Hop', 'Indie',
@@ -170,7 +175,8 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
   const [genreSearch, setGenreSearch] = useState('')
   const [rawImage, setRawImage] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
-  const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
 
   const selectedGenres = profile?.interestGenres ?? []
@@ -180,7 +186,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
     if (invalidFields[field as string]) {
       setInvalidFields(prev => ({ ...prev, [field as string]: false }))
     }
-    if (errorModalMsg) setErrorModalMsg(null)
+    if (errorMsg) setErrorMsg(null)
   }
 
   const handleFileInput = (file: File) => {
@@ -213,31 +219,31 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
 
     if (!fn || !ln || !em || !pw) {
       setInvalidFields(errors)
-      setErrorModalMsg('Por favor completa los campos obligatorios: Nombre, Apellido, Correo electrónico y Contraseña.')
+      setErrorMsg('Por favor completa los campos obligatorios: Nombre, Apellido, Correo electrónico y Contraseña.')
       return
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(em)) {
       setInvalidFields({ email: true })
-      setErrorModalMsg('Por favor ingresa un correo electrónico válido (ejemplo: usuario@dominio.com).')
+      setErrorMsg('Por favor ingresa un correo electrónico válido (ejemplo: usuario@dominio.com).')
       return
     }
 
     if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw)) {
       setInvalidFields({ password: true })
-      setErrorModalMsg('La contraseña no cumple con los requisitos de seguridad: Mínimo 8 caracteres, incluir al menos 1 letra mayúscula, 1 minúscula y 1 número.')
+      setErrorMsg('La contraseña no cumple con los requisitos de seguridad: Mínimo 8 caracteres, incluir al menos 1 letra mayúscula, 1 minúscula y 1 número.')
       return
     }
 
     if (selectedGenres.length < 3) {
       setInvalidFields({ genres: true })
-      setErrorModalMsg('Debes seleccionar un mínimo de 3 géneros musicales de interés para continuar.')
+      setErrorMsg('Debes seleccionar un mínimo de 3 géneros musicales de interés para continuar.')
       return
     }
 
     setInvalidFields({})
-    setErrorModalMsg(null)
+    setErrorMsg(null)
     onNavigate?.('Onboarding')
   }
 
@@ -273,7 +279,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
           <h1>Crear cuenta</h1>
           <p className="ls-auth-subtitle">Comienza a conectar con artistas y productores musicales.</p>
 
-          <form className="ls-auth-form" onSubmit={(e) => { e.preventDefault(); handleContinue() }}>
+          <form className="ls-auth-form" autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleContinue() }}>
             {/* ── Top Row: Foto de perfil + Inputs First Name & Last Name ── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
 
@@ -317,6 +323,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                     type="text"
                     value={profile?.firstName ?? ''}
                     placeholder="Nombre"
+                    autoComplete="off"
                     onChange={e => handleFieldChange('firstName', e.target.value)}
                     style={{
                       borderColor: invalidFields.firstName ? '#ef4444' : undefined,
@@ -330,6 +337,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                     type="text"
                     value={profile?.lastName ?? ''}
                     placeholder="Apellido"
+                    autoComplete="off"
                     onChange={e => handleFieldChange('lastName', e.target.value)}
                     style={{
                       borderColor: invalidFields.lastName ? '#ef4444' : undefined,
@@ -342,8 +350,13 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
 
             <label>
               Nombre artístico / Apodo
-              <input type="text" value={profile?.nickname ?? ''} placeholder="Nombre artístico u apodo"
-                onChange={e => handleFieldChange('nickname', e.target.value)} />
+              <input
+                type="text"
+                value={profile?.nickname ?? ''}
+                placeholder="Nombre artístico u apodo"
+                autoComplete="off"
+                onChange={e => handleFieldChange('nickname', e.target.value)}
+              />
             </label>
 
             <label>
@@ -352,6 +365,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                 type="email"
                 value={profile?.email ?? ''}
                 placeholder="correo@ejemplo.com"
+                autoComplete="off"
                 onChange={e => handleFieldChange('email', e.target.value)}
                 style={{
                   borderColor: invalidFields.email ? '#ef4444' : undefined,
@@ -362,16 +376,41 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
 
             <label>
               Contraseña *
-              <input
-                type="password"
-                value={profile?.password ?? ''}
-                placeholder="Crea una contraseña segura"
-                onChange={e => handleFieldChange('password', e.target.value)}
-                style={{
-                  borderColor: invalidFields.password ? '#ef4444' : undefined,
-                  background: invalidFields.password ? 'rgba(239, 68, 68, 0.05)' : undefined
-                }}
-              />
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={profile?.password ?? ''}
+                  placeholder="Crea una contraseña segura"
+                  autoComplete="new-password"
+                  onChange={e => handleFieldChange('password', e.target.value)}
+                  style={{
+                    width: '100%',
+                    paddingRight: '42px',
+                    borderColor: invalidFields.password ? '#ef4444' : undefined,
+                    background: invalidFields.password ? 'rgba(239, 68, 68, 0.05)' : undefined
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0
+                  }}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? <PiEyeSlashBold style={{ fontSize: '1.15rem' }} /> : <PiEyeBold style={{ fontSize: '1.15rem' }} />}
+                </button>
+              </div>
               <small style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.74rem', marginTop: '4px', display: 'block' }}>
                 Requisitos: Mínimo 8 caracteres con al menos 1 mayúscula, 1 minúscula y 1 número.
               </small>
@@ -395,21 +434,38 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
 
             <label>
               Rol en la Plataforma
-              <select
-                className="ls-auth-select"
-                value={profile?.role ?? 'Productor y Artista'}
-                onChange={e => handleFieldChange('role', e.target.value)}
-              >
-                <option value="Productor">Productor</option>
-                <option value="Artista">Artista</option>
-                <option value="Productor y Artista">Productor y Artista (Ambos)</option>
-              </select>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <select
+                  className="ls-auth-select"
+                  value={profile?.role ?? 'Productor y Artista'}
+                  onChange={e => handleFieldChange('role', e.target.value)}
+                  style={{ width: '100%', paddingRight: '42px', appearance: 'none', WebkitAppearance: 'none' }}
+                >
+                  <option value="Productor">Productor</option>
+                  <option value="Artista">Artista</option>
+                  <option value="Productor y Artista">Productor y Artista (Ambos)</option>
+                </select>
+                <PiCaretDownBold
+                  style={{
+                    position: 'absolute',
+                    right: '14px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                    color: 'rgba(255, 255, 255, 0.75)',
+                    fontSize: '1.1rem',
+                  }}
+                />
+              </div>
             </label>
 
             <div className="ls-profile-field wide-field">
               <label>Géneros de Interés * (Mínimo 3)</label>
               <div style={{ marginBottom: '8px' }}>
-                <input type="text" placeholder="Buscar géneros..."
+                <input
+                  type="text"
+                  placeholder="Buscar géneros..."
+                  autoComplete="off"
                   value={genreSearch}
                   onChange={e => setGenreSearch(e.target.value)}
                   className="ls-admin-search-input"
@@ -445,7 +501,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
               </small>
             </div>
 
-            {errorModalMsg && (
+            {errorMsg && (
               <div
                 style={{
                   margin: '10px 0 14px',
@@ -461,7 +517,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                 }}
               >
                 <PiWarningOctagonBold style={{ fontSize: '1.2rem', color: '#ef4444', flexShrink: 0 }} />
-                <span>{errorModalMsg}</span>
+                <span>{errorMsg}</span>
               </div>
             )}
 
@@ -478,43 +534,6 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
           </div>
         </div>
       </div>
-
-      {/* Modal de Validación de Registro */}
-      {errorModalMsg && (
-        <div className="ls-modal-overlay" onClick={() => setErrorModalMsg(null)}>
-          <div className="ls-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px' }}>
-            <button type="button" className="ls-modal-close" onClick={() => setErrorModalMsg(null)} aria-label="Cerrar">
-              <PiXBold />
-            </button>
-            <div className="ls-report-header" style={{ marginBottom: '16px' }}>
-              <div className="ls-report-badge-icon" style={{ background: 'rgba(255, 60, 110, 0.15)', color: '#ff3c6e', border: '1px solid rgba(255, 60, 110, 0.3)' }}>
-                <PiWarningOctagonBold style={{ fontSize: '1.4rem' }} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, color: '#fff' }}>Campos Incompletos</h3>
-                <p className="ls-report-subtitle" style={{ margin: '4px 0 0' }}>
-                  Completa los datos requeridos
-                </p>
-              </div>
-            </div>
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '20px' }}>
-              <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', lineHeight: '1.4' }}>
-                {errorModalMsg}
-              </p>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                className="ls-primary-button"
-                onClick={() => setErrorModalMsg(null)}
-                style={{ width: '100%' }}
-              >
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }

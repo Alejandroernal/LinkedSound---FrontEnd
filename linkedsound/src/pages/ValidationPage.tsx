@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { FaSoundcloud, FaSpotify, FaInstagram } from 'react-icons/fa6'
-import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold } from 'react-icons/pi'
+import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold, PiWarningOctagonBold } from 'react-icons/pi'
 import type { AppPage, Profile } from '../types'
 
 type ValidationPageProps = {
@@ -36,7 +36,9 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
   const [soundcloud, setSoundcloud] = useState(profile?.soundcloudUrl || profile?.soundcloud || '')
   const [instagram, setInstagram] = useState(profile?.instagramUrl || profile?.instagram || '')
   const [spotify, setSpotify] = useState(profile?.spotifyUrl || profile?.spotify || '')
-  const [location, setLocation] = useState(profile?.location || 'Berlin, Germany')
+  const [location, setLocation] = useState(profile?.location || '')
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
 
   const [showMap, setShowMap] = useState(true)
   const [isLocating, setIsLocating] = useState(false)
@@ -295,24 +297,53 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
   }, [showMap])
 
   const handleValidate = () => {
-    if (soundcloud) {
-      onProfileChange?.('soundcloudUrl', soundcloud)
-      onProfileChange?.('soundcloud', soundcloud)
+    const sc = soundcloud.trim()
+    const loc = location.trim()
+
+    const errors: Record<string, boolean> = {}
+    if (!sc) errors.soundcloud = true
+    if (!loc) errors.location = true
+
+    if (!sc || !loc) {
+      setInvalidFields(errors)
+      setValidationError('SoundCloud y la ubicación son campos obligatorios para finalizar la configuración. Si no los tienes por ahora o prefieres completarlos más tarde, usa "Saltar por ahora".')
+      return
     }
-    if (instagram) {
-      onProfileChange?.('instagramUrl', instagram)
-      onProfileChange?.('instagram', instagram)
+
+    setInvalidFields({})
+    setValidationError(null)
+
+    onProfileChange?.('soundcloudUrl', sc)
+    onProfileChange?.('soundcloud', sc)
+    if (instagram.trim()) {
+      onProfileChange?.('instagramUrl', instagram.trim())
+      onProfileChange?.('instagram', instagram.trim())
     }
-    if (spotify) {
-      onProfileChange?.('spotifyUrl', spotify)
-      onProfileChange?.('spotify', spotify)
+    if (spotify.trim()) {
+      onProfileChange?.('spotifyUrl', spotify.trim())
+      onProfileChange?.('spotify', spotify.trim())
     }
-    if (location) onProfileChange?.('location', location)
+    onProfileChange?.('location', loc)
     onRegisterComplete?.()
     onNavigate?.('Discovery')
   }
 
   const handleSkip = () => {
+    if (soundcloud.trim()) {
+      onProfileChange?.('soundcloudUrl', soundcloud.trim())
+      onProfileChange?.('soundcloud', soundcloud.trim())
+    }
+    if (instagram.trim()) {
+      onProfileChange?.('instagramUrl', instagram.trim())
+      onProfileChange?.('instagram', instagram.trim())
+    }
+    if (spotify.trim()) {
+      onProfileChange?.('spotifyUrl', spotify.trim())
+      onProfileChange?.('spotify', spotify.trim())
+    }
+    if (location.trim()) {
+      onProfileChange?.('location', location.trim())
+    }
     onRegisterComplete?.()
     onNavigate?.('Discovery')
   }
@@ -335,17 +366,26 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
           <label>
             <span>
               <FaSoundcloud className="ls-field-icon" />
-              SoundCloud Perfil URL (Opcional)
+              SoundCloud Perfil URL * (Obligatorio para finalizar)
             </span>
             <input
               type="url"
               placeholder="https://soundcloud.com/tu-usuario"
               value={soundcloud}
+              autoComplete="off"
               onChange={(e) => {
                 const val = e.target.value
                 setSoundcloud(val)
+                if (validationError && invalidFields.soundcloud) {
+                  setInvalidFields(prev => ({ ...prev, soundcloud: false }))
+                  setValidationError(null)
+                }
                 onProfileChange?.('soundcloudUrl', val)
                 onProfileChange?.('soundcloud', val)
+              }}
+              style={{
+                borderColor: invalidFields.soundcloud ? '#ef4444' : undefined,
+                background: invalidFields.soundcloud ? 'rgba(239, 68, 68, 0.05)' : undefined
               }}
             />
           </label>
@@ -422,14 +462,21 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
           <div className="ls-location-group">
 
             <label>
-              <span>Ubicación</span>
+              <span>Ubicación * (Obligatoria para finalizar)</span>
               <div className="ls-location-input-wrapper">
                 <input
                   ref={inputRef}
                   type="text"
                   placeholder="Escribe tu ciudad (ej. Madrid, Berlín, Buenos Aires...)"
                   value={location}
-                  onChange={handleLocationInputChange}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    handleLocationInputChange(e)
+                    if (validationError && invalidFields.location) {
+                      setInvalidFields(prev => ({ ...prev, location: false }))
+                      setValidationError(null)
+                    }
+                  }}
                   onKeyDown={handleKeyDown}
                   onFocus={() => {
                     if (suggestions.length > 0) setShowSuggestions(true)
@@ -437,6 +484,10 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
                   onBlur={() => {
                     // Retardo para permitir clic en la sugerencia si se usa mouse
                     setTimeout(() => setShowSuggestions(false), 200)
+                  }}
+                  style={{
+                    borderColor: invalidFields.location ? '#ef4444' : undefined,
+                    background: invalidFields.location ? 'rgba(239, 68, 68, 0.05)' : undefined
                   }}
                 />
 
@@ -481,9 +532,8 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
                   Elegir en mapa
                 </button>
                 {(isLocating || isSearching) && (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#c084fc' }}>
-                    <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', display: 'inline-block' }} />
-                    <span>{isLocating ? 'Obteniendo ubicación...' : 'Buscando...'}</span>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', padding: '6px' }} title="Buscando ubicación" aria-label="Cargando">
+                    <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
                   </div>
                 )}
               </div>
@@ -573,7 +623,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
                   </button>
                 </div>
 
-                {/* Overlay estado/carga superior derecho */}
+                {/* Overlay solo spinner superior derecho sin texto que colisione */}
                 {(isLocating || isSearching) && (
                   <div
                     style={{
@@ -585,19 +635,17 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
                       backdropFilter: 'blur(8px)',
                       WebkitBackdropFilter: 'blur(8px)',
                       border: '1px solid rgba(168, 85, 247, 0.5)',
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
+                      padding: '8px',
+                      borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      justifyContent: 'center',
                       boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
                     }}
+                    title={isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}
+                    aria-label="Cargando ubicación"
                   >
-                    <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
-                    <span>{isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}</span>
+                    <span className="ls-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
                   </div>
                 )}
 
@@ -627,17 +675,37 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
 
           <div className="ls-validation-box" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '12px', padding: '14px 16px', margin: '16px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <span className="ls-status-indicator" style={{ width: '10px', height: '10px', borderRadius: '50%', background: soundcloud ? '#27ae60' : '#f59e0b', display: 'inline-block' }} />
+              <span className="ls-status-indicator" style={{ width: '10px', height: '10px', borderRadius: '50%', background: (soundcloud.trim() && location.trim()) ? '#27ae60' : '#f59e0b', display: 'inline-block' }} />
               <strong style={{ fontSize: '0.9rem', color: '#fff' }}>
-                {soundcloud ? 'Perfil Listo para Discovery' : ''}
+                {(soundcloud.trim() && location.trim()) ? 'Perfil Listo para Discovery' : 'Campos Requeridos'}
               </strong>
             </div>
             <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.4 }}>
-              {soundcloud
-                ? '¡Excelente! Tu cuenta o muestra de SoundCloud ha sido vinculada y tu perfil estará activo en Discovery.'
-                : 'Vincular SoundCloud no es un requisito bloqueante para completar tu registro. Puedes omitir este paso ahora y tu perfil se activará en las recomendaciones de Discovery cuando cargues tu música desde la edición de tu perfil.'}
+              {(soundcloud.trim() && location.trim())
+                ? '¡Excelente! Tu cuenta de SoundCloud y tu ubicación han sido configuradas y tu perfil estará activo en Discovery.'
+                : 'Para finalizar la configuración debes ingresar SoundCloud y tu ubicación. Si no cuentas con ellos por ahora o deseas cargarlos luego, usa el botón "Saltar por ahora".'}
             </p>
           </div>
+
+          {validationError && (
+            <div
+              style={{
+                margin: '10px 0 14px',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                color: '#fca5a5',
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <PiWarningOctagonBold style={{ fontSize: '1.2rem', color: '#ef4444', flexShrink: 0 }} />
+              <span>{validationError}</span>
+            </div>
+          )}
 
           <button type="button" className="ls-primary-button ls-auth-button" onClick={handleValidate} style={{ width: '100%', marginBottom: '10px' }}>
             Finalizar Configuración
@@ -649,7 +717,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
             onClick={handleSkip}
             style={{ width: '100%', border: '1px dashed rgba(255, 255, 255, 0.25)', color: 'rgba(255, 255, 255, 0.85)' }}
           >
-            Omitir por ahora (Continuar más tarde)
+            Saltar por ahora
           </button>
         </div>
       </div>

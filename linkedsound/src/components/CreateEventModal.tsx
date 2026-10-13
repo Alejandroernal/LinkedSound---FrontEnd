@@ -618,9 +618,8 @@ export default function CreateEventModal({
                     Elegir en mapa
                   </button>
                   {(isLocating || isSearching) && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#c084fc' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px' }} title={isLocating ? 'Obteniendo ubicación...' : 'Buscando...'} aria-label="Cargando">
                       <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', display: 'inline-block' }} />
-                      <span>{isLocating ? 'Obteniendo ubicación...' : 'Buscando...'}</span>
                     </div>
                   )}
                 </div>
@@ -722,19 +721,17 @@ export default function CreateEventModal({
                         backdropFilter: 'blur(8px)',
                         WebkitBackdropFilter: 'blur(8px)',
                         border: '1px solid rgba(168, 85, 247, 0.5)',
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        color: '#fff',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
+                        padding: '8px',
+                        borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
+                        justifyContent: 'center',
                         boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
                       }}
+                      title={isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}
+                      aria-label="Cargando ubicación"
                     >
-                      <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
-                      <span>{isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}</span>
+                      <span className="ls-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
                     </div>
                   )}
 

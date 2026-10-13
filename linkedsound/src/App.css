@@ -1837,6 +1837,12 @@ button {
   padding-bottom: 18px;
 }
 
+.ls-profile-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .ls-primary-button {
   border: none;
   border-radius: 12px;
@@ -4189,6 +4195,17 @@ button {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
+  }
+
+  .ls-profile-edit-actions {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .ls-profile-edit-actions button {
+    width: 100%;
   }
 
   .ls-primary-button {
