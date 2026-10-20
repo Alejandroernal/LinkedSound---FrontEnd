@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { FaSoundcloud, FaSpotify, FaInstagram } from 'react-icons/fa6'
-import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold, PiWarningOctagonBold } from 'react-icons/pi'
+import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold, PiWarningOctagonBold, PiCheckBold } from 'react-icons/pi'
 import type { AppPage, Profile } from '../types'
 
 type ValidationPageProps = {
   onNavigate?: (page: AppPage) => void
   profile?: Profile
   onProfileChange?: (field: keyof Profile, value: any) => void
-  onRegisterComplete?: () => void
+  onRegisterComplete?: () => Promise<{ success: boolean; message?: string } | void> | void
 }
 
 type LocationSuggestion = {
@@ -37,6 +37,9 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
   const [instagram, setInstagram] = useState(profile?.instagramUrl || profile?.instagram || '')
   const [spotify, setSpotify] = useState(profile?.spotifyUrl || profile?.spotify || '')
   const [location, setLocation] = useState(profile?.location || '')
+  const [verifiedLocation, setVerifiedLocation] = useState(profile?.location || '')
+  const [isLocationVerified, setIsLocationVerified] = useState(Boolean(profile?.location && profile.location.trim()))
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
 
@@ -71,11 +74,23 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
       const label = [city, country].filter(Boolean).join(', ')
       const finalLoc = label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`
       setLocation(finalLoc)
+      setVerifiedLocation(finalLoc)
+      setIsLocationVerified(true)
       onProfileChange?.('location', finalLoc)
+      if (validationError && invalidFields.location) {
+        setInvalidFields(prev => ({ ...prev, location: false }))
+        setValidationError(null)
+      }
     } catch {
       const fallback = `${lat.toFixed(3)}, ${lon.toFixed(3)}`
       setLocation(fallback)
+      setVerifiedLocation(fallback)
+      setIsLocationVerified(true)
       onProfileChange?.('location', fallback)
+      if (validationError && invalidFields.location) {
+        setInvalidFields(prev => ({ ...prev, location: false }))
+        setValidationError(null)
+      }
     } finally {
       setIsLocating(false)
     }
@@ -135,7 +150,10 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
   const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setLocation(val)
-    onProfileChange?.('location', val)
+
+    if (val.trim().toLowerCase() !== verifiedLocation.trim().toLowerCase()) {
+      setIsLocationVerified(false)
+    }
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
@@ -148,8 +166,15 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
 
   const applySelectedLocation = (item: LocationSuggestion) => {
     setLocation(item.label)
+    setVerifiedLocation(item.label)
+    setIsLocationVerified(true)
     onProfileChange?.('location', item.label)
     setShowSuggestions(false)
+
+    if (validationError && invalidFields.location) {
+      setInvalidFields(prev => ({ ...prev, location: false }))
+      setValidationError(null)
+    }
 
     if (!showMap) {
       setShowMap(true)
@@ -171,17 +196,16 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (showSuggestions && suggestions.length > 0) {
-      if (e.key === 'Tab') {
-        // Seleccion mediante tabulacion
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev + 1) % suggestions.length)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
         e.preventDefault()
         const target = suggestions[highlightedIndex] || suggestions[0]
         applySelectedLocation(target)
-      } else if (e.key === 'Enter') {
-        e.preventDefault()
-        const target = suggestions[highlightedIndex] || suggestions[0]
-        applySelectedLocation(target)
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault()
       } else if (e.key === 'Escape') {
         setShowSuggestions(false)
       }
@@ -296,17 +320,31 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     }
   }, [showMap])
 
-  const handleValidate = () => {
+  const handleValidate = async () => {
     const sc = soundcloud.trim()
     const loc = location.trim()
 
     const errors: Record<string, boolean> = {}
     if (!sc) errors.soundcloud = true
-    if (!loc) errors.location = true
 
-    if (!sc || !loc) {
+    const isLocValid = isLocationVerified && loc.length > 0 && loc.toLowerCase() === verifiedLocation.trim().toLowerCase()
+    if (!isLocValid) errors.location = true
+
+    if (!sc && !isLocValid) {
       setInvalidFields(errors)
-      setValidationError('SoundCloud y la ubicación son campos obligatorios para finalizar la configuración. Si no los tienes por ahora o prefieres completarlos más tarde, usa "Saltar por ahora".')
+      setValidationError('SoundCloud y la selección de una localidad válida son obligatorios para finalizar la configuración. Si no los tienes por ahora, usa "Saltar por ahora".')
+      return
+    }
+
+    if (!sc) {
+      setInvalidFields(errors)
+      setValidationError('SoundCloud es un campo obligatorio para finalizar la configuración. Si prefieres completarlo más tarde, usa "Saltar por ahora".')
+      return
+    }
+
+    if (!isLocValid) {
+      setInvalidFields(errors)
+      setValidationError('Debes seleccionar una localidad válida de la lista desplegable sugerida o seleccionarla directamente en el mapa.')
       return
     }
 
@@ -324,11 +362,23 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
       onProfileChange?.('spotify', spotify.trim())
     }
     onProfileChange?.('location', loc)
-    onRegisterComplete?.()
-    onNavigate?.('Discovery')
+
+    setIsSubmitting(true)
+    try {
+      const result = await onRegisterComplete?.()
+      if (result && typeof result === 'object' && 'success' in result && !result.success) {
+        setValidationError(result.message || 'Error al completar el registro con el servidor.')
+        return
+      }
+      onNavigate?.('Discovery')
+    } catch (err: any) {
+      setValidationError(err?.message || 'Error al procesar el registro con el servidor.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (soundcloud.trim()) {
       onProfileChange?.('soundcloudUrl', soundcloud.trim())
       onProfileChange?.('soundcloud', soundcloud.trim())
@@ -341,11 +391,23 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
       onProfileChange?.('spotifyUrl', spotify.trim())
       onProfileChange?.('spotify', spotify.trim())
     }
-    if (location.trim()) {
-      onProfileChange?.('location', location.trim())
+    const loc = location.trim()
+    const isLocValid = isLocationVerified && loc.length > 0 && loc.toLowerCase() === verifiedLocation.trim().toLowerCase()
+    if (isLocValid) {
+      onProfileChange?.('location', loc)
+    } else {
+      onProfileChange?.('location', 'No especificada')
     }
-    onRegisterComplete?.()
-    onNavigate?.('Discovery')
+
+    setIsSubmitting(true)
+    try {
+      await onRegisterComplete?.()
+      onNavigate?.('Discovery')
+    } catch {
+      onNavigate?.('Discovery')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -513,12 +575,46 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
               </div>
             </label>
 
-            <div className="ls-tab-hint">
+              <div className="ls-tab-hint">
               <span>Tip:</span>
               <span>
-                Presiona <kbd>Tab</kbd> o <kbd>Enter</kbd> para autocompletar sugerencias o haz clic en el mapa.
+                Usa <kbd>Tab</kbd> o <kbd>Enter</kbd> para seleccionar la localidad sugerida o haz clic directamente en el mapa.
               </span>
             </div>
+
+            {isLocationVerified && location.trim().length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#10b981',
+                  fontSize: '0.78rem',
+                  marginTop: '6px',
+                  fontWeight: 500,
+                }}
+              >
+                <PiCheckBold style={{ fontSize: '0.95rem' }} />
+                <span>Localidad verificada: {verifiedLocation}</span>
+              </div>
+            )}
+
+            {!isLocationVerified && location.trim().length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#f59e0b',
+                  fontSize: '0.78rem',
+                  marginTop: '6px',
+                  fontWeight: 500,
+                }}
+              >
+                <PiWarningOctagonBold style={{ fontSize: '0.95rem' }} />
+                <span>Debes seleccionar una opción de la lista (clic, Tab o Enter) o marcar el mapa.</span>
+              </div>
+            )}
 
             {!showMap && (
               <div className="ls-map-actions-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
@@ -707,14 +803,21 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
             </div>
           )}
 
-          <button type="button" className="ls-primary-button ls-auth-button" onClick={handleValidate} style={{ width: '100%', marginBottom: '10px' }}>
-            Finalizar Configuración
+          <button
+            type="button"
+            className="ls-primary-button ls-auth-button"
+            onClick={handleValidate}
+            disabled={isSubmitting}
+            style={{ width: '100%', marginBottom: '10px', opacity: isSubmitting ? 0.7 : 1 }}
+          >
+            {isSubmitting ? 'Guardando configuración...' : 'Finalizar Configuración'}
           </button>
 
           <button
             type="button"
             className="ls-secondary-button"
             onClick={handleSkip}
+            disabled={isSubmitting}
             style={{ width: '100%', border: '1px dashed rgba(255, 255, 255, 0.25)', color: 'rgba(255, 255, 255, 0.85)' }}
           >
             Saltar por ahora

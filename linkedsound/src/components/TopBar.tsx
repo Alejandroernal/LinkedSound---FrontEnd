@@ -11,8 +11,8 @@ import {
   PiCheckCircleBold,
   PiTrashBold
 } from 'react-icons/pi'
-import { navItems, conversations as defaultConversations } from '../data/mockData'
 import type { AppPage, Profile, NotificationItem } from '../types'
+import { navItems } from '../types'
 
 type TopBarProps = {
   activePage?: AppPage
@@ -47,10 +47,10 @@ export default function TopBar({
   onSignOut,
   unreadMessagesCount,
 }: TopBarProps) {
-  const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Admin User' : 'Kaelen Voss'))
+  const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Administrador' : 'Mi Perfil'))
   const userRole = profile?.role === 'Administrador'
     ? 'Administrador'
-    : (profile?.role || profile?.category || (isAdminSession ? 'Administrador' : 'Productor y Artista'))
+    : (profile?.role || profile?.category || (isAdminSession ? 'Administrador' : 'Artista'))
   const userProfileImage = profile?.profileImage ?? ''
 
   // Control del dropdown de notificaciones
@@ -64,8 +64,7 @@ export default function TopBar({
   const profileRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter((n) => !n.read).length
-  const fallbackUnreadMessages = defaultConversations.filter((c) => c.unread > 0).reduce((acc, c) => acc + (c.unread || 0), 0)
-  const totalUnreadMessages = unreadMessagesCount ?? fallbackUnreadMessages
+  const totalUnreadMessages = unreadMessagesCount ?? 0
 
   // Cerrar menús al hacer click fuera
   useEffect(() => {
@@ -260,7 +259,7 @@ export default function TopBar({
               <div className="ls-profile-dropdown">
                 <div className="ls-profile-dropdown-info">
                   <strong>{userName}</strong>
-                  <small>{profile?.email || (isAdminSession ? 'admin@linkedsound.app' : 'kaelen@linkedsound.app')}</small>
+                  <small>{profile?.email || (isAdminSession ? 'admin@linkedsound.app' : 'usuario@linkedsound.app')}</small>
                 </div>
                 <hr className="ls-dropdown-divider" />
                 <button

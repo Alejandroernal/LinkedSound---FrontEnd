@@ -1,12 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import { RadarFilters, type RadarFilterState } from '../components/SidebarPanels'
 import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import SwipeCardStack from '../components/SwipeCardStack'
-import { recommendations, type ProfileCard } from '../data/mockData'
+import type { ProfileCard } from '../data/mockData'
 import type { AppPage, Profile, NotificationItem } from '../types'
+import { api } from '../services/api'
 
 type DashboardPageProps = {
   activePage?: AppPage
@@ -89,6 +90,68 @@ export default function DashboardPage({
   onConnectProfile,
   unreadMessagesCount,
 }: DashboardPageProps) {
+  const [cardsList, setCardsList] = useState<ProfileCard[]>([])
+
+  useEffect(() => {
+    Promise.all([
+      api.auth.getUsers(),
+      api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [] })),
+    ]).then(([res, interRes]) => {
+      if (res.success && Array.isArray(res.users)) {
+        const currentId = profile?.id
+        const currentEmail = profile?.email
+        const currentNick = profile?.nickname
+
+        const interactedUserIds = new Set(
+          (interRes.interactions || []).map((i: any) => i.receiverId)
+        )
+
+        const dbCards: ProfileCard[] = res.users
+          .filter((u: any) => {
+            // Excluir al usuario actual de su propio stack de descubrimiento
+            if (currentId && u.id === currentId) return false
+            if (currentEmail && u.email === currentEmail) return false
+            if (currentNick && u.nickname === currentNick) return false
+            if (u.role === 'Administrador' || u.role === 'Admin') return false
+            // Excluir perfiles con interaccion previa (like o descarte)
+            if (interactedUserIds.has(u.id)) return false
+            return true
+          })
+          .map((u: any) => {
+            const coords = (typeof u.latitude === 'number' && typeof u.longitude === 'number')
+              ? { lat: u.latitude, lon: u.longitude }
+              : getCoordinatesForLocation(u.location)
+
+            return {
+              id: u.id,
+              firstName: u.firstName || '',
+              lastName: u.lastName || '',
+              nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
+              role: u.role || 'Artista',
+              location: u.location || 'No especificada',
+              latitude: coords?.lat,
+              longitude: coords?.lon,
+              description: u.description || '',
+              interestGenres: u.interestGenres || [],
+              tags: u.interestGenres || [],
+              soundcloudUrl: u.soundcloudUrl || '',
+              soundcloudHandle: u.soundcloudHandle || '',
+              spotifyUrl: u.spotifyUrl || '',
+              instagramUrl: u.instagramUrl || '',
+              profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+              match: '95%',
+              isProfile: true,
+              itemRole: 'Perfil',
+              badge: u.role === 'Productor' ? 'Producer' : 'Artist',
+              tracks: Array.isArray(u.tracks) ? u.tracks : [],
+            }
+          })
+
+        setCardsList(dbCards)
+      }
+    }).catch(() => {})
+  }, [profile?.id, profile?.email, profile?.nickname])
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
   const [previewProfile, setPreviewProfile] = useState<ProfileCard | null>(null)
@@ -127,7 +190,7 @@ export default function DashboardPage({
       }
     }
 
-    return recommendations.filter((card) => {
+    return cardsList.filter((card) => {
       // 1. Location text filter
       if (filters.locationQuery.trim()) {
         const query = filters.locationQuery.trim().toLowerCase()
@@ -181,11 +244,13 @@ export default function DashboardPage({
   const handleDecision = (liked: boolean) => {
     if (filteredRecommendations.length === 0) return
     const currentCard = filteredRecommendations[currentIndex % filteredRecommendations.length]
-    if (liked && currentCard) {
-      if (onConnectProfile) {
-        onConnectProfile(currentCard)
-      } else {
-        console.log(`Conectado con ${currentCard.nickname}`)
+    if (currentCard) {
+      if (liked) {
+        if (onConnectProfile) {
+          onConnectProfile(currentCard)
+        }
+      } else if (currentCard.id) {
+        api.interactions.pass(currentCard.id).catch(() => {})
       }
     }
     setCurrentIndex((prev) => prev + 1)

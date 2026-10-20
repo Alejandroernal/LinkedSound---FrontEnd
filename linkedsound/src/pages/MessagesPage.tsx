@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import ConversationSidebar from '../components/ConversationSidebar'
@@ -6,19 +6,9 @@ import ChatThread from '../components/ChatThread'
 import UnmatchModal from '../components/UnmatchModal'
 import SpamReportModal from '../components/SpamReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
-import {
-  conversations as initialConversations,
-  messagesByConversation as initialMessages,
-  initialNewMatches,
-  exploreCards,
-  recommendations,
-  mockUsers,
-  type Message,
-  type Conversation,
-  type ProfileCard,
-  type NewMatchItem,
-} from '../data/mockData'
+import type { Message, Conversation, ProfileCard, NewMatchItem } from '../data/mockData'
 import type { AppPage, Profile, NotificationItem } from '../types'
+import { api } from '../services/api'
 import {
   PiSparkleFill,
   PiChatCircleDotsBold,
@@ -61,14 +51,15 @@ export default function MessagesPage({
   activeId: propActiveId,
   setActiveId: propSetActiveId,
 }: MessagesPageProps) {
-  const [localConversationsList, setLocalConversationsList] = useState<Conversation[]>(initialConversations)
-  const [localMessagesMap, setLocalMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
+  const [localConversationsList, setLocalConversationsList] = useState<Conversation[]>([])
+  const [localMessagesMap, setLocalMessagesMap] = useState<Record<string, Message[]>>({})
   const [localActiveId, setLocalActiveId] = useState('')
 
-  const [newMatchesList, setNewMatchesList] = useState<NewMatchItem[]>(initialNewMatches)
+  const [newMatchesList, setNewMatchesList] = useState<NewMatchItem[]>([])
   const [selectedNewMatchId, setSelectedNewMatchId] = useState<string | null>(null)
   const [spamReportingMatch, setSpamReportingMatch] = useState<NewMatchItem | null>(null)
   const [firstMessageText, setFirstMessageText] = useState('')
+  const [dbUsersList, setDbUsersList] = useState<ProfileCard[]>([])
 
   const conversationsList = propConversationsList ?? localConversationsList
   const setConversationsList = propSetConversationsList ?? setLocalConversationsList
@@ -82,6 +73,83 @@ export default function MessagesPage({
   const [unmatchingTarget, setUnmatchingTarget] = useState<Conversation | null>(null)
   const [inspectedProfileCard, setInspectedProfileCard] = useState<ProfileCard | null>(null)
 
+  useEffect(() => {
+    // Cargar conversaciones reales de la base de datos
+    api.conversations.getAll().then((res) => {
+      if (res.success && Array.isArray(res.conversations)) {
+        if (res.conversations.length > 0) {
+          const firstConvId = res.conversations[0].id
+          const targetActiveId = activeId || firstConvId
+          if (!activeId) {
+            setActiveId(firstConvId)
+          }
+
+          // Marcar la conversacion abierta como leida (unread: 0) para despejar la notificacion
+          const updatedConvs = res.conversations.map((c) =>
+            c.id === targetActiveId ? { ...c, unread: 0 } : c
+          )
+          setConversationsList(updatedConvs)
+
+          api.conversations.getMessages(targetActiveId).then((mRes) => {
+            if (mRes.success && Array.isArray(mRes.messages)) {
+              setMessagesMap((prev) => ({
+                ...prev,
+                [targetActiveId]: mRes.messages,
+              }))
+            }
+          }).catch(() => {})
+        } else {
+          setConversationsList([])
+          setActiveId('')
+          setMessagesMap({})
+        }
+      }
+    }).catch(() => {})
+
+    // Cargar matches mutuos reales para la seccion de Nuevos Matches
+    api.interactions.getMatches().then((res) => {
+      if (res.success && Array.isArray(res.matches)) {
+        const mappedMatches: NewMatchItem[] = res.matches.map((m: any) => ({
+          id: m.partnerId,
+          name: m.name,
+          role: m.role || 'Artista',
+          location: m.location || 'No especificada',
+          match: m.affinityPercent || '95%',
+          profileImage: m.profileImage || '',
+          accent: 'purple' as const,
+          date: m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'Hoy',
+        }))
+        setNewMatchesList(mappedMatches)
+      }
+    }).catch(() => {})
+
+    // Cargar usuarios para perfil inspeccionado
+    api.auth.getUsers().then((res) => {
+      if (res.success && Array.isArray(res.users)) {
+        const mapped: ProfileCard[] = res.users.map((u: any) => ({
+          id: u.id,
+          firstName: u.firstName || '',
+          lastName: u.lastName || '',
+          nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
+          role: u.role || 'Artista',
+          location: u.location || 'No especificada',
+          description: u.description || '',
+          interestGenres: u.interestGenres || [],
+          tags: u.interestGenres || [],
+          soundcloudUrl: u.soundcloudUrl || '',
+          spotifyUrl: u.spotifyUrl || '',
+          instagramUrl: u.instagramUrl || '',
+          profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+          match: '94%',
+          isProfile: true,
+          itemRole: 'Perfil',
+          tracks: Array.isArray(u.tracks) && u.tracks.length > 0 ? u.tracks : [],
+        }))
+        setDbUsersList(mapped)
+      }
+    }).catch(() => {})
+  }, [])
+
   const activeConversation = conversationsList.find((item) => item.id === activeId) ?? null
   const selectedNewMatch = newMatchesList.find((m) => m.id === selectedNewMatchId) ?? null
 
@@ -91,6 +159,15 @@ export default function MessagesPage({
     setConversationsList((prev) =>
       prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c))
     )
+
+    api.conversations.getMessages(id).then((res) => {
+      if (res.success && Array.isArray(res.messages)) {
+        setMessagesMap((prev) => ({
+          ...prev,
+          [id]: res.messages,
+        }))
+      }
+    }).catch(() => {})
   }
 
   const handleSelectNewMatch = (id: string) => {
@@ -105,8 +182,13 @@ export default function MessagesPage({
     const now = new Date()
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-    const newConv: Conversation = {
-      id: match.id,
+    const existingConv = conversationsList.find(
+      (c) => c.name.toLowerCase() === match.name.toLowerCase() || c.id === match.id
+    )
+    const convId = existingConv ? existingConv.id : match.id
+
+    const newConv: Conversation = existingConv || {
+      id: convId,
       name: match.name,
       role: match.role,
       avatar: match.name.substring(0, 2).toUpperCase(),
@@ -126,15 +208,20 @@ export default function MessagesPage({
       time: timeStr,
     }
 
-    setConversationsList((prev) => [newConv, ...prev])
+    if (!existingConv) {
+      setConversationsList((prev) => [newConv, ...prev])
+    }
     setMessagesMap((prev) => ({
       ...prev,
-      [match.id]: [initialMsg],
+      [convId]: [...(prev[convId] || []), initialMsg],
     }))
     setNewMatchesList((prev) => prev.filter((m) => m.id !== match.id))
     setSelectedNewMatchId(null)
     setFirstMessageText('')
-    handleSelectConversation(match.id)
+    handleSelectConversation(convId)
+
+    // Enviar mensaje persistente a la base de datos
+    api.conversations.sendMessage(convId, { text: firstMessageText.trim() }).catch(() => {})
   }
 
   const handleConfirmReportSpam = () => {
@@ -150,50 +237,37 @@ export default function MessagesPage({
   const handleInspectProfile = () => {
     if (!activeConversation) return
     const targetName = activeConversation.name.toLowerCase().trim()
-    const foundCard =
-      exploreCards.find((c) => c.nickname?.toLowerCase().trim() === targetName) ??
-      recommendations.find((c) => c.nickname?.toLowerCase().trim() === targetName) ??
-      mockUsers.find((c) => c.nickname?.toLowerCase().trim() === targetName)
+    const foundCard = dbUsersList.find((c) => c.nickname?.toLowerCase().trim() === targetName)
 
     if (foundCard) {
       setInspectedProfileCard(foundCard)
     } else {
       const nameParts = activeConversation.name.trim().split(' ')
       const firstName = nameParts[0] || activeConversation.name
-      const lastName = nameParts.slice(1).join(' ') || 'Artista'
-      const cleanHandle = activeConversation.name.toLowerCase().replace(/\s+/g, '')
+      const lastName = nameParts.slice(1).join(' ') || ''
 
-      const fallbackCard: ProfileCard = {
+      const cleanCard: ProfileCard = {
         firstName,
         lastName,
         nickname: activeConversation.name,
-        role: activeConversation.role || 'Productor y Artista',
-        location: activeConversation.location || 'LinkedSound HQ',
-        profileImage: activeConversation.profileImage || 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
+        role: activeConversation.role || 'Artista',
+        location: activeConversation.location || 'No especificada',
+        profileImage: activeConversation.profileImage || activeConversation.avatar || '',
         isProfile: true,
         itemRole: 'Perfil',
-        description: `Perfil oficial de ${activeConversation.name} en LinkedSound. Creador y colaborador de la comunidad musical.`,
-        match: '94%',
-        badge: 'Creador',
-        interestGenres: ['Electronic', 'Synthwave', 'Ambient'],
-        tags: ['Electronic', 'Synthwave'],
-        soundcloudUrl: `https://soundcloud.com/${cleanHandle}`,
-        spotifyUrl: `https://open.spotify.com/artist/${cleanHandle}`,
-        instagramUrl: `https://instagram.com/${cleanHandle}`,
-        soundcloudHandle: cleanHandle,
-        tracks: [
-          {
-            id: 'tr-msg-1',
-            title: `${activeConversation.name} - Official Single`,
-            plays: '15.4k',
-            duration: '3:45',
-            genre: 'Electronic',
-            soundcloudLink: `https://soundcloud.com/${cleanHandle}`,
-          },
-        ],
+        description: '',
+        match: '100%',
+        badge: 'Contacto',
+        interestGenres: [],
+        tags: [],
+        soundcloudUrl: '',
+        spotifyUrl: '',
+        instagramUrl: '',
+        soundcloudHandle: '',
+        tracks: [],
       }
 
-      setInspectedProfileCard(fallbackCard)
+      setInspectedProfileCard(cleanCard)
     }
   }
 
@@ -228,7 +302,7 @@ export default function MessagesPage({
       attachment,
     }
 
-    const previewText = text || (attachment ? `📎 ${attachment.name}` : '')
+    const previewText = text || (attachment ? `[Archivo] ${attachment.name}` : '')
 
     setMessagesMap((prev) => ({
       ...prev,
@@ -243,35 +317,34 @@ export default function MessagesPage({
       )
     )
 
-    setTimeout(() => {
-      const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      const replies = [
-        '¡Recibido! Le echo un ojo ahora mismo y te aviso.',
-        'Suena potente esa idea. Ajusto el máster y te paso el nuevo bounce.',
-        'Totalmente de acuerdo, vamos a fijar esa sesión para esta semana.',
-      ]
-      const randomReply = replies[Math.floor(Math.random() * replies.length)]
-
-      const simulatedReply: Message = {
-        id: String(Date.now() + 1),
-        sender: 'them',
-        text: randomReply,
-        time: replyTime,
+    api.conversations.sendMessage(activeId, {
+      text,
+      attachmentUrl: attachment?.url,
+      attachmentName: attachment?.name,
+      attachmentType: attachment?.type,
+      attachmentSize: attachment?.size,
+    }).then((res) => {
+      if (res.success && res.formattedMessage?.attachment?.url) {
+        setMessagesMap((prev) => {
+          const currentList = prev[activeId] || []
+          return {
+            ...prev,
+            [activeId]: currentList.map((m) =>
+              m.id === newMessage.id
+                ? {
+                    ...m,
+                    id: res.formattedMessage.id || m.id,
+                    attachment: {
+                      ...m.attachment!,
+                      url: res.formattedMessage.attachment.url,
+                    },
+                  }
+                : m
+            ),
+          }
+        })
       }
-
-      setMessagesMap((prev) => ({
-        ...prev,
-        [activeId]: [...(prev[activeId] ?? []), simulatedReply],
-      }))
-
-      setConversationsList((prev) =>
-        prev.map((c) =>
-          c.id === activeId
-            ? { ...c, preview: randomReply, time: replyTime }
-            : c
-        )
-      )
-    }, 1200)
+    }).catch(() => {})
   }
 
   const handleClearChat = (id?: string) => {

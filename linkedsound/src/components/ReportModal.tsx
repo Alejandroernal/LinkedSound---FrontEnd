@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PiFlagBold, PiXBold, PiCheckCircleBold, PiWarningBold } from 'react-icons/pi'
+import { api } from '../services/api'
 
 type ReportModalProps = {
   isOpen: boolean
@@ -46,7 +47,14 @@ export default function ReportModal({
     setError('')
     setSubmitted(true)
     const finalReason = isOtherReason ? `Otro motivo: ${customReason.trim()}` : selectedReason
-    console.log(`[Reporte enviado] Target: ${targetName} (${targetType}), Reason: ${finalReason}, Details: ${details}`)
+
+    api.reports.create({
+      targetName,
+      targetType: targetType === 'Evento' ? 'Evento' : 'Perfil',
+      reason: finalReason,
+      details: details.trim(),
+      origin: 'Discovery',
+    }).catch(() => {})
   }
 
   const handleClose = () => {

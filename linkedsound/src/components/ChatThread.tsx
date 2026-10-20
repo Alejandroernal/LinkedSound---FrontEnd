@@ -19,6 +19,64 @@ import type { Message, Conversation } from '../data/mockData'
 const ALLOWED_AUDIO_EXT = ['.wav', '.mp3', '.flac', '.ogg']
 const ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png']
 
+function ChatImageAttachment({
+  url,
+  name,
+  onClick,
+}: {
+  url: string
+  name: string
+  onClick: () => void
+}) {
+  const [hasError, setHasError] = useState(false)
+
+  if (hasError) {
+    return (
+      <div
+        style={{
+          padding: '10px 14px',
+          borderRadius: '10px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: 'rgba(255, 255, 255, 0.75)',
+          fontSize: '0.8rem',
+          maxWidth: '260px',
+        }}
+      >
+        <PiImageBold style={{ color: '#00e5ff', fontSize: '1.2rem', flexShrink: 0 }} />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {name || 'Imagen adjunta'}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      style={{
+        borderRadius: '12px',
+        overflow: 'hidden',
+        maxWidth: '260px',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+      onClick={onClick}
+      title="Haz clic para ver la imagen a tamano completo"
+    >
+      <img
+        src={url}
+        alt={name}
+        onError={() => setHasError(true)}
+        style={{ width: '100%', height: 'auto', display: 'block' }}
+      />
+    </div>
+  )
+}
+
 type ChatThreadProps = {
   conversation: Conversation
   messages: Message[]
@@ -98,17 +156,21 @@ export default function ChatThread({
     }
 
     setFileError(null)
-    const url = URL.createObjectURL(file)
     const sizeMB = (file.size / (1024 * 1024)).toFixed(2) + ' MB'
 
-    setSelectedFile({
-      file,
-      name: file.name,
-      url,
-      type: isAudio ? 'audio' : 'image',
-      format: ext.toUpperCase().replace('.', ''),
-      size: sizeMB,
-    })
+    const reader = new FileReader()
+    reader.onload = () => {
+      const resultUrl = typeof reader.result === 'string' ? reader.result : ''
+      setSelectedFile({
+        file,
+        name: file.name,
+        url: resultUrl,
+        type: isAudio ? 'audio' : 'image',
+        format: ext.toUpperCase().replace('.', ''),
+        size: sizeMB,
+      })
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSend = () => {
@@ -379,24 +441,11 @@ export default function ChatThread({
               {message.attachment && (
                 <div className="ls-message-attachment" style={{ marginBottom: message.text ? '8px' : '0' }}>
                   {message.attachment.type === 'image' ? (
-                    <div
-                      style={{
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        maxWidth: '260px',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                      }}
+                    <ChatImageAttachment
+                      url={message.attachment.url}
+                      name={message.attachment.name}
                       onClick={() => setPreviewImageUrl(message.attachment?.url ?? null)}
-                      title="Haz clic para ver la imagen a tamaño completo"
-                    >
-                      <img
-                        src={message.attachment.url}
-                        alt={message.attachment.name}
-                        style={{ width: '100%', height: 'auto', display: 'block' }}
-                      />
-                    </div>
+                    />
                   ) : (
                     <div
                       style={{
@@ -451,7 +500,7 @@ export default function ChatThread({
             onClick={() => setFileError(null)}
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}
           >
-            ✕
+            <PiXBold />
           </button>
         </div>
       )}

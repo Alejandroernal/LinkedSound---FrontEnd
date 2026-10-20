@@ -158,6 +158,12 @@ export type EventItem = {
   createdDate?: string
   reportsCount?: number
 
+  // Identificación del organizador y auditoría
+  ownerId?: string
+  ownerNickname?: string
+  createdAt?: string
+  updatedAt?: string
+
   // Enlaces o temas opcionales del evento
   soundcloudUrl?: string
   spotifyUrl?: string
@@ -240,4 +246,18 @@ export function formatEventDate(dateStr?: string): string {
   }
   return dateStr
 }
+
+export type ProfileCard = ExplorerItemCard
+
+export type NavItem = {
+  label: AppPage
+  active?: boolean
+}
+
+export const navItems: NavItem[] = [
+  { label: 'Discovery' },
+  { label: 'Explorer' },
+  { label: 'Messages' },
+  { label: 'Profile' },
+]
 

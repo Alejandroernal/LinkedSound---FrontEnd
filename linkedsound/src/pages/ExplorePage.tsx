@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useDebounce } from '../hooks/useDebounce'
+import { api } from '../services/api'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
@@ -22,8 +23,9 @@ import {
   PiCalendarBold,
   PiMapPinBold,
   PiXBold,
+  PiPencilSimpleBold,
 } from 'react-icons/pi'
-import { exploreCards as initialExploreCards, type ProfileCard } from '../data/mockData'
+import type { ProfileCard } from '../data/mockData'
 import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
 
 type ExplorePageProps = {
@@ -53,7 +55,88 @@ export default function ExplorePage({
   onConnectProfile,
   unreadMessagesCount,
 }: ExplorePageProps) {
-  const [cardsList, setCardsList] = useState<ProfileCard[]>(initialExploreCards)
+  const [cardsList, setCardsList] = useState<ProfileCard[]>([])
+
+  const loadData = () => {
+    Promise.all([api.auth.getUsers(), api.events.getAll()]).then(([usersRes, eventsRes]) => {
+      const combinedCards: ProfileCard[] = []
+
+      // 1. Cargar usuarios de la base de datos
+      if (usersRes.success && Array.isArray(usersRes.users)) {
+        const userCards: ProfileCard[] = usersRes.users
+          .filter((u: any) => u.role !== 'Administrador')
+          .map((u: any) => ({
+            id: u.id,
+            firstName: u.firstName || '',
+            lastName: u.lastName || '',
+            nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
+            role: u.role || 'Artista',
+            location: u.location || 'No especificada',
+            country: u.country || '',
+            province: u.province || '',
+            city: u.city || '',
+            streetAddress: u.streetAddress || '',
+            latitude: u.latitude,
+            longitude: u.longitude,
+            description: u.description || '',
+            interestGenres: u.interestGenres || [],
+            tags: u.interestGenres || [],
+            soundcloudUrl: u.soundcloudUrl || '',
+            soundcloudHandle: u.soundcloudHandle || '',
+            spotifyUrl: u.spotifyUrl || '',
+            instagramUrl: u.instagramUrl || '',
+            profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+            match: '92%',
+            isProfile: true,
+            itemRole: 'Perfil',
+            badge: u.role === 'Productor' ? 'Producer' : 'Artist',
+            tracks: Array.isArray(u.tracks) ? u.tracks : [],
+          }))
+        combinedCards.push(...userCards)
+      }
+
+      // 2. Cargar eventos de la base de datos
+      if (eventsRes.success && Array.isArray(eventsRes.events)) {
+        const eventCards: ProfileCard[] = eventsRes.events.map((ev: any) => ({
+          id: ev.id,
+          nickname: ev.nickname || ev.title,
+          role: ev.role || 'Evento Live',
+          location: ev.location || 'No especificada',
+          country: ev.country || '',
+          province: ev.province || '',
+          city: ev.city || '',
+          streetAddress: ev.streetAddress || '',
+          latitude: ev.latitude,
+          longitude: ev.longitude,
+          interestGenres: ev.interestGenres || [],
+          tags: ev.interestGenres || [],
+          profileImage: ev.profileImage || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
+          match: '100%',
+          description: ev.description || '',
+          badge: 'Evento',
+          itemRole: 'Evento',
+          isProfile: false,
+          eventDate: ev.eventDate,
+          eventTime: ev.eventTime || '22:00',
+          venue: ev.venue || 'Venue Principal',
+          ticketUrl: ev.ticketUrl || 'https://linkedsound.app/tickets',
+          isFinished: ev.isFinished,
+          soundcloudUrl: ev.soundcloudUrl || '',
+          spotifyUrl: ev.spotifyUrl || '',
+          instagramUrl: ev.instagramUrl || '',
+          tracks: ev.tracks || [],
+        }))
+        combinedCards.push(...eventCards)
+      }
+
+      setCardsList(combinedCards)
+    }).catch(() => {})
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const [activeGenre, setActiveGenre] = useState('')
@@ -64,9 +147,89 @@ export default function ExplorePage({
   const [rejectingTarget, setRejectingTarget] = useState<ProfileCard | null>(null)
   const [selectedPreviewCard, setSelectedPreviewCard] = useState<ProfileCard | null>(null)
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<ProfileCard | null>(null)
 
-  const handleCreateEvent = (newEvent: ProfileCard) => {
-    setCardsList((prev) => [newEvent, ...prev])
+  const handleCreateEvent = async (newEvent: ProfileCard) => {
+    try {
+      const eventItem = newEvent as Partial<EventItem>
+      const res = await api.events.create({
+        title: newEvent.nickname,
+        nickname: newEvent.nickname,
+        role: newEvent.role,
+        eventDate: eventItem.eventDate || '',
+        eventTime: eventItem.eventTime || '22:00',
+        venue: eventItem.venue || 'Venue Principal',
+        ticketUrl: eventItem.ticketUrl ? eventItem.ticketUrl.trim() : null,
+        location: newEvent.location,
+        country: newEvent.country,
+        province: newEvent.province,
+        city: newEvent.city,
+        streetAddress: newEvent.streetAddress,
+        latitude: newEvent.latitude,
+        longitude: newEvent.longitude,
+        interestGenres: newEvent.interestGenres,
+        description: newEvent.description,
+        profileImage: newEvent.profileImage,
+      })
+
+      if (res.success && res.event) {
+        const created: ProfileCard = {
+          ...newEvent,
+          id: res.event.id,
+          createdAt: res.event.createdAt,
+          ownerId: res.event.ownerId,
+        }
+        setCardsList((prev) => [created, ...prev])
+      } else {
+        setCardsList((prev) => [newEvent, ...prev])
+      }
+    } catch {
+      setCardsList((prev) => [newEvent, ...prev])
+    }
+  }
+
+  const handleUpdateEvent = async (updatedEvent: ProfileCard) => {
+    if (!updatedEvent.id) return
+    try {
+      const eventItem = updatedEvent as Partial<EventItem>
+      const res = await api.events.update(updatedEvent.id, {
+        title: updatedEvent.nickname,
+        nickname: updatedEvent.nickname,
+        role: updatedEvent.role,
+        eventDate: eventItem.eventDate,
+        eventTime: eventItem.eventTime,
+        venue: eventItem.venue,
+        ticketUrl: eventItem.ticketUrl ? eventItem.ticketUrl.trim() : null,
+        location: updatedEvent.location,
+        country: updatedEvent.country,
+        province: updatedEvent.province,
+        city: updatedEvent.city,
+        streetAddress: updatedEvent.streetAddress,
+        latitude: updatedEvent.latitude,
+        longitude: updatedEvent.longitude,
+        interestGenres: updatedEvent.interestGenres,
+        description: updatedEvent.description,
+        profileImage: updatedEvent.profileImage,
+      })
+
+      if (res.success && res.event) {
+        setCardsList((prev) =>
+          prev.map((c) =>
+            c.id === updatedEvent.id
+              ? {
+                  ...c,
+                  ...updatedEvent,
+                  updatedAt: res.event.updatedAt,
+                }
+              : c
+          )
+        )
+      }
+    } catch (err) {
+      console.error('Error al actualizar el evento:', err)
+    } finally {
+      setEditingEvent(null)
+    }
   }
 
   const handleConfirmReject = (cardToReject: ProfileCard) => {
@@ -406,6 +569,40 @@ export default function ExplorePage({
                         )}
 
                         <div className="ls-card-action-group">
+                          {!isProfile && (() => {
+                            const isOwner = Boolean(
+                              isAdminSession ||
+                              (profile?.id && card.ownerId && card.ownerId === profile.id) ||
+                              (profile?.nickname && card.ownerNickname && card.ownerNickname.toLowerCase() === profile.nickname.toLowerCase()) ||
+                              (profile?.nickname && card.owner && card.owner.toLowerCase() === profile.nickname.toLowerCase())
+                            )
+                            if (!isOwner) return null
+
+                            const createdAtTime = card.createdAt ? new Date(card.createdAt).getTime() : null
+                            const isExpired = createdAtTime ? (Date.now() - createdAtTime) > 24 * 60 * 60 * 1000 : false
+
+                            return (
+                              <button
+                                type="button"
+                                className="ls-card-btn-action"
+                                style={{
+                                  color: isExpired ? '#94a3b8' : '#00e5ff',
+                                  borderColor: isExpired ? 'rgba(148, 163, 184, 0.3)' : 'rgba(0, 229, 255, 0.4)',
+                                  opacity: isExpired ? 0.6 : 1,
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setEditingEvent(card)
+                                  setShowCreateEventModal(true)
+                                }}
+                                title={isExpired ? 'Plazo de modificación expirado (+24hs)' : 'Editar Evento'}
+                              >
+                                <PiPencilSimpleBold />
+                                <span>{isExpired ? 'Expirado' : 'Editar'}</span>
+                              </button>
+                            )
+                          })()}
+
                           <button
                             type="button"
                             className="ls-card-btn-action report"
@@ -445,13 +642,21 @@ export default function ExplorePage({
         </section>
       </main>
 
-      {/* SoundCloud Preview Modal for profiles */}
+      {/* SoundCloud Preview Modal for profiles and events */}
       <SoundCloudPreviewModal
         isOpen={Boolean(selectedPreviewCard)}
         card={selectedPreviewCard}
         onClose={() => setSelectedPreviewCard(null)}
         onConnectProfile={onConnectProfile}
         onDiscardProfile={(cardToDiscard) => setRejectingTarget(cardToDiscard)}
+        onEditEvent={(cardToEdit) => {
+          setSelectedPreviewCard(null)
+          setEditingEvent(cardToEdit)
+          setShowCreateEventModal(true)
+        }}
+        currentUserId={profile?.id}
+        currentUserNickname={profile?.nickname}
+        isAdmin={isAdminSession}
       />
 
       {/* Report Modal */}
@@ -462,13 +667,18 @@ export default function ExplorePage({
         onClose={() => setReportingTarget(null)}
       />
 
-      {/* Modal de Creación de Evento */}
+      {/* Modal de Creación y Edición de Evento */}
       <CreateEventModal
         isOpen={showCreateEventModal}
-        onClose={() => setShowCreateEventModal(false)}
+        onClose={() => {
+          setShowCreateEventModal(false)
+          setEditingEvent(null)
+        }}
         onCreateEvent={handleCreateEvent}
+        onUpdateEvent={handleUpdateEvent}
+        eventToEdit={editingEvent}
         userNickname={profile?.nickname || profile?.firstName || 'Creador LinkedSound'}
-        userLocation={profile?.location || 'Berlin, Germany'}
+        userLocation={profile?.location || ''}
       />
 
       {/* Reject / Pass Match Modal */}

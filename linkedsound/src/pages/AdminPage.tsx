@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import StatusBar from '../components/StatusBar'
-import { mockReports, mockActivity, mockUsers, mockExplorerItems } from '../data/mockData'
 import type { AppPage, Profile, UserReport, UserActivityLog, UserProfile, ExplorerItem, NotificationItem } from '../types'
 import { useDebounce } from '../hooks/useDebounce'
+import { api } from '../services/api'
 import {
   PiUsersBold,
   PiWarningOctagonBold,
@@ -44,11 +44,73 @@ export default function AdminPage({
 }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState<'reports' | 'users' | 'events' | 'activity'>('reports')
 
-  // Estados de datos interactivos desde mockData.ts
-  const [reports, setReports] = useState<UserReport[]>(mockReports)
-  const [users, setUsers] = useState<UserProfile[]>(mockUsers)
-  const [explorerItems, setExplorerItems] = useState<ExplorerItem[]>(mockExplorerItems)
-  const [activities, setActivities] = useState<UserActivityLog[]>(mockActivity)
+  // Estados de datos interactivos desde Supabase PostgreSQL
+  const [reports, setReports] = useState<UserReport[]>([])
+  const [users, setUsers] = useState<UserProfile[]>([])
+  const [explorerItems, setExplorerItems] = useState<ExplorerItem[]>([])
+  const [activities, setActivities] = useState<UserActivityLog[]>([])
+
+  // Cargar datos en vivo desde la base de datos de Supabase
+  useEffect(() => {
+    // 1. Usuarios
+    api.auth.getUsers({ all: true }).then((res) => {
+      if (res.success && Array.isArray(res.users)) {
+        const dbUsers: UserProfile[] = res.users.map((u: any) => ({
+          id: u.id,
+          firstName: u.firstName || '',
+          lastName: u.lastName || '',
+          nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
+          role: u.role || 'Artista',
+          location: u.location || 'No especificada',
+          description: u.description || '',
+          interestGenres: u.interestGenres || [],
+          soundcloudUrl: u.soundcloudUrl || '',
+          spotifyUrl: u.spotifyUrl || '',
+          instagramUrl: u.instagramUrl || '',
+          profileImage: u.profileImage || '',
+          email: u.email || '',
+          password: '••••••••',
+          status: (u.status as any) || 'Active',
+          reportsCount: u.reportsCount || 0,
+        }))
+        setUsers(dbUsers)
+      }
+    }).catch(() => {})
+
+    // 2. Reportes
+    api.reports.getAll().then((res) => {
+      if (res.success && Array.isArray(res.reports)) {
+        setReports(res.reports)
+      }
+    }).catch(() => {})
+
+    // 3. Eventos
+    api.events.getAll().then((res) => {
+      if (res.success && Array.isArray(res.events)) {
+        const items: ExplorerItem[] = res.events.map((ev: any) => ({
+          id: ev.id,
+          title: ev.title || ev.nickname,
+          type: 'Evento',
+          owner: ev.owner || 'Organizador',
+          location: ev.location || 'No especificada',
+          genres: ev.interestGenres || [],
+          status: ev.status === 'Active' ? 'Active' : 'Under Review',
+          createdDate: ev.eventDate || '2026-11-01',
+          views: 120,
+          description: ev.description || '',
+          image: ev.profileImage || '',
+        }))
+        setExplorerItems(items)
+      }
+    }).catch(() => {})
+
+    // 4. Actividad
+    api.activity.getAll().then((res) => {
+      if (res.success && Array.isArray(res.activities)) {
+        setActivities(res.activities)
+      }
+    }).catch(() => {})
+  }, [])
 
   // Filtros y búsquedas (Con Debounce)
   const [reportTargetTypeFilter, setReportTargetTypeFilter] = useState<'All' | 'Perfil' | 'Evento'>('All')
@@ -127,6 +189,7 @@ export default function AdminPage({
     }
 
     setActivities(prev => [newLog, ...prev])
+    api.activity.create({ action: actionText, module: targetModule }).catch(() => {})
   }
 
   // ── Handlers Reportes ──
@@ -157,6 +220,12 @@ export default function AdminPage({
       }
       return r
     }))
+
+    // Persistir en Supabase
+    api.reports.update(resolvingReport.id, {
+      status: 'Resolved',
+      adminComment: comment,
+    }).catch(() => {})
 
     // Registrar en Log de Auditoría
     logAdminAction(`Resolvió el reporte ${resolvingReport.id} sobre "${resolvingReport.reportedUser}". Comentario: "${comment}"`, 'Sistema')
@@ -203,6 +272,12 @@ export default function AdminPage({
       return r
     }))
 
+    // Persistir en Supabase
+    api.reports.update(dismissingReport.id, {
+      status: 'Dismissed',
+      adminComment: comment,
+    }).catch(() => {})
+
     // Registrar en Log de Auditoría
     logAdminAction(`Desestimó el reporte ${dismissingReport.id} sobre "${dismissingReport.reportedUser}". Motivo: "${comment}"`, 'Sistema')
 
@@ -223,6 +298,10 @@ export default function AdminPage({
 
   const handleSaveReportDetails = (updated: UserReport) => {
     setReports(prev => prev.map(r => r.id === updated.id ? updated : r))
+    api.reports.update(updated.id, {
+      severity: updated.severity,
+      adminComment: updated.adminComment,
+    }).catch(() => {})
     logAdminAction(`Actualizó severidad/anotación del reporte ${updated.id} sobre "${updated.reportedUser}"`, 'Sistema')
     setEditingReport(null)
   }
@@ -288,6 +367,7 @@ export default function AdminPage({
     const fullMotive = `${eventDeleteReason}${details ? `: ${details}` : ''}`
     
     setExplorerItems(prev => prev.filter(item => item.id !== deletingExplorerItem.id))
+    api.events.delete(deletingExplorerItem.id).catch(() => {})
 
     // Registrar en Log de Auditoría
     logAdminAction(`Dio de baja el evento "${deletingExplorerItem.title}" del organizador "${deletingExplorerItem.owner}". Motivo: "${fullMotive}"`, 'Explorer')

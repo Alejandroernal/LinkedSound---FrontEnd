@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 import DashboardPage from './pages/DashboardPage'
@@ -11,14 +11,11 @@ import ValidationPage from './pages/ValidationPage'
 import AdminPage from './pages/AdminPage'
 import MatchModal from './components/MatchModal'
 import type { AppPage, Profile, NotificationItem } from './types'
-import {
-  userNotifications as defaultUserNotifs,
-  adminNotifications as defaultAdminNotifs,
-  conversations as initialConversations,
-  messagesByConversation as initialMessages,
-  type ProfileCard,
-  type Conversation,
-  type Message,
+import { api, getToken, setToken, clearToken } from './services/api'
+import type {
+  ProfileCard,
+  Conversation,
+  Message,
 } from './data/mockData'
 
 const pagePaths: Record<AppPage, string> = {
@@ -41,22 +38,22 @@ type AuthSession = {
 const STORAGE_KEY = 'linkedsound_auth_session'
 const REGISTERED_USER_KEY = 'linkedsound_registered_user'
 
-const DEFAULT_DEMO_USER_PROFILE: Profile = {
-  firstName: 'Kaelen',
-  lastName: 'Voss',
-  nickname: 'Kaelen Voss',
-  email: 'kaelen@linkedsound.app',
-  password: 'password123',
-  role: 'Productor y Artista',
-  category: 'Productor y Artista',
-  location: 'Berlin, Germany',
-  description: 'Building cinematic soundscapes with modular synths, analog drums, and hybrid live vocals. Specialized in dark synthwave, electronic arrangements, and immersive audio production.',
-  interestGenres: ['Synthwave', 'Electronic', 'Dark Pop'],
-  tags: ['Synthwave', 'Analog', 'Live', 'Night Drive'],
-  spotifyUrl: 'https://open.spotify.com/artist/kaelenvoss',
-  instagramUrl: 'https://instagram.com/kaelenvoss',
-  soundcloudUrl: 'https://soundcloud.com/kaelen-voss',
-  profileImage: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+const EMPTY_PROFILE: Profile = {
+  firstName: '',
+  lastName: '',
+  nickname: '',
+  email: '',
+  password: '',
+  role: 'Artista',
+  category: 'Artista',
+  location: '',
+  description: '',
+  interestGenres: [],
+  tags: [],
+  spotifyUrl: '',
+  instagramUrl: '',
+  soundcloudUrl: '',
+  profileImage: '',
   allowEdit: true,
   allowPostRegister: true,
 }
@@ -117,25 +114,60 @@ function App() {
   const [registeredUser, setRegisteredUser] = useState<Profile | null>(getInitialRegisteredUser)
   const isAdminLoggedIn = authSession.isLoggedIn && authSession.role === 'admin'
 
-  // Profile starts with registered or demo user if logged in, or fallback
+  // Profile starts with registered or empty profile if logged in
   const [profile, setProfile] = useState<Profile>(() => {
     const storedReg = getInitialRegisteredUser()
     if (storedReg) return storedReg
-    const initialSession = getInitialAuthSession()
-    if (initialSession.isLoggedIn && initialSession.role === 'user') return DEFAULT_DEMO_USER_PROFILE
-    return DEFAULT_DEMO_USER_PROFILE
+    return EMPTY_PROFILE
   })
+
+  const [adminProfile, setAdminProfile] = useState<Profile>(EMPTY_PROFILE)
+
+  // Cargar usuario autenticado real desde la base de datos de Supabase si existe token
+  useEffect(() => {
+    const token = getToken()
+    if (!token) return
+
+    api.auth.getMe().then((res) => {
+      if (res.success && res.user) {
+        const u = res.user
+        const loaded: Profile = {
+          ...EMPTY_PROFILE,
+          ...u,
+          role: u.role || 'Artista',
+          category: u.role || 'Artista',
+          interestGenres: u.interestGenres || [],
+          allowEdit: true,
+          allowPostRegister: true,
+        }
+        if (u.role === 'Administrador' || u.role === 'Admin') {
+          setAdminProfile(loaded)
+          setProfile(loaded)
+          setAuthSession({ isLoggedIn: true, role: 'admin' })
+        } else {
+          setProfile(loaded)
+          setRegisteredUser(loaded)
+          setAuthSession({ isLoggedIn: true, role: 'user' })
+        }
+      } else {
+        clearToken()
+        setAuthSession({ isLoggedIn: false, role: null })
+      }
+    }).catch(() => {
+      // Backend temporalmente no disponible
+    })
+  }, [])
 
   // Borrador de registro independiente para evitar datos precargados
   const [registrationDraft, setRegistrationDraft] = useState<Profile>(EMPTY_REGISTER_PROFILE)
 
   // Estado de notificaciones para usuario normal y administrador
-  const [userNotifs, setUserNotifs] = useState<NotificationItem[]>(defaultUserNotifs)
-  const [adminNotifs, setAdminNotifs] = useState<NotificationItem[]>(defaultAdminNotifs)
+  const [userNotifs, setUserNotifs] = useState<NotificationItem[]>([])
+  const [adminNotifs, setAdminNotifs] = useState<NotificationItem[]>([])
 
   // Estado global para mensajes y conversaciones matcheadas
-  const [conversationsList, setConversationsList] = useState<Conversation[]>(initialConversations)
-  const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>(initialMessages)
+  const [conversationsList, setConversationsList] = useState<Conversation[]>([])
+  const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>({})
   const [activeChatId, setActiveChatId] = useState<string>('')
   const [matchedCard, setMatchedCard] = useState<ProfileCard | null>(null)
 
@@ -165,25 +197,49 @@ function App() {
     }
   }
 
-  const handleLoginAsAdmin = () => {
+  const handleLoginAsAdmin = (backendUser?: any) => {
     const session: AuthSession = { isLoggedIn: true, role: 'admin' }
     setAuthSession(session)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+
+    if (backendUser) {
+      const formatted: Profile = {
+        ...EMPTY_PROFILE,
+        ...backendUser,
+        role: 'Administrador',
+        category: backendUser.role || 'Administrador',
+        interestGenres: backendUser.interestGenres || [],
+        allowEdit: true,
+        allowPostRegister: true,
+      }
+      setAdminProfile(formatted)
+      setProfile(formatted)
+    }
   }
 
-  const handleLoginAsUser = (email?: string) => {
+  const handleLoginAsUser = (_email?: string, backendUser?: Partial<Profile>) => {
     const session: AuthSession = { isLoggedIn: true, role: 'user' }
     setAuthSession(session)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
 
-    if (email && email.toLowerCase() === 'kaelen@linkedsound.app') {
-      setProfile(DEFAULT_DEMO_USER_PROFILE)
-    } else if (email && registeredUser && registeredUser.email && email.toLowerCase() === registeredUser.email.toLowerCase()) {
+    if (backendUser) {
+      const merged: Profile = {
+        ...EMPTY_PROFILE,
+        ...backendUser,
+        role: backendUser.role || 'Artista',
+        category: backendUser.role || 'Artista',
+        interestGenres: backendUser.interestGenres || [],
+        allowEdit: true,
+        allowPostRegister: true,
+      }
+      setProfile(merged)
+      setRegisteredUser(merged)
+      localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify(merged))
+      return
+    }
+
+    if (registeredUser) {
       setProfile(registeredUser)
-    } else if (registeredUser) {
-      setProfile(registeredUser)
-    } else {
-      setProfile(DEFAULT_DEMO_USER_PROFILE)
     }
   }
 
@@ -196,48 +252,85 @@ function App() {
     })
   }
 
-  const handleRegisterComplete = () => {
+  const handleRegisterComplete = async (): Promise<{ success: boolean; message?: string }> => {
     const finalProfile: Profile = {
       ...registrationDraft,
-      role: registrationDraft.role || 'Productor y Artista',
-      category: registrationDraft.role || registrationDraft.category || 'Productor y Artista',
+      role: registrationDraft.role || 'Artista',
+      category: registrationDraft.role || registrationDraft.category || 'Artista',
     }
-    setRegisteredUser(finalProfile)
-    localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify(finalProfile))
-    setProfile(finalProfile)
-    const session: AuthSession = { isLoggedIn: true, role: 'user' }
-    setAuthSession(session)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
-    navigate('/discovery')
+
+    try {
+      const res = await api.auth.register({
+        email: finalProfile.email,
+        password: finalProfile.password,
+        firstName: finalProfile.firstName,
+        lastName: finalProfile.lastName,
+        nickname: finalProfile.nickname || `${finalProfile.firstName} ${finalProfile.lastName}`.trim(),
+        role: finalProfile.role,
+        location: finalProfile.location || 'No especificada',
+        country: finalProfile.country,
+        province: finalProfile.province,
+        city: finalProfile.city,
+        streetAddress: finalProfile.streetAddress,
+        latitude: finalProfile.latitude,
+        longitude: finalProfile.longitude,
+        interestGenres: finalProfile.interestGenres || [],
+        description: finalProfile.description,
+        soundcloudUrl: finalProfile.soundcloudUrl || finalProfile.soundcloud,
+        spotifyUrl: finalProfile.spotifyUrl || finalProfile.spotify,
+        instagramUrl: finalProfile.instagramUrl || finalProfile.instagram,
+        profileImage: finalProfile.profileImage,
+      })
+
+      if (!res.success) {
+        return {
+          success: false,
+          message: res.message || 'Error al registrar el usuario en el servidor.',
+        }
+      }
+
+      if (res.token) {
+        setToken(res.token)
+      }
+
+      const savedUser: Profile = res.user
+        ? {
+            ...EMPTY_PROFILE,
+            ...res.user,
+            interestGenres: res.user.interestGenres || finalProfile.interestGenres || [],
+            allowEdit: true,
+            allowPostRegister: true,
+          }
+        : finalProfile
+
+      setRegisteredUser(savedUser)
+      localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify(savedUser))
+      setProfile(savedUser)
+      const session: AuthSession = { isLoggedIn: true, role: 'user' }
+      setAuthSession(session)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+      return { success: true }
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err?.message || 'Error de conexión con el servidor al registrar el usuario.',
+      }
+    }
   }
 
   const handleSignOut = () => {
     setAuthSession({ isLoggedIn: false, role: null })
     localStorage.removeItem(STORAGE_KEY)
+    clearToken()
+    setConversationsList([])
+    setMessagesMap({})
+    setActiveChatId('')
+    setUserNotifs([])
+    setMatchedCard(null)
     // Borrador de registro limpio para el próximo alta
     setRegistrationDraft(EMPTY_REGISTER_PROFILE)
     navigate('/login')
   }
-
-  const [adminProfile, setAdminProfile] = useState<Profile>({
-    firstName: 'Admin',
-    lastName: 'User',
-    nickname: 'Admin User',
-    email: 'admin@linkedsound.app',
-    password: 'adminpassword123',
-    role: 'Administrador',
-    category: 'Productor y Artista',
-    location: 'LinkedSound HQ',
-    description: 'Administrador del sistema LinkedSound. Encargado de la gestión integral de usuarios, moderación activa de contenidos comunitarios y supervisión de la plataforma musical.',
-    interestGenres: ['Synthwave', 'DarkElectro', 'Cyberpunk'],
-    tags: ['Admin', 'Mod', 'System'],
-    spotifyUrl: 'https://spotify.com',
-    instagramUrl: 'https://instagram.com',
-    soundcloudUrl: 'https://soundcloud',
-    profileImage: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
-    allowEdit: true,
-    allowPostRegister: true,
-  })
 
   const activeProfile = isAdminLoggedIn ? adminProfile : profile
 
@@ -266,68 +359,59 @@ function App() {
     navigate(pagePaths[page])
   }
 
-  // Handler de Conexión / Match Mutuo (Tinder Style) desde Discovery o Explorer
-  const handleConnectProfile = (card: ProfileCard) => {
+  // Handler de Conexion y Verificacion de Match Mutuo persistente en base de datos
+  const handleConnectProfile = async (card: ProfileCard) => {
     const cardName = card.nickname || ('firstName' in card ? card.firstName : '') || 'Artista'
-    const convId = card.id || cardName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    const targetUserId = card.id
 
-    // Se realiza el Match si el perfil tiene preLiked === true o por defecto
-    const isMatch = card.preLiked === true || card.preLiked !== false
+    if (!targetUserId) {
+      return
+    }
 
-    if (isMatch) {
-      // 1. Notificación de Match
-      const matchNotif: NotificationItem = {
-        id: `notif_match_${Date.now()}`,
-        title: `¡Nuevo Match con ${cardName}!`,
-        message: `${cardName} también ha aceptado conectar contigo. ¡Hablad en Mensajes!`,
-        timestamp: 'Justo ahora',
-        read: false,
-        type: 'match',
-        linkPage: 'Messages',
+    try {
+      const res = await api.interactions.like(targetUserId)
+
+      if (res.success && res.isMatch) {
+        // 1. Notificacion de Match Mutuo confirmado
+        const matchNotif: NotificationItem = {
+          id: `notif_match_${Date.now()}`,
+          title: `¡Nuevo Match con ${cardName}!`,
+          message: `${cardName} tambien ha conectado contigo. ¡Ya pueden conversar en Mensajes!`,
+          timestamp: 'Justo ahora',
+          read: false,
+          type: 'match',
+          linkPage: 'Messages',
+        }
+        setUserNotifs((prev) => [matchNotif, ...prev])
+
+        // 2. Incorporar la conversacion persistente creada en PostgreSQL
+        if (res.conversation) {
+          const conv = res.conversation
+          setConversationsList((prev) => {
+            const exists = prev.some((c) => c.id === conv.id)
+            if (exists) return prev
+            return [conv, ...prev]
+          })
+          setActiveChatId(conv.id)
+        }
+
+        // 3. Abrir Modal de Celebracion de Match
+        setMatchedCard(card)
+      } else if (res.success) {
+        // Like registrado pero pendiente de reciprocidad
+        const likeSentNotif: NotificationItem = {
+          id: `notif_like_${Date.now()}`,
+          title: `Like enviado a ${cardName}`,
+          message: `Has enviado un like a ${cardName}. Si coincide contigo, se creara el chat.`,
+          timestamp: 'Justo ahora',
+          read: false,
+          type: 'like',
+          linkPage: 'Messages',
+        }
+        setUserNotifs((prev) => [likeSentNotif, ...prev])
       }
-      setUserNotifs((prev) => [matchNotif, ...prev])
-
-      // 2. Crear nueva conversación si no existe
-      setConversationsList((prev) => {
-        const exists = prev.some((c) => c.id === convId || c.name.toLowerCase() === cardName.toLowerCase())
-        if (exists) return prev
-
-        const newConv: Conversation = {
-          id: convId,
-          name: cardName,
-          role: card.role || (card.isProfile !== false ? 'Productor y Artista' : 'Evento'),
-          avatar: cardName.substring(0, 2).toUpperCase(),
-          accent: 'purple',
-          status: 'Conectado (Match)',
-          preview: `¡Habéis conectado! Empieza la conversación.`,
-          time: 'Ahora',
-          unread: 1,
-          profileImage: card.profileImage,
-          location: card.location,
-        }
-        return [newConv, ...prev]
-      })
-
-      // 3. Crear mensaje de bienvenida inicial
-      setMessagesMap((prev) => {
-        if (prev[convId] && prev[convId].length > 0) return prev
-        const welcomeMsg: Message = {
-          id: `msg_match_${Date.now()}`,
-          sender: 'them',
-          text: `¡Hola ${profile.firstName || 'Kaelen'}! Qué genial que hayamos conectado por LinkedSound. Me encanta tu perfil y tu música.`,
-          time: 'Justo ahora',
-        }
-        return {
-          ...prev,
-          [convId]: [welcomeMsg],
-        }
-      })
-
-      // 4. Seleccionar la nueva conversación
-      setActiveChatId(convId)
-
-      // 5. Abrir Modal de Celebración de Match
-      setMatchedCard(card)
+    } catch (error) {
+      console.error('Error al conectar perfil:', error)
     }
   }
 

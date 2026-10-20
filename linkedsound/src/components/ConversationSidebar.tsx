@@ -9,6 +9,7 @@ import {
   PiUserMinusBold,
   PiDotsThreeVerticalBold,
   PiSparkleFill,
+  PiXBold,
 } from 'react-icons/pi'
 import type { Conversation, Message, NewMatchItem } from '../data/mockData'
 
@@ -119,7 +120,7 @@ export default function ConversationSidebar({
             }}
             onClick={() => setSearchQuery('')}
           >
-            ✕
+            <PiXBold />
           </button>
         )}
       </div>
@@ -206,7 +207,7 @@ export default function ConversationSidebar({
             const lastMessageDisplay = conversation.blocked
               ? '[Usuario bloqueado]'
               : lastMsg
-              ? (lastMsg.text || (lastMsg.attachment ? `📎 ${lastMsg.attachment.name}` : ''))
+              ? (lastMsg.text || (lastMsg.attachment ? `[Archivo] ${lastMsg.attachment.name}` : ''))
               : conversation.preview
 
             return (

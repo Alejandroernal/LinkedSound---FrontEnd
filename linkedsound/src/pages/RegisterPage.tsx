@@ -5,6 +5,7 @@ import {
   PiEyeBold,
   PiEyeSlashBold,
   PiCaretDownBold,
+  PiXBold,
 } from 'react-icons/pi'
 
 const AVAILABLE_GENRES = [
@@ -130,7 +131,7 @@ export function AvatarEditorModal({
 
         <div className="ls-av-modal__header">
           <span>Editar foto de perfil</span>
-          <button className="ls-av-modal__close" onClick={onCancel}>✕</button>
+          <button className="ls-av-modal__close" onClick={onCancel} aria-label="Cerrar"><PiXBold /></button>
         </div>
 
         <canvas

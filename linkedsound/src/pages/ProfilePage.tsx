@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { FaSoundcloud, FaSpotify, FaInstagram } from 'react-icons/fa6'
-import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold } from 'react-icons/pi'
+import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold, PiCheckBold, PiWarningOctagonBold, PiXBold } from 'react-icons/pi'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import { AvatarEditorModal } from './RegisterPage'
 import type { AppPage, Profile, NotificationItem } from '../types'
+import { api } from '../services/api'
 
 type ProfilePageProps = {
   activePage?: AppPage
@@ -81,6 +82,12 @@ export default function ProfilePage({
   const [isSearching, setIsSearching] = useState(false)
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(0)
+
+  const [verifiedLocation, setVerifiedLocation] = useState(profile.location || '')
+  const [isLocationVerified, setIsLocationVerified] = useState(Boolean(profile.location && profile.location.trim()))
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null)
 
   // Editor modal recortador de imagen
   const [rawImage, setRawImage] = useState<string | null>(null)
@@ -93,11 +100,13 @@ export default function ProfilePage({
 
   const handleStartEdit = () => {
     setInitialProfileSnapshot({ ...profile })
+    setVerifiedLocation(profile.location || '')
+    setIsLocationVerified(Boolean(profile.location && profile.location.trim()))
     setIsEditing(true)
     setInvalidFields({})
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     const errors: Record<string, boolean> = {}
 
     if (!profile.firstName?.trim()) errors.firstName = true
@@ -105,7 +114,10 @@ export default function ProfilePage({
     if (!profile.nickname?.trim()) errors.nickname = true
     if (!profile.email?.trim()) errors.email = true
     if (!profile.password?.trim()) errors.password = true
-    if (!profile.location?.trim()) errors.location = true
+    
+    const locTrim = profile.location?.trim() || ''
+    const isLocValid = isLocationVerified && locTrim.length > 0 && locTrim.toLowerCase() === verifiedLocation.trim().toLowerCase()
+    if (!isLocValid) errors.location = true
     
     const descTrimmed = profile.description?.trim() || ''
     if (!descTrimmed || descTrimmed.length < 139) {
@@ -118,8 +130,50 @@ export default function ProfilePage({
     }
 
     setInvalidFields({})
-    setIsEditing(false)
-    setInitialProfileSnapshot(null)
+    setIsSaving(true)
+
+    try {
+      const response = await api.auth.updateProfile({
+        firstName: profile.firstName?.trim(),
+        lastName: profile.lastName?.trim(),
+        nickname: profile.nickname?.trim(),
+        role: profile.role || profile.category || 'Artista',
+        location: locTrim,
+        description: descTrimmed,
+        interestGenres: profile.interestGenres || [],
+        soundcloudUrl: profile.soundcloudUrl || profile.soundcloud,
+        spotifyUrl: profile.spotifyUrl || profile.spotify,
+        instagramUrl: profile.instagramUrl || profile.instagram,
+        profileImage: profile.profileImage,
+      })
+
+      if (!response.success) {
+        setSaveErrorMessage(response.message || 'No se pudo guardar los cambios en la base de datos.')
+        return
+      }
+
+      if (response.user) {
+        const u = response.user
+        if (u.firstName) onProfileChange('firstName', u.firstName)
+        if (u.lastName) onProfileChange('lastName', u.lastName)
+        if (u.nickname) onProfileChange('nickname', u.nickname)
+        if (u.role) {
+          onProfileChange('role', u.role)
+          onProfileChange('category', u.role)
+        }
+        if (u.location) onProfileChange('location', u.location)
+        if (u.description) onProfileChange('description', u.description)
+        if (u.profileImage) onProfileChange('profileImage', u.profileImage)
+        if (Array.isArray(u.interestGenres)) onProfileChange('interestGenres', u.interestGenres)
+      }
+
+      setIsEditing(false)
+      setInitialProfileSnapshot(null)
+    } catch (err: any) {
+      setSaveErrorMessage(err?.message || 'Error al conectar con el servidor para actualizar el perfil.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const getInputStyle = (fieldName: string) => {
@@ -140,6 +194,20 @@ export default function ProfilePage({
       return (
         <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
           La descripción es obligatoria y debe tener como mínimo 139 caracteres (actual: {currentLen}).
+        </small>
+      )
+    }
+    if (fieldName === 'location') {
+      if (!profile.location?.trim()) {
+        return (
+          <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+            La ubicación es obligatoria.
+          </small>
+        )
+      }
+      return (
+        <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+          Debes seleccionar una localidad válida de la lista sugerida o seleccionarla en el mapa.
         </small>
       )
     }
@@ -236,9 +304,29 @@ export default function ProfilePage({
         ''
       const country = data.address?.country || ''
       const label = [city, country].filter(Boolean).join(', ')
-      onProfileChange('location', label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`)
+      const finalLoc = label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`
+      onProfileChange('location', finalLoc)
+      setVerifiedLocation(finalLoc)
+      setIsLocationVerified(true)
+      if (invalidFields.location) {
+        setInvalidFields((prev) => {
+          const next = { ...prev }
+          delete next.location
+          return next
+        })
+      }
     } catch {
-      onProfileChange('location', `${lat.toFixed(3)}, ${lon.toFixed(3)}`)
+      const fallback = `${lat.toFixed(3)}, ${lon.toFixed(3)}`
+      onProfileChange('location', fallback)
+      setVerifiedLocation(fallback)
+      setIsLocationVerified(true)
+      if (invalidFields.location) {
+        setInvalidFields((prev) => {
+          const next = { ...prev }
+          delete next.location
+          return next
+        })
+      }
     } finally {
       setIsLocating(false)
     }
@@ -276,12 +364,14 @@ export default function ProfilePage({
         })
         setSuggestions(results)
         setShowSuggestions(true)
+        setHighlightedIndex(0)
       } else {
         const matches = PRESET_LOCATIONS.filter((loc) =>
           loc.label.toLowerCase().includes(trimmed)
         )
         setSuggestions(matches)
         setShowSuggestions(matches.length > 0)
+        setHighlightedIndex(0)
       }
     } catch {
       const matches = PRESET_LOCATIONS.filter((loc) =>
@@ -289,6 +379,7 @@ export default function ProfilePage({
       )
       setSuggestions(matches)
       setShowSuggestions(matches.length > 0)
+      setHighlightedIndex(0)
     } finally {
       setIsSearching(false)
     }
@@ -296,7 +387,16 @@ export default function ProfilePage({
 
   const handleSelectLocation = (loc: LocationSuggestion) => {
     onProfileChange('location', loc.label)
+    setVerifiedLocation(loc.label)
+    setIsLocationVerified(true)
     setShowSuggestions(false)
+    if (invalidFields.location) {
+      setInvalidFields((prev) => {
+        const next = { ...prev }
+        delete next.location
+        return next
+      })
+    }
 
     if (mapRef.current) {
       mapRef.current.flyTo({ center: [loc.lon, loc.lat], zoom: 12 })
@@ -306,6 +406,24 @@ export default function ProfilePage({
         markerRef.current = new maplibregl.Marker({ color: '#a855f7' })
           .setLngLat([loc.lon, loc.lat])
           .addTo(mapRef.current)
+      }
+    }
+  }
+
+  const handleLocationKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev + 1) % suggestions.length)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault()
+        const target = suggestions[highlightedIndex] || suggestions[0]
+        handleSelectLocation(target)
+      } else if (e.key === 'Escape') {
+        setShowSuggestions(false)
       }
     }
   }
@@ -472,10 +590,21 @@ export default function ProfilePage({
 
             {isEditing ? (
               <div className="ls-profile-edit-actions">
-                <button type="button" className="ls-primary-button" onClick={handleSaveEdit}>
-                  Guardar cambios
+                <button
+                  type="button"
+                  className="ls-primary-button"
+                  onClick={handleSaveEdit}
+                  disabled={isSaving}
+                  style={{ opacity: isSaving ? 0.7 : 1 }}
+                >
+                  {isSaving ? 'Guardando cambios...' : 'Guardar cambios'}
                 </button>
-                <button type="button" className="ls-secondary-button" onClick={handleCancelEdit}>
+                <button
+                  type="button"
+                  className="ls-secondary-button"
+                  onClick={handleCancelEdit}
+                  disabled={isSaving}
+                >
                   Cancelar
                 </button>
               </div>
@@ -622,8 +751,12 @@ export default function ProfilePage({
                       onChange={(e) => {
                         const val = e.target.value
                         handleChange('location', val)
+                        if (val.trim().toLowerCase() !== verifiedLocation.trim().toLowerCase()) {
+                          setIsLocationVerified(false)
+                        }
                         searchLocation(val)
                       }}
+                      onKeyDown={handleLocationKeyDown}
                       onFocus={() => {
                         if (suggestions.length > 0) setShowSuggestions(true)
                       }}
@@ -634,20 +767,55 @@ export default function ProfilePage({
                     />
                     {renderFieldError('location')}
 
+                    {isLocationVerified && (profile.location?.trim() || '').length > 0 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: '#10b981',
+                          fontSize: '0.78rem',
+                          marginTop: '6px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <PiCheckBold style={{ fontSize: '0.95rem' }} />
+                        <span>Localidad verificada: {verifiedLocation}</span>
+                      </div>
+                    )}
+
+                    {!isLocationVerified && (profile.location?.trim() || '').length > 0 && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: '#f59e0b',
+                          fontSize: '0.78rem',
+                          marginTop: '6px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <PiWarningOctagonBold style={{ fontSize: '0.95rem' }} />
+                        <span>Debes seleccionar una opción sugerida (clic, Tab o Enter) o marcarla en el mapa.</span>
+                      </div>
+                    )}
+
                     {showSuggestions && suggestions.length > 0 && (
                       <div className="ls-autocomplete-dropdown" role="listbox">
                         {suggestions.map((item, idx) => (
                           <div
                             key={`${item.lat}-${item.lon}-${idx}`}
-                            className="ls-autocomplete-item"
+                            className={`ls-autocomplete-item ${idx === highlightedIndex ? 'active' : ''}`}
                             role="option"
+                            aria-selected={idx === highlightedIndex}
                             onMouseDown={(e) => {
                               e.preventDefault()
                               handleSelectLocation(item)
                             }}
                           >
                             <span className="ls-ac-text">{item.full}</span>
-                            <span className="ls-ac-badge">Elegir</span>
+                            <span className="ls-ac-badge">{idx === highlightedIndex ? 'Tab / Enter' : 'Elegir'}</span>
                           </div>
                         ))}
                       </div>
@@ -863,7 +1031,7 @@ export default function ProfilePage({
                   {renderFieldError('email')}
                 </>
               ) : (
-                <span>{profile.email || 'kaelen@linkedsound.app'}</span>
+                <span>{profile.email || 'Sin correo'}</span>
               )}
             </div>
 
@@ -1041,6 +1209,51 @@ export default function ProfilePage({
                 onClick={handleConfirmDiscard}
               >
                 Sí, descartar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Error al Guardar Perfil */}
+      {saveErrorMessage && (
+        <div className="ls-modal-overlay" onClick={() => setSaveErrorMessage(null)}>
+          <div
+            className="ls-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(100%, 440px)',
+              background: '#0f1325',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              borderRadius: '18px',
+              padding: '24px',
+              boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444' }}>
+                <PiWarningOctagonBold style={{ fontSize: '1.4rem' }} />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>Error al guardar perfil</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSaveErrorMessage(null)}
+                style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.6)', cursor: 'pointer', fontSize: '1.2rem', padding: 0 }}
+                aria-label="Cerrar modal"
+              >
+                <PiXBold />
+              </button>
+            </div>
+            <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', lineHeight: 1.5, margin: '0 0 20px' }}>
+              {saveErrorMessage}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="ls-primary-button"
+                onClick={() => setSaveErrorMessage(null)}
+              >
+                Aceptar
               </button>
             </div>
           </div>

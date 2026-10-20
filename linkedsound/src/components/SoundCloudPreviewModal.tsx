@@ -16,6 +16,7 @@ import {
   PiFlameBold,
   PiWarningBold,
   PiTimerBold,
+  PiPencilSimpleBold,
 } from 'react-icons/pi'
 import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
@@ -27,6 +28,10 @@ type SoundCloudPreviewModalProps = {
   onClose: () => void
   onConnectProfile?: (card: ProfileCard) => void
   onDiscardProfile?: (card: ProfileCard) => void
+  onEditEvent?: (card: ProfileCard) => void
+  currentUserId?: string
+  currentUserNickname?: string
+  isAdmin?: boolean
 }
 
 const PRESET_COORDINATES: Record<string, [number, number]> = {
@@ -44,6 +49,10 @@ export default function SoundCloudPreviewModal({
   onClose,
   onConnectProfile,
   onDiscardProfile,
+  onEditEvent,
+  currentUserId,
+  currentUserNickname,
+  isAdmin,
 }: SoundCloudPreviewModalProps) {
   const [activeEmbedUrl, setActiveEmbedUrl] = useState<string | null>(null)
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null)
@@ -318,7 +327,7 @@ export default function SoundCloudPreviewModal({
                     {card.country && <div style={{ textAlign: 'left' }}><strong>País:</strong> {card.country}</div>}
                   </div>
                 )}
-                {card.ticketUrl && !card.isFinished && (
+                {card.ticketUrl && card.ticketUrl.trim() && !card.isFinished && (
                   <a
                     href={card.ticketUrl}
                     target="_blank"
@@ -368,9 +377,90 @@ export default function SoundCloudPreviewModal({
                 <span key={tag}>{tag}</span>
               ))}
             </div>
-            <button type="button" className="ls-secondary-button" onClick={handleCloseModal} style={{ marginTop: '16px' }}>
-              Cerrar Vista Previa
-            </button>
+
+            {/* Acciones de Vista Previa y Edición */}
+            {(() => {
+              const isOwner = Boolean(
+                isAdmin ||
+                (currentUserId && card.ownerId && card.ownerId === currentUserId) ||
+                (currentUserNickname && card.ownerNickname && card.ownerNickname.toLowerCase() === currentUserNickname.toLowerCase()) ||
+                (currentUserNickname && card.owner && card.owner.toLowerCase() === currentUserNickname.toLowerCase())
+              )
+
+              const eventCreatedAt = card.createdAt ? new Date(card.createdAt).getTime() : null
+              const isEventExpired = eventCreatedAt ? (Date.now() - eventCreatedAt) > 24 * 60 * 60 * 1000 : false
+              const remainingEventHours = eventCreatedAt ? Math.max(0, 24 - (Date.now() - eventCreatedAt) / (1000 * 60 * 60)) : 24
+
+              return (
+                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  {isOwner && onEditEvent && (
+                    <div style={{ marginBottom: '12px' }}>
+                      {isEventExpired ? (
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            color: '#fca5a5',
+                            fontSize: '0.78rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <PiWarningBold size={16} style={{ flexShrink: 0, color: '#ef4444' }} />
+                          <span>Plazo de modificación expirado: han transcurrido más de 24 horas desde su creación.</span>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            background: 'rgba(168, 85, 247, 0.12)',
+                            border: '1px solid rgba(168, 85, 247, 0.3)',
+                            color: '#e9d5ff',
+                            fontSize: '0.78rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <PiClockBold size={16} style={{ flexShrink: 0, color: '#c084fc' }} />
+                          <span>Ventana de edición activa: restan {remainingEventHours.toFixed(1)} horas para realizar modificaciones.</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button type="button" className="ls-secondary-button" onClick={handleCloseModal}>
+                      Cerrar Vista Previa
+                    </button>
+                    {isOwner && onEditEvent && (
+                      <button
+                        type="button"
+                        className="ls-primary-button"
+                        disabled={isEventExpired}
+                        onClick={() => {
+                          onEditEvent(card)
+                          handleCloseModal()
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          opacity: isEventExpired ? 0.5 : 1,
+                          cursor: isEventExpired ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <PiPencilSimpleBold /> Editar Evento
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         ) : (
           <div className="ls-sc-preview-container">

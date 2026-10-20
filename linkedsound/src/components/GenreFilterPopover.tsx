@@ -84,7 +84,7 @@ export default function GenreFilterPopover({
                 onClick={() => setSearchQuery('')}
                 title="Limpiar búsqueda de género"
               >
-                ✕
+                <PiXBold />
               </button>
             )}
           </div>

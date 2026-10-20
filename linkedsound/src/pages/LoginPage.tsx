@@ -2,11 +2,12 @@ import { useState } from 'react'
 import type { AppPage } from '../types'
 import ForgotPasswordModal from '../components/ForgotPasswordModal'
 import { PiWarningOctagonBold, PiEyeBold, PiEyeSlashBold } from 'react-icons/pi'
+import { api, setToken } from '../services/api'
 
 type LoginPageProps = {
   onNavigate?: (page: AppPage) => void
-  onLoginAsAdmin?: () => void
-  onLoginAsUser?: (userEmail?: string) => void
+  onLoginAsAdmin?: (adminData?: any) => void
+  onLoginAsUser?: (userEmail?: string, userData?: any) => void
   registeredEmail?: string
   registeredPassword?: string
 }
@@ -18,15 +19,16 @@ export default function LoginPage({
   registeredEmail,
   registeredPassword,
 }: LoginPageProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState(registeredEmail || '')
+  const [password, setPassword] = useState(registeredPassword || '')
   const [showPassword, setShowPassword] = useState(false)
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [emailError, setEmailError] = useState(false)
   const [passwordError, setPasswordError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     const trimmedEmail = email.trim().toLowerCase()
     const trimmedPassword = password.trim()
 
@@ -50,48 +52,42 @@ export default function LoginPage({
       return
     }
 
-    // 3. Comprobar si son credenciales de Administrador
-    const isAdminCreds =
-      trimmedEmail === 'admin@linkedsound.app' &&
-      (trimmedPassword === 'adminpassword123' || trimmedPassword === 'admin123')
+    // 3. Autenticar con el Backend conectado a la base de datos de Supabase
+    setIsLoading(true)
+    try {
+      const response = await api.auth.login({
+        email: trimmedEmail,
+        password: trimmedPassword,
+      })
 
-    if (isAdminCreds) {
-      onLoginAsAdmin?.()
-      onNavigate?.('Admin')
-      return
+      if (response.success && response.user) {
+        if (response.token) {
+          setToken(response.token)
+        }
+
+        // Si el usuario registrado en la base de datos tiene rol de Administrador
+        if (response.user.role === 'Administrador' || response.user.role === 'Admin') {
+          onLoginAsAdmin?.(response.user)
+          onNavigate?.('Admin')
+          return
+        }
+
+        // Usuario normal
+        onLoginAsUser?.(trimmedEmail, response.user)
+        onNavigate?.('Discovery')
+        return
+      }
+
+      setEmailError(true)
+      setPasswordError(true)
+      setErrorMsg(response.message || 'El correo electrónico o la contraseña ingresados son incorrectos.')
+    } catch {
+      setEmailError(true)
+      setPasswordError(true)
+      setErrorMsg('No se pudo establecer conexión con el servidor. Verifica que el backend esté activo.')
+    } finally {
+      setIsLoading(false)
     }
-
-    // 4. Comprobar si son credenciales de Usuario Normal
-    const isNormalUserCreds =
-      (trimmedEmail === 'kaelen@linkedsound.app' && trimmedPassword === 'password123') ||
-      (registeredEmail && trimmedEmail === registeredEmail.toLowerCase() && registeredPassword && trimmedPassword === registeredPassword)
-
-    if (isNormalUserCreds) {
-      onLoginAsUser?.(trimmedEmail)
-      onNavigate?.('Discovery')
-      return
-    }
-
-    // 5. Credenciales incorrectas (Mensaje genérico sin revelar cuál falló)
-    setEmailError(true)
-    setPasswordError(true)
-    setErrorMsg('El correo electrónico o la contraseña ingresados son incorrectos.')
-  }
-
-  const handleDemoUser = () => {
-    setEmail('kaelen@linkedsound.app')
-    setPassword('password123')
-    setErrorMsg(null)
-    setEmailError(false)
-    setPasswordError(false)
-  }
-
-  const handleDemoAdmin = () => {
-    setEmail('admin@linkedsound.app')
-    setPassword('adminpassword123')
-    setErrorMsg(null)
-    setEmailError(false)
-    setPasswordError(false)
   }
 
   return (
@@ -170,52 +166,6 @@ export default function LoginPage({
             </div>
           </label>
 
-          {/* Seleccion rápida de demo */}
-          <div style={{
-            margin: '8px 0',
-            padding: '10px 12px',
-            background: 'rgba(255, 255, 255, 0.04)',
-            borderRadius: '8px',
-            border: '1px dashed rgba(255, 255, 255, 0.15)',
-            fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.7)'
-          }}>
-            <div style={{ fontWeight: 600, color: '#fff', marginBottom: '4px' }}>Autocompletar datos para Demo:</div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-              <button
-                type="button"
-                onClick={handleDemoUser}
-                style={{
-                  background: !email.includes('admin') ? 'rgba(0,229,255,0.2)' : 'transparent',
-                  border: '1px solid rgba(0,229,255,0.4)',
-                  color: '#00e5ff',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '11px'
-                }}
-              >
-                Usuario Normal
-              </button>
-              <button
-                type="button"
-                onClick={handleDemoAdmin}
-                style={{
-                  background: email.includes('admin') ? 'rgba(255,60,110,0.2)' : 'transparent',
-                  border: '1px solid rgba(255,60,110,0.4)',
-                  color: '#ff3c6e',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 600
-                }}
-              >
-                Administrador
-              </button>
-            </div>
-          </div>
-
           <div className="ls-auth-row">
             <label className="ls-check-line">
               <input type="checkbox" defaultChecked />
@@ -253,11 +203,13 @@ export default function LoginPage({
           <button
             type="submit"
             className="ls-primary-button ls-auth-button"
+            disabled={isLoading}
             style={{
-              background: email.includes('admin') ? 'linear-gradient(135deg, #ff3c6e 0%, #a10035 100%)' : undefined
+              opacity: isLoading ? 0.7 : 1,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
             }}
           >
-            {email.includes('admin') ? 'Ingresar como Administrador' : 'Iniciar sesión'}
+            {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </button>
         </form>
 

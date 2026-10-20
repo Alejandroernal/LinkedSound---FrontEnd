@@ -1,6 +1,8 @@
-import { tags } from '../data/mockData'
+type HeroCardProps = {
+  tags?: string[]
+}
 
-export default function HeroCard() {
+export default function HeroCard({ tags = [] }: HeroCardProps) {
   return (
     <div className="ls-hero-card">
       <div className="ls-hero-image">

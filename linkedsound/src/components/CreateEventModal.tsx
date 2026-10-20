@@ -10,7 +10,12 @@ import {
   PiCheckBold,
   PiWarningBold,
   PiEyeSlashBold,
-  PiNavigationArrowBold
+  PiNavigationArrowBold,
+  PiUploadSimpleBold,
+  PiClockBold,
+  PiPencilSimpleBold,
+  PiImageBold,
+  PiTrashBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 
@@ -18,6 +23,8 @@ type CreateEventModalProps = {
   isOpen: boolean
   onClose: () => void
   onCreateEvent: (newEvent: ProfileCard) => void
+  onUpdateEvent?: (updatedEvent: ProfileCard) => void
+  eventToEdit?: ProfileCard | null
   userNickname?: string
   userLocation?: string
 }
@@ -27,19 +34,22 @@ type LocationSuggestion = {
   lat: number
   lon: number
   full: string
+  country?: string
+  province?: string
+  city?: string
 }
 
 const PRESET_LOCATIONS: LocationSuggestion[] = [
-  { label: 'Berlin, Germany', lat: 52.520, lon: 13.405, full: 'Berlin, Germany' },
-  { label: 'London, United Kingdom', lat: 51.507, lon: -0.127, full: 'London, England, United Kingdom' },
-  { label: 'New York, USA', lat: 40.712, lon: -74.006, full: 'New York, NY, United States' },
-  { label: 'Los Angeles, USA', lat: 34.052, lon: -118.243, full: 'Los Angeles, CA, United States' },
-  { label: 'Paris, France', lat: 48.856, lon: 2.352, full: 'Paris, Île-de-France, France' },
-  { label: 'Madrid, Spain', lat: 40.416, lon: -3.703, full: 'Madrid, Community of Madrid, Spain' },
-  { label: 'Buenos Aires, Argentina', lat: -34.603, lon: -58.381, full: 'Buenos Aires, Argentina' },
-  { label: 'Tokyo, Japan', lat: 35.676, lon: 139.650, full: 'Tokyo, Japan' },
-  { label: 'Amsterdam, Netherlands', lat: 52.367, lon: 4.904, full: 'Amsterdam, Netherlands' },
-  { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico' },
+  { label: 'Berlin, Germany', lat: 52.520, lon: 13.405, full: 'Berlin, Germany', country: 'Alemania', province: 'Berlín', city: 'Berlin' },
+  { label: 'London, United Kingdom', lat: 51.507, lon: -0.127, full: 'London, England, United Kingdom', country: 'Reino Unido', province: 'England', city: 'London' },
+  { label: 'New York, USA', lat: 40.712, lon: -74.006, full: 'New York, NY, United States', country: 'Estados Unidos', province: 'New York', city: 'New York' },
+  { label: 'Los Angeles, USA', lat: 34.052, lon: -118.243, full: 'Los Angeles, CA, United States', country: 'Estados Unidos', province: 'California', city: 'Los Angeles' },
+  { label: 'Paris, France', lat: 48.856, lon: 2.352, full: 'Paris, Île-de-France, France', country: 'Francia', province: 'Île-de-France', city: 'Paris' },
+  { label: 'Madrid, Spain', lat: 40.416, lon: -3.703, full: 'Madrid, Community of Madrid, Spain', country: 'España', province: 'Madrid', city: 'Madrid' },
+  { label: 'Buenos Aires, Argentina', lat: -34.603, lon: -58.381, full: 'Buenos Aires, Argentina', country: 'Argentina', province: 'Buenos Aires', city: 'Buenos Aires' },
+  { label: 'Tokyo, Japan', lat: 35.676, lon: 139.650, full: 'Tokyo, Japan', country: 'Japón', province: 'Tokyo', city: 'Tokyo' },
+  { label: 'Amsterdam, Netherlands', lat: 52.367, lon: 4.904, full: 'Amsterdam, Netherlands', country: 'Países Bajos', province: 'North Holland', city: 'Amsterdam' },
+  { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico', country: 'México', province: 'CDMX', city: 'Ciudad de México' },
 ]
 
 const genreOptions = [
@@ -55,22 +65,29 @@ const genreOptions = [
   'Darkwave',
   'Electronic',
   'Vocal',
-  'Experimental'
+  'Experimental',
 ]
 
 export default function CreateEventModal({
   isOpen,
   onClose,
   onCreateEvent,
-  userNickname = 'Kaelen Voss',
-  userLocation = 'Berlin, Germany',
+  onUpdateEvent,
+  eventToEdit,
+  userNickname = 'Organizador',
+  userLocation = '',
 }: CreateEventModalProps) {
+  const isEditing = Boolean(eventToEdit && eventToEdit.id)
+
   const [title, setTitle] = useState('')
   const [role, setRole] = useState('Showcase & Live Performance')
   const [location, setLocation] = useState(userLocation)
-  const [country, setCountry] = useState('Alemania')
-  const [province, setProvince] = useState('Berlín')
-  const [city, setCity] = useState('Mitte')
+  const [verifiedLocation, setVerifiedLocation] = useState(userLocation)
+  const [isLocationVerified, setIsLocationVerified] = useState(Boolean(userLocation && userLocation.trim()))
+
+  const [country, setCountry] = useState('')
+  const [province, setProvince] = useState('')
+  const [city, setCity] = useState('')
   const [streetAddress, setStreetAddress] = useState('')
 
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
@@ -86,20 +103,63 @@ export default function CreateEventModal({
   const [description, setDescription] = useState('')
   const [ticketUrl, setTicketUrl] = useState('')
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Live', 'Techno'])
-  const [profileImage, setProfileImage] = useState(
-    'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80'
-  )
+  const [profileImage, setProfileImage] = useState('')
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const updateLocationFromParts = (c: string, p: string, ct: string, st: string) => {
-    const parts = [st, ct, p, c].filter(Boolean)
-    if (parts.length > 0) {
-      setLocation(parts.join(', '))
+  // Cálculo de lapso de modificación de 24 horas
+  const createdAtTime = eventToEdit?.createdAt ? new Date(eventToEdit.createdAt).getTime() : null
+  const isExpired = isEditing && createdAtTime ? (Date.now() - createdAtTime) > 24 * 60 * 60 * 1000 : false
+  const remainingHours = isEditing && createdAtTime
+    ? Math.max(0, 24 - (Date.now() - createdAtTime) / (1000 * 60 * 60))
+    : 24
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    if (eventToEdit) {
+      const evTitle = eventToEdit.nickname || eventToEdit.title || ''
+      setTitle(evTitle)
+      setRole(eventToEdit.role || 'Showcase & Live Performance')
+      const evLoc = eventToEdit.location || ''
+      setLocation(evLoc)
+      setVerifiedLocation(evLoc)
+      setIsLocationVerified(Boolean(evLoc.trim()))
+      setCountry(eventToEdit.country || '')
+      setProvince(eventToEdit.province || '')
+      setCity(eventToEdit.city || '')
+      setStreetAddress(eventToEdit.streetAddress || '')
+      setVenue(eventToEdit.venue || '')
+      setEventDate(eventToEdit.eventDate || '')
+      setEventTime(eventToEdit.eventTime || '22:00')
+      setDescription(eventToEdit.description || '')
+      setTicketUrl(eventToEdit.ticketUrl || '')
+      setSelectedGenres(eventToEdit.interestGenres && eventToEdit.interestGenres.length > 0 ? eventToEdit.interestGenres : ['Live', 'Techno'])
+      setProfileImage(eventToEdit.profileImage || '')
+    } else {
+      setTitle('')
+      setRole('Showcase & Live Performance')
+      const initialLoc = userLocation || ''
+      setLocation(initialLoc)
+      setVerifiedLocation(initialLoc)
+      setIsLocationVerified(Boolean(initialLoc.trim()))
+      setCountry('')
+      setProvince('')
+      setCity('')
+      setStreetAddress('')
+      setVenue('')
+      setEventDate('')
+      setEventTime('22:00')
+      setDescription('')
+      setTicketUrl('')
+      setSelectedGenres(['Live', 'Techno'])
+      setProfileImage('')
     }
-  }
+    setValidationError(null)
+  }, [isOpen, eventToEdit, userLocation])
 
   const reverseGeocode = async (lat: number, lon: number) => {
     setIsLocating(true)
@@ -120,15 +180,22 @@ export default function CreateEventModal({
       const foundCountry = addr.country || ''
       const foundStreet = [addr.road, addr.house_number].filter(Boolean).join(' ') || addr.pedestrian || ''
 
-      if (foundCountry) setCountry(foundCountry)
-      if (foundProvince) setProvince(foundProvince)
-      if (foundCity) setCity(foundCity)
-      if (foundStreet) setStreetAddress(foundStreet)
+      setCountry(foundCountry)
+      setProvince(foundProvince)
+      setCity(foundCity)
+      setStreetAddress(foundStreet)
 
       const label = [foundStreet, foundCity, foundProvince, foundCountry].filter(Boolean).join(', ')
-      setLocation(label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`)
+      const finalLoc = label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`
+      setLocation(finalLoc)
+      setVerifiedLocation(finalLoc)
+      setIsLocationVerified(true)
+      if (validationError) setValidationError(null)
     } catch {
-      setLocation(`${lat.toFixed(3)}, ${lon.toFixed(3)}`)
+      const fallback = `${lat.toFixed(3)}, ${lon.toFixed(3)}`
+      setLocation(fallback)
+      setVerifiedLocation(fallback)
+      setIsLocationVerified(true)
     } finally {
       setIsLocating(false)
     }
@@ -157,12 +224,16 @@ export default function CreateEventModal({
             addr.village ||
             addr.municipality ||
             item.display_name.split(',')[0]
+          const foundProvince = addr.state || addr.province || addr.region || ''
           const foundCountry = addr.country || ''
           return {
             label: [foundCity, foundCountry].filter(Boolean).join(', '),
             lat: parseFloat(item.lat),
             lon: parseFloat(item.lon),
             full: item.display_name,
+            country: foundCountry,
+            province: foundProvince,
+            city: foundCity,
           }
         })
         setSuggestions(results)
@@ -187,7 +258,14 @@ export default function CreateEventModal({
 
   const handleSelectLocation = (loc: LocationSuggestion) => {
     setLocation(loc.label)
+    setVerifiedLocation(loc.label)
+    setIsLocationVerified(true)
     setShowSuggestions(false)
+    if (validationError) setValidationError(null)
+
+    if (loc.country) setCountry(loc.country)
+    if (loc.province) setProvince(loc.province)
+    if (loc.city) setCity(loc.city)
 
     if (mapRef.current) {
       mapRef.current.flyTo({ center: [loc.lon, loc.lat], zoom: 12 })
@@ -238,6 +316,41 @@ export default function CreateEventModal({
     }
   }
 
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo de archivo (imagen)
+    if (!file.type.startsWith('image/')) {
+      setValidationError('El archivo seleccionado no es una imagen válida. Formatos permitidos: JPG, PNG, WEBP, GIF.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || ''
+    if (!validExtensions.includes(fileExt)) {
+      setValidationError('Extensión de archivo no permitida. Formatos válidos: JPG, PNG, WEBP, GIF.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    // Validar tamaño máximo de imagen (10 MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setValidationError('El archivo de imagen excede el límite permitido de 10 MB.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (loadEvt) => {
+      const result = loadEvt.target?.result as string
+      setProfileImage(result)
+      setValidationError(null)
+    }
+    reader.readAsDataURL(file)
+  }
+
   useEffect(() => {
     if (!isOpen || !showMap || !mapContainerRef.current) {
       if (mapRef.current) {
@@ -257,9 +370,7 @@ export default function CreateEventModal({
       return
     }
 
-    // Limpiar residuos en el contenedor antes de crear la instancia única
     mapContainerRef.current.innerHTML = ''
-
     let timer: ReturnType<typeof setTimeout> | null = null
 
     try {
@@ -316,20 +427,41 @@ export default function CreateEventModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (isEditing && isExpired) {
+      setValidationError('El plazo de modificación de 24 horas para este evento ha expirado. Ya no es posible modificar dicho evento.')
+      return
+    }
+
     const now = new Date()
-    // Formatting local date as YYYY-MM-DD
-    const year = now.getFullYear()
+    const currentYear = now.getFullYear()
     const month = String(now.getMonth() + 1).padStart(2, '0')
     const day = String(now.getDate()).padStart(2, '0')
-    const todayStr = `${year}-${month}-${day}`
+    const todayStr = `${currentYear}-${month}-${day}`
 
-    if (!title.trim() || !eventDate) {
-      setValidationError('Por favor completa el título y la fecha del evento.')
+    // 1. Restricción de caracteres en título
+    const trimmedTitle = title.trim()
+    if (!trimmedTitle || trimmedTitle.length < 3 || trimmedTitle.length > 80) {
+      setValidationError('El título del evento es obligatorio y debe tener entre 3 y 80 caracteres.')
+      return
+    }
+
+    // 2. Validación de Fecha y Año de 4 dígitos
+    if (!eventDate) {
+      setValidationError('Por favor completa la fecha del evento.')
+      return
+    }
+
+    const yearParts = eventDate.split('-')
+    const enteredYearStr = yearParts[0]
+    const enteredYear = parseInt(enteredYearStr, 10)
+
+    if (!enteredYearStr || enteredYearStr.length !== 4 || isNaN(enteredYear) || enteredYear < currentYear || enteredYear > 2099) {
+      setValidationError(`El año debe tener exactamente 4 dígitos y ser válido (entre ${currentYear} y 2099).`)
       return
     }
 
     if (eventDate < todayStr) {
-      setValidationError('No puedes crear eventos con fechas pasadas. La fecha debe ser posterior o igual al día de hoy.')
+      setValidationError('No puedes publicar ni modificar eventos con fechas pasadas. La fecha debe ser igual o posterior a hoy.')
       return
     }
 
@@ -344,45 +476,86 @@ export default function CreateEventModal({
       }
     }
 
-    const finalLocation =
-      [streetAddress.trim(), city.trim(), province.trim(), country.trim()].filter(Boolean).join(', ') ||
-      location.trim() ||
-      'Online / Global'
-
-    const newEvent: ProfileCard = {
-      nickname: title.trim(),
-      role: role.trim() || 'Evento Live',
-      location: finalLocation,
-      country: country.trim(),
-      province: province.trim(),
-      city: city.trim(),
-      streetAddress: streetAddress.trim(),
-      interestGenres: selectedGenres,
-      profileImage: profileImage.trim() || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
-      match: '100%',
-      description: description.trim() || 'Nuevo evento publicado por la comunidad en LinkedSound.',
-      badge: 'Evento',
-      itemRole: 'Evento',
-      isProfile: false,
-      eventDate,
-      eventTime: eventTime || '22:00',
-      venue: venue.trim() || 'Venue Principal',
-      ticketUrl: ticketUrl.trim() || 'https://linkedsound.app/tickets',
-      isFinished: false,
-      soundcloudUrl: '',
-      spotifyUrl: '',
-      instagramUrl: '',
+    // 3. Validación de Localización igual que en Perfiles
+    const locTrim = location.trim()
+    const isLocValid = isLocationVerified && locTrim.length > 0 && locTrim.toLowerCase() === verifiedLocation.trim().toLowerCase()
+    if (!isLocValid) {
+      setValidationError('Debes seleccionar una localidad válida de la lista sugerida o seleccionarla en el mapa.')
+      return
     }
 
-    onCreateEvent(newEvent)
-    onClose()
+    // 4. Validación de Imagen
+    if (profileImage && !profileImage.startsWith('data:image/') && !profileImage.startsWith('http://') && !profileImage.startsWith('https://')) {
+      setValidationError('La imagen promocional debe ser un archivo de imagen válido o una URL web (http/https).')
+      return
+    }
 
-    // Reset form
-    setTitle('')
-    setVenue('')
-    setEventDate('')
-    setDescription('')
-    setTicketUrl('')
+    // 5. Enlace de Tickets puede ser campo nulo
+    let finalTicketUrl: string | null = null
+    if (ticketUrl && ticketUrl.trim()) {
+      const trimmedTicket = ticketUrl.trim()
+      if (!trimmedTicket.startsWith('http://') && !trimmedTicket.startsWith('https://')) {
+        finalTicketUrl = `https://${trimmedTicket}`
+      } else {
+        finalTicketUrl = trimmedTicket
+      }
+    }
+
+    const finalLocation =
+      [streetAddress.trim(), city.trim(), province.trim(), country.trim()].filter(Boolean).join(', ') ||
+      locTrim ||
+      'Online / Global'
+
+    if (isEditing && eventToEdit && onUpdateEvent) {
+      const updatedEvent: ProfileCard = {
+        ...eventToEdit,
+        title: trimmedTitle,
+        nickname: trimmedTitle,
+        role: role.trim().slice(0, 50) || 'Evento Live',
+        location: finalLocation,
+        country: country.trim() || undefined,
+        province: province.trim() || undefined,
+        city: city.trim() || undefined,
+        streetAddress: streetAddress.trim() || undefined,
+        interestGenres: selectedGenres,
+        profileImage: profileImage.trim() || undefined,
+        description: description.trim().slice(0, 500) || undefined,
+        eventDate,
+        eventTime: eventTime || '22:00',
+        venue: venue.trim().slice(0, 60) || undefined,
+        ticketUrl: finalTicketUrl || undefined,
+      }
+      onUpdateEvent(updatedEvent)
+    } else {
+      const newEvent: ProfileCard = {
+        title: trimmedTitle,
+        nickname: trimmedTitle,
+        role: role.trim().slice(0, 50) || 'Evento Live',
+        location: finalLocation,
+        country: country.trim(),
+        province: province.trim(),
+        city: city.trim(),
+        streetAddress: streetAddress.trim(),
+        interestGenres: selectedGenres,
+        profileImage: profileImage.trim() || undefined,
+        match: '100%',
+        description: description.trim().slice(0, 500) || 'Nuevo evento publicado por la comunidad en LinkedSound.',
+        badge: 'Evento',
+        itemRole: 'Evento',
+        isProfile: false,
+        eventDate,
+        eventTime: eventTime || '22:00',
+        venue: venue.trim().slice(0, 60) || 'Venue Principal',
+        ticketUrl: finalTicketUrl || undefined,
+        isFinished: false,
+        soundcloudUrl: '',
+        spotifyUrl: '',
+        instagramUrl: '',
+      }
+      onCreateEvent(newEvent)
+    }
+
+    onClose()
   }
 
   return (
@@ -406,20 +579,71 @@ export default function CreateEventModal({
             <div
               className="ls-report-badge-icon"
               style={{
-                background: 'linear-gradient(135deg, #a855f7, #6d5efc)',
+                background: isEditing
+                  ? 'linear-gradient(135deg, #00e5ff, #6d5efc)'
+                  : 'linear-gradient(135deg, #a855f7, #6d5efc)',
                 color: '#fff',
-                boxShadow: '0 0 20px rgba(168, 85, 247, 0.5)'
+                boxShadow: isEditing
+                  ? '0 0 20px rgba(0, 229, 255, 0.5)'
+                  : '0 0 20px rgba(168, 85, 247, 0.5)'
               }}
             >
-              <PiCalendarPlusBold />
+              {isEditing ? <PiPencilSimpleBold /> : <PiCalendarPlusBold />}
             </div>
             <div>
-              <h3 style={{ margin: 0 }}>Publicar Nuevo Evento</h3>
+              <h3 style={{ margin: 0 }}>
+                {isEditing ? 'Modificar Evento' : 'Publicar Nuevo Evento'}
+              </h3>
               <p className="ls-report-subtitle">
                 Organizador: <strong>{userNickname}</strong>
               </p>
             </div>
           </div>
+
+          {/* Banner de lapso de modificación de 24 horas */}
+          {isEditing && (
+            isExpired ? (
+              <div
+                style={{
+                  marginBottom: '1rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '10px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.45)',
+                  color: '#fca5a5',
+                  fontSize: '0.84rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                }}
+              >
+                <PiWarningBold size={20} style={{ flexShrink: 0, color: '#ef4444' }} />
+                <span>
+                  <strong>Plazo de modificación expirado:</strong> Han transcurrido más de 24 horas desde la creación de este evento. Conforme a las reglas de la plataforma, no es posible modificarlo.
+                </span>
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginBottom: '1rem',
+                  padding: '0.65rem 1rem',
+                  borderRadius: '10px',
+                  background: 'rgba(168, 85, 247, 0.12)',
+                  border: '1px solid rgba(168, 85, 247, 0.35)',
+                  color: '#e9d5ff',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <PiClockBold size={18} style={{ color: '#c084fc', flexShrink: 0 }} />
+                <span>
+                  <strong>Ventana de edición activa:</strong> Restan aproximadamente {remainingHours.toFixed(1)} horas para realizar modificaciones a este evento.
+                </span>
+              </div>
+            )
+          )}
 
           {validationError && (
             <div
@@ -436,15 +660,23 @@ export default function CreateEventModal({
                 gap: '0.5rem',
               }}
             >
-              <PiWarningBold size={18} />
+              <PiWarningBold size={18} style={{ flexShrink: 0 }} />
               <span>{validationError}</span>
             </div>
           )}
 
+          {/* Título del Evento con restricción de caracteres */}
           <div className="ls-form-group">
-            <label className="ls-form-label">Título del Evento *</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="ls-form-label">Título del Evento *</label>
+              <span style={{ fontSize: '0.72rem', color: title.length > 70 ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>
+                {title.length}/80 caracteres
+              </span>
+            </div>
             <input
               type="text"
+              maxLength={80}
+              disabled={isExpired}
               placeholder="Ej. Synth Lab Live Night, Berlin Underground Jam..."
               value={title}
               onChange={(e) => {
@@ -453,8 +685,8 @@ export default function CreateEventModal({
               }}
               className="ls-select-input"
               style={{
-                borderColor: validationError && !title.trim() ? '#ef4444' : undefined,
-                boxShadow: validationError && !title.trim() ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : undefined
+                borderColor: validationError && (!title.trim() || title.trim().length < 3) ? '#ef4444' : undefined,
+                boxShadow: validationError && (!title.trim() || title.trim().length < 3) ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : undefined
               }}
             />
           </div>
@@ -464,6 +696,8 @@ export default function CreateEventModal({
               <label className="ls-form-label">Concepto / Formato</label>
               <input
                 type="text"
+                maxLength={50}
+                disabled={isExpired}
                 placeholder="Ej. Live Session, Showcase"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
@@ -477,6 +711,8 @@ export default function CreateEventModal({
               </label>
               <input
                 type="text"
+                maxLength={60}
+                disabled={isExpired}
                 placeholder="Ej. Watergate Club, Niceto..."
                 value={venue}
                 onChange={(e) => setVenue(e.target.value)}
@@ -485,87 +721,29 @@ export default function CreateEventModal({
             </div>
           </div>
 
-          {/* Bloque Detallado de Localización (País, Provincia, Localidad, Calle y Altura) */}
-          <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px', margin: '8px 0 14px 0' }}>
-            <span style={{ display: 'block', fontSize: '0.8rem', color: '#c084fc', fontWeight: 700, marginBottom: '10px' }}>
-              <PiMapPinBold style={{ marginRight: '4px' }} /> Detalle de Localización del Evento
-            </span>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
-              <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>País</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Argentina, Alemania, España..."
-                  value={country}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setCountry(val)
-                    updateLocationFromParts(val, province, city, streetAddress)
-                  }}
-                  className="ls-select-input"
-                />
-              </div>
-              <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Provincia / Estado</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Buenos Aires, Berlín, Madrid..."
-                  value={province}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setProvince(val)
-                    updateLocationFromParts(country, val, city, streetAddress)
-                  }}
-                  className="ls-select-input"
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Localidad / Ciudad</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Palermo, Mitte, Malasaña..."
-                  value={city}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setCity(val)
-                    updateLocationFromParts(country, province, val, streetAddress)
-                  }}
-                  className="ls-select-input"
-                />
-              </div>
-              <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Calle y Altura</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Niceto Vega 5510, Skalitzer Str. 130..."
-                  value={streetAddress}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setStreetAddress(val)
-                    updateLocationFromParts(country, province, city, val)
-                  }}
-                  className="ls-select-input"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Selector Completo de Ubicación con Mapa y Geocodificación OSM */}
+          {/* Selector de Ubicación Verificada con Autocomplete y Mapa */}
           <div className="ls-form-group wide-field ls-location-group" style={{ position: 'relative' }}>
-            <label className="ls-form-label">Location / Ubicación del Evento</label>
+            <label className="ls-form-label">
+              Ubicación de la Localidad *
+              {isLocationVerified && (
+                <span style={{ marginLeft: '8px', fontSize: '0.74rem', color: '#86efac', fontWeight: 600 }}>
+                  <PiCheckBold style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Localidad verificada
+                </span>
+              )}
+            </label>
             <div>
               <div className="ls-location-input-wrapper" style={{ position: 'relative' }}>
                 <input
                   type="text"
-                  placeholder="Escribe tu ciudad o busca en el mapa (ej. Madrid, Berlín, Buenos Aires...)"
+                  disabled={isExpired}
+                  placeholder="Escribe la ciudad o selecciona en el mapa (ej. Berlín, Buenos Aires, Madrid...)"
                   value={location}
                   onChange={(e) => {
                     const val = e.target.value
                     setLocation(val)
+                    if (val.trim().toLowerCase() !== verifiedLocation.trim().toLowerCase()) {
+                      setIsLocationVerified(false)
+                    }
                     searchLocation(val)
                   }}
                   onKeyDown={handleLocationKeyDown}
@@ -573,12 +751,16 @@ export default function CreateEventModal({
                     if (suggestions.length > 0) setShowSuggestions(true)
                   }}
                   onBlur={() => {
-                    setTimeout(() => setShowSuggestions(false), 200)
+                    setTimeout(() => setShowSuggestions(false), 250)
                   }}
                   className="ls-select-input"
+                  style={{
+                    borderColor: validationError && !isLocationVerified ? '#ef4444' : undefined,
+                    boxShadow: validationError && !isLocationVerified ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : undefined,
+                  }}
                 />
 
-                {showSuggestions && suggestions.length > 0 && (
+                {showSuggestions && suggestions.length > 0 && !isExpired && (
                   <div className="ls-autocomplete-dropdown" role="listbox">
                     {suggestions.map((item, idx) => (
                       <div
@@ -600,13 +782,13 @@ export default function CreateEventModal({
                 )}
               </div>
 
-              {showSuggestions && suggestions.length > 0 && (
+              {showSuggestions && suggestions.length > 0 && !isExpired && (
                 <div className="ls-tab-hint">
                   <span>Sugerencia rápida: presiona <kbd>Tab</kbd> o <kbd>Enter</kbd> para elegir <strong>{suggestions[0].label}</strong></span>
                 </div>
               )}
 
-              {!showMap && (
+              {!showMap && !isExpired && (
                 <div className="ls-map-actions-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px' }}>
                   <button
                     type="button"
@@ -617,15 +799,25 @@ export default function CreateEventModal({
                     <PiMapPinBold />
                     Elegir en mapa
                   </button>
+                  <button
+                    type="button"
+                    className="ls-map-toggle-btn"
+                    onClick={handleUseCurrentLocation}
+                    disabled={isLocating}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <PiNavigationArrowBold />
+                    {isLocating ? 'Detectando...' : 'Usar mi ubicación actual'}
+                  </button>
                   {(isLocating || isSearching) && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px' }} title={isLocating ? 'Obteniendo ubicación...' : 'Buscando...'} aria-label="Cargando">
+                    <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px' }} title={isLocating ? 'Obteniendo ubicación...' : 'Buscando...'}>
                       <span className="ls-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', display: 'inline-block' }} />
                     </div>
                   )}
                 </div>
               )}
 
-              {showMap && (
+              {showMap && !isExpired && (
                 <div
                   className="ls-map-wrapper"
                   style={{
@@ -644,7 +836,6 @@ export default function CreateEventModal({
                     style={{ width: '100%', height: '240px', borderRadius: '12px', marginTop: 0 }}
                   />
 
-                  {/* Overlay controles flotantes superior izquierdo */}
                   <div
                     style={{
                       position: 'absolute',
@@ -709,33 +900,6 @@ export default function CreateEventModal({
                     </button>
                   </div>
 
-                  {/* Overlay estado/carga superior derecho */}
-                  {(isLocating || isSearching) && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '10px',
-                        right: '10px',
-                        zIndex: 10,
-                        background: 'rgba(15, 19, 37, 0.92)',
-                        backdropFilter: 'blur(8px)',
-                        WebkitBackdropFilter: 'blur(8px)',
-                        border: '1px solid rgba(168, 85, 247, 0.5)',
-                        padding: '8px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
-                      }}
-                      title={isLocating ? 'Buscando tu ubicación...' : 'Buscando dirección...'}
-                      aria-label="Cargando ubicación"
-                    >
-                      <span className="ls-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', borderColor: '#a855f7 #a855f7 transparent transparent', display: 'inline-block' }} />
-                    </div>
-                  )}
-
-                  {/* Overlay sugerencia inferior izquierdo */}
                   <div
                     style={{
                       position: 'absolute',
@@ -744,7 +908,6 @@ export default function CreateEventModal({
                       zIndex: 10,
                       background: 'rgba(15, 19, 37, 0.8)',
                       backdropFilter: 'blur(6px)',
-                      WebkitBackdropFilter: 'blur(6px)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
                       padding: '4px 10px',
                       borderRadius: '6px',
@@ -753,22 +916,87 @@ export default function CreateEventModal({
                       pointerEvents: 'none'
                     }}
                   >
-                    Haz clic en el mapa para marcar tu posición
+                    Haz clic en el mapa para marcar la posición exacta
                   </div>
                 </div>
               )}
             </div>
           </div>
 
+          {/* Detalle de Localización sincronizado */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px', margin: '4px 0 14px 0' }}>
+            <span style={{ display: 'block', fontSize: '0.8rem', color: '#c084fc', fontWeight: 700, marginBottom: '10px' }}>
+              <PiMapPinBold style={{ marginRight: '4px' }} /> Detalle de Localización del Evento
+            </span>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>País</label>
+                <input
+                  type="text"
+                  maxLength={60}
+                  disabled={isExpired}
+                  placeholder="Ej. Argentina, Alemania, España..."
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="ls-select-input"
+                />
+              </div>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Provincia / Estado</label>
+                <input
+                  type="text"
+                  maxLength={60}
+                  disabled={isExpired}
+                  placeholder="Ej. Buenos Aires, Berlín, Madrid..."
+                  value={province}
+                  onChange={(e) => setProvince(e.target.value)}
+                  className="ls-select-input"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Localidad / Ciudad</label>
+                <input
+                  type="text"
+                  maxLength={60}
+                  disabled={isExpired}
+                  placeholder="Ej. Palermo, Mitte, Malasaña..."
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="ls-select-input"
+                />
+              </div>
+              <div className="ls-form-group">
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Calle y Altura</label>
+                <input
+                  type="text"
+                  maxLength={80}
+                  disabled={isExpired}
+                  placeholder="Ej. Niceto Vega 5510, Skalitzer Str. 130..."
+                  value={streetAddress}
+                  onChange={(e) => setStreetAddress(e.target.value)}
+                  className="ls-select-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Fecha y Hora con restricción de año a 4 dígitos */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="ls-form-group">
-              <label className="ls-form-label">Fecha *</label>
+              <label className="ls-form-label">Fecha * (Año de 4 dígitos)</label>
               <input
                 type="date"
+                disabled={isExpired}
                 min={new Date().toLocaleDateString('sv-SE')}
+                max="2099-12-31"
                 value={eventDate}
                 onChange={(e) => {
-                  setEventDate(e.target.value)
+                  const val = e.target.value
+                  setEventDate(val)
                   if (validationError) setValidationError(null)
                 }}
                 className="ls-select-input"
@@ -783,6 +1011,7 @@ export default function CreateEventModal({
               <label className="ls-form-label">Hora</label>
               <input
                 type="time"
+                disabled={isExpired}
                 value={eventTime}
                 onChange={(e) => setEventTime(e.target.value)}
                 className="ls-select-input"
@@ -791,30 +1020,41 @@ export default function CreateEventModal({
             </div>
           </div>
 
+          {/* Enlace de Entradas / Tickets (Campo nulo / Opcional) */}
           <div className="ls-form-group">
             <label className="ls-form-label">
-              Enlace de Entradas / Tickets <PiTicketBold style={{ color: '#00e5ff' }} />
+              Enlace de Entradas / Tickets (Opcional) <PiTicketBold style={{ color: '#00e5ff' }} />
             </label>
             <input
               type="url"
-              placeholder="https://eventbrite.com/tu-evento"
+              disabled={isExpired}
+              placeholder="https://eventbrite.com/tu-evento (dejar vacío si no aplica)"
               value={ticketUrl}
               onChange={(e) => setTicketUrl(e.target.value)}
               className="ls-select-input"
             />
           </div>
 
+          {/* Descripción / Lineup con límite de caracteres */}
           <div className="ls-form-group">
-            <label className="ls-form-label">Descripción / Lineup</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="ls-form-label">Descripción / Lineup</label>
+              <span style={{ fontSize: '0.72rem', color: description.length > 450 ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>
+                {description.length}/500 caracteres
+              </span>
+            </div>
             <textarea
               className="ls-textarea-input"
               rows={3}
+              maxLength={500}
+              disabled={isExpired}
               placeholder="Describe la propuesta musical, DJs o artistas invitados..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
+          {/* Géneros Destacados */}
           <div className="ls-form-group">
             <label className="ls-form-label">Géneros Destacados (máx 4)</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
@@ -824,6 +1064,7 @@ export default function CreateEventModal({
                   <button
                     key={g}
                     type="button"
+                    disabled={isExpired}
                     onClick={() => handleGenreToggle(g)}
                     className={`ls-genre-chip ${isSelected ? 'is-selected' : ''}`}
                     style={{ fontSize: '0.72rem', padding: '4px 10px' }}
@@ -836,23 +1077,121 @@ export default function CreateEventModal({
             </div>
           </div>
 
+          {/* Imagen Promocional del Evento con Validación de Imagen */}
           <div className="ls-form-group">
-            <label className="ls-form-label">URL de Imagen Promocional</label>
+            <label className="ls-form-label">
+              Flyer / Imagen Promocional del Evento <PiImageBold style={{ color: '#c084fc' }} />
+            </label>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/jpg, image/webp, image/gif"
+                style={{ display: 'none' }}
+                disabled={isExpired}
+                onChange={handleImageFileUpload}
+              />
+              <button
+                type="button"
+                className="ls-secondary-button"
+                disabled={isExpired}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  fontSize: '0.8rem',
+                }}
+              >
+                <PiUploadSimpleBold /> Subir Archivo de Imagen
+              </button>
+              <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)' }}>
+                Formatos permitidos: JPG, PNG, WEBP, GIF (máx 10 MB)
+              </span>
+            </div>
+
             <input
               type="url"
-              placeholder="https://images.unsplash.com/..."
-              value={profileImage}
-              onChange={(e) => setProfileImage(e.target.value)}
+              disabled={isExpired}
+              placeholder="O escribe una URL directa de imagen (https://...)"
+              value={profileImage.startsWith('data:image/') ? '' : profileImage}
+              onChange={(e) => {
+                setProfileImage(e.target.value)
+                if (validationError) setValidationError(null)
+              }}
               className="ls-select-input"
             />
+
+            {profileImage && (
+              <div
+                style={{
+                  marginTop: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                }}
+              >
+                <img
+                  src={profileImage}
+                  alt="Vista previa del flyer"
+                  style={{ width: '70px', height: '52px', objectFit: 'cover', borderRadius: '6px' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <span style={{ display: 'block', fontSize: '0.78rem', color: '#c084fc', fontWeight: 600 }}>
+                    Imagen promocional cargada
+                  </span>
+                  {!isExpired && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileImage('')
+                        if (fileInputRef.current) fileInputRef.current.value = ''
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontSize: '0.74rem',
+                        padding: 0,
+                        marginTop: '2px',
+                        textDecoration: 'underline',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <PiTrashBold /> Quitar imagen
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="ls-modal-actions" style={{ marginTop: '12px' }}>
+          <div className="ls-modal-actions" style={{ marginTop: '14px' }}>
             <button type="button" className="ls-secondary-button" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="ls-primary-button" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <PiSparkleBold /> Publicar Evento
+            <button
+              type="submit"
+              disabled={isExpired}
+              className="ls-primary-button"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: isExpired ? 0.5 : 1,
+                cursor: isExpired ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <PiSparkleBold /> {isEditing ? 'Guardar Cambios' : 'Publicar Evento'}
             </button>
           </div>
         </form>
@@ -860,5 +1199,3 @@ export default function CreateEventModal({
     </div>
   )
 }
-
-
