@@ -16,6 +16,8 @@ import {
   PiPencilSimpleBold,
   PiImageBold,
   PiTrashBold,
+  PiWarningOctagonBold,
+  PiLockKeyBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 
@@ -81,9 +83,9 @@ export default function CreateEventModal({
 
   const [title, setTitle] = useState('')
   const [role, setRole] = useState('Showcase & Live Performance')
-  const [location, setLocation] = useState(userLocation)
-  const [verifiedLocation, setVerifiedLocation] = useState(userLocation)
-  const [isLocationVerified, setIsLocationVerified] = useState(Boolean(userLocation && userLocation.trim()))
+  const [location, setLocation] = useState('')
+  const [verifiedLocation, setVerifiedLocation] = useState('')
+  const [isLocationVerified, setIsLocationVerified] = useState(false)
 
   const [country, setCountry] = useState('')
   const [province, setProvince] = useState('')
@@ -92,6 +94,7 @@ export default function CreateEventModal({
 
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(0)
   const [showMap, setShowMap] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
@@ -121,31 +124,32 @@ export default function CreateEventModal({
     if (!isOpen) return
 
     if (eventToEdit) {
-      const evTitle = eventToEdit.nickname || eventToEdit.title || ''
+      const ev = eventToEdit as any
+      const evTitle = ev.nickname || ev.title || ''
       setTitle(evTitle)
-      setRole(eventToEdit.role || 'Showcase & Live Performance')
-      const evLoc = eventToEdit.location || ''
+      setRole(ev.role || 'Showcase & Live Performance')
+      const evLoc = ev.location || ''
       setLocation(evLoc)
       setVerifiedLocation(evLoc)
       setIsLocationVerified(Boolean(evLoc.trim()))
-      setCountry(eventToEdit.country || '')
-      setProvince(eventToEdit.province || '')
-      setCity(eventToEdit.city || '')
-      setStreetAddress(eventToEdit.streetAddress || '')
-      setVenue(eventToEdit.venue || '')
-      setEventDate(eventToEdit.eventDate || '')
-      setEventTime(eventToEdit.eventTime || '22:00')
-      setDescription(eventToEdit.description || '')
-      setTicketUrl(eventToEdit.ticketUrl || '')
-      setSelectedGenres(eventToEdit.interestGenres && eventToEdit.interestGenres.length > 0 ? eventToEdit.interestGenres : ['Live', 'Techno'])
-      setProfileImage(eventToEdit.profileImage || '')
+      setCountry(ev.country || '')
+      setProvince(ev.province || '')
+      setCity(ev.city || '')
+      setStreetAddress(ev.streetAddress || '')
+      setVenue(ev.venue || '')
+      setEventDate(ev.eventDate || '')
+      setEventTime(ev.eventTime || '22:00')
+      setDescription(ev.description || '')
+      setTicketUrl(ev.ticketUrl || '')
+      setSelectedGenres(ev.interestGenres && ev.interestGenres.length > 0 ? ev.interestGenres : ['Live', 'Techno'])
+      setProfileImage(ev.profileImage || '')
+      setHighlightedIndex(0)
     } else {
       setTitle('')
       setRole('Showcase & Live Performance')
-      const initialLoc = userLocation || ''
-      setLocation(initialLoc)
-      setVerifiedLocation(initialLoc)
-      setIsLocationVerified(Boolean(initialLoc.trim()))
+      setLocation('')
+      setVerifiedLocation('')
+      setIsLocationVerified(false)
       setCountry('')
       setProvince('')
       setCity('')
@@ -157,6 +161,7 @@ export default function CreateEventModal({
       setTicketUrl('')
       setSelectedGenres(['Live', 'Techno'])
       setProfileImage('')
+      setHighlightedIndex(0)
     }
     setValidationError(null)
   }, [isOpen, eventToEdit, userLocation])
@@ -238,12 +243,14 @@ export default function CreateEventModal({
         })
         setSuggestions(results)
         setShowSuggestions(true)
+        setHighlightedIndex(0)
       } else {
         const matches = PRESET_LOCATIONS.filter((loc) =>
           loc.label.toLowerCase().includes(trimmed)
         )
         setSuggestions(matches)
         setShowSuggestions(matches.length > 0)
+        setHighlightedIndex(0)
       }
     } catch {
       const matches = PRESET_LOCATIONS.filter((loc) =>
@@ -251,6 +258,7 @@ export default function CreateEventModal({
       )
       setSuggestions(matches)
       setShowSuggestions(matches.length > 0)
+      setHighlightedIndex(0)
     } finally {
       setIsSearching(false)
     }
@@ -310,9 +318,20 @@ export default function CreateEventModal({
   }
 
   const handleLocationKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if ((e.key === 'Tab' || e.key === 'Enter') && showSuggestions && suggestions.length > 0) {
-      e.preventDefault()
-      handleSelectLocation(suggestions[0])
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev + 1) % suggestions.length)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setHighlightedIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault()
+        const target = suggestions[highlightedIndex] || suggestions[0]
+        handleSelectLocation(target)
+      } else if (e.key === 'Escape') {
+        setShowSuggestions(false)
+      }
     }
   }
 
@@ -440,8 +459,8 @@ export default function CreateEventModal({
 
     // 1. Restricción de caracteres en título
     const trimmedTitle = title.trim()
-    if (!trimmedTitle || trimmedTitle.length < 3 || trimmedTitle.length > 80) {
-      setValidationError('El título del evento es obligatorio y debe tener entre 3 y 80 caracteres.')
+    if (!trimmedTitle || trimmedTitle.length < 3 || trimmedTitle.length > 50) {
+      setValidationError('El título del evento es obligatorio y debe tener entre 3 y 50 caracteres para preservar el formato.')
       return
     }
 
@@ -476,21 +495,27 @@ export default function CreateEventModal({
       }
     }
 
-    // 3. Validación de Localización igual que en Perfiles
+    // 3. Validación de Localización corroborada (Tabulación obligatoria)
     const locTrim = location.trim()
     const isLocValid = isLocationVerified && locTrim.length > 0 && locTrim.toLowerCase() === verifiedLocation.trim().toLowerCase()
     if (!isLocValid) {
-      setValidationError('Debes seleccionar una localidad válida de la lista sugerida o seleccionarla en el mapa.')
+      setValidationError('Debes corroborar la información de localización seleccionando una opción sugerida (presiona Tab o Enter) o marcarla en el mapa.')
       return
     }
 
-    // 4. Validación de Imagen
+    // 4. Validación de longitud máxima en descripción
+    if (description && description.trim().length > 250) {
+      setValidationError('La descripción no debe superar los 250 caracteres para no romper el formato en el modal.')
+      return
+    }
+
+    // 5. Validación de Imagen
     if (profileImage && !profileImage.startsWith('data:image/') && !profileImage.startsWith('http://') && !profileImage.startsWith('https://')) {
       setValidationError('La imagen promocional debe ser un archivo de imagen válido o una URL web (http/https).')
       return
     }
 
-    // 5. Enlace de Tickets puede ser campo nulo
+    // 6. Enlace de Tickets puede ser campo nulo
     let finalTicketUrl: string | null = null
     if (ticketUrl && ticketUrl.trim()) {
       const trimmedTicket = ticketUrl.trim()
@@ -509,43 +534,45 @@ export default function CreateEventModal({
     if (isEditing && eventToEdit && onUpdateEvent) {
       const updatedEvent: ProfileCard = {
         ...eventToEdit,
-        title: trimmedTitle,
-        nickname: trimmedTitle,
-        role: role.trim().slice(0, 50) || 'Evento Live',
+        title: trimmedTitle.slice(0, 50),
+        nickname: trimmedTitle.slice(0, 50),
+        role: role.trim().slice(0, 40) || 'Evento Live',
         location: finalLocation,
         country: country.trim() || undefined,
         province: province.trim() || undefined,
         city: city.trim() || undefined,
-        streetAddress: streetAddress.trim() || undefined,
+        streetAddress: streetAddress.trim().slice(0, 50) || undefined,
         interestGenres: selectedGenres,
         profileImage: profileImage.trim() || undefined,
-        description: description.trim().slice(0, 500) || undefined,
+        description: description.trim().slice(0, 250) || undefined,
         eventDate,
         eventTime: eventTime || '22:00',
-        venue: venue.trim().slice(0, 60) || undefined,
+        venue: venue.trim().slice(0, 40) || undefined,
         ticketUrl: finalTicketUrl || undefined,
       }
       onUpdateEvent(updatedEvent)
     } else {
       const newEvent: ProfileCard = {
-        title: trimmedTitle,
-        nickname: trimmedTitle,
-        role: role.trim().slice(0, 50) || 'Evento Live',
+        title: trimmedTitle.slice(0, 50),
+        nickname: trimmedTitle.slice(0, 50),
+        role: role.trim().slice(0, 40) || 'Evento Live',
         location: finalLocation,
         country: country.trim(),
         province: province.trim(),
         city: city.trim(),
-        streetAddress: streetAddress.trim(),
+        streetAddress: streetAddress.trim().slice(0, 50),
         interestGenres: selectedGenres,
         profileImage: profileImage.trim() || undefined,
         match: '100%',
-        description: description.trim().slice(0, 500) || 'Nuevo evento publicado por la comunidad en LinkedSound.',
+        description: description.trim().slice(0, 250) || 'Nuevo evento publicado por la comunidad en LinkedSound.',
         badge: 'Evento',
         itemRole: 'Evento',
         isProfile: false,
+        owner: userNickname,
+        ownerNickname: userNickname,
         eventDate,
         eventTime: eventTime || '22:00',
-        venue: venue.trim().slice(0, 60) || 'Venue Principal',
+        venue: venue.trim().slice(0, 40) || 'Venue Principal',
         ticketUrl: finalTicketUrl || undefined,
         isFinished: false,
         soundcloudUrl: '',
@@ -669,13 +696,13 @@ export default function CreateEventModal({
           <div className="ls-form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label className="ls-form-label">Título del Evento *</label>
-              <span style={{ fontSize: '0.72rem', color: title.length > 70 ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>
-                {title.length}/80 caracteres
+              <span style={{ fontSize: '0.72rem', color: title.length > 45 ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>
+                {title.length}/50 caracteres
               </span>
             </div>
             <input
               type="text"
-              maxLength={80}
+              maxLength={50}
               disabled={isExpired}
               placeholder="Ej. Synth Lab Live Night, Berlin Underground Jam..."
               value={title}
@@ -696,7 +723,7 @@ export default function CreateEventModal({
               <label className="ls-form-label">Concepto / Formato</label>
               <input
                 type="text"
-                maxLength={50}
+                maxLength={40}
                 disabled={isExpired}
                 placeholder="Ej. Live Session, Showcase"
                 value={role}
@@ -711,7 +738,7 @@ export default function CreateEventModal({
               </label>
               <input
                 type="text"
-                maxLength={60}
+                maxLength={40}
                 disabled={isExpired}
                 placeholder="Ej. Watergate Club, Niceto..."
                 value={venue}
@@ -725,11 +752,6 @@ export default function CreateEventModal({
           <div className="ls-form-group wide-field ls-location-group" style={{ position: 'relative' }}>
             <label className="ls-form-label">
               Ubicación de la Localidad *
-              {isLocationVerified && (
-                <span style={{ marginLeft: '8px', fontSize: '0.74rem', color: '#86efac', fontWeight: 600 }}>
-                  <PiCheckBold style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Localidad verificada
-                </span>
-              )}
             </label>
             <div>
               <div className="ls-location-input-wrapper" style={{ position: 'relative' }}>
@@ -765,7 +787,7 @@ export default function CreateEventModal({
                     {suggestions.map((item, idx) => (
                       <div
                         key={`${item.lat}-${item.lon}-${idx}`}
-                        className={`ls-autocomplete-item ${idx === 0 ? 'active' : ''}`}
+                        className={`ls-autocomplete-item ${idx === highlightedIndex ? 'active' : ''}`}
                         role="option"
                         onMouseDown={(e) => {
                           e.preventDefault()
@@ -774,7 +796,7 @@ export default function CreateEventModal({
                       >
                         <span className="ls-ac-text">{item.full}</span>
                         <span className="ls-ac-badge">
-                          {idx === 0 ? 'Presiona Tab ↹' : 'Elegir'}
+                          {idx === highlightedIndex ? 'Tab / Enter ↹' : 'Elegir'}
                         </span>
                       </div>
                     ))}
@@ -782,9 +804,43 @@ export default function CreateEventModal({
                 )}
               </div>
 
+              {isLocationVerified && (location.trim() || '').length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: '#10b981',
+                    fontSize: '0.78rem',
+                    marginTop: '6px',
+                    fontWeight: 500,
+                  }}
+                >
+                  <PiCheckBold style={{ fontSize: '0.95rem' }} />
+                  <span>Localidad Verificada: {verifiedLocation}</span>
+                </div>
+              )}
+
+              {!isLocationVerified && (location.trim() || '').length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: '#f59e0b',
+                    fontSize: '0.78rem',
+                    marginTop: '6px',
+                    fontWeight: 500,
+                  }}
+                >
+                  <PiWarningOctagonBold style={{ fontSize: '0.95rem' }} />
+                  <span>Debes corroborar la información seleccionando una opción sugerida (Tab o Enter) o marcarla en el mapa.</span>
+                </div>
+              )}
+
               {showSuggestions && suggestions.length > 0 && !isExpired && (
                 <div className="ls-tab-hint">
-                  <span>Sugerencia rápida: presiona <kbd>Tab</kbd> o <kbd>Enter</kbd> para elegir <strong>{suggestions[0].label}</strong></span>
+                  <span>Sugerencia rápida: presiona <kbd>Tab</kbd> o <kbd>Enter</kbd> para elegir <strong>{suggestions[highlightedIndex]?.label || suggestions[0]?.label}</strong></span>
                 </div>
               )}
 
@@ -923,7 +979,7 @@ export default function CreateEventModal({
             </div>
           </div>
 
-          {/* Detalle de Localización sincronizado */}
+          {/* Detalle de Localización sincronizado (Campos corroborados automáticamente) */}
           <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '14px', margin: '4px 0 14px 0' }}>
             <span style={{ display: 'block', fontSize: '0.8rem', color: '#c084fc', fontWeight: 700, marginBottom: '10px' }}>
               <PiMapPinBold style={{ marginRight: '4px' }} /> Detalle de Localización del Evento
@@ -931,49 +987,73 @@ export default function CreateEventModal({
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
               <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>País</label>
+                <label className="ls-form-label" style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>País</span>
+                  <PiLockKeyBold style={{ color: '#c084fc', fontSize: '0.8rem' }} title="Campo corroborado automáticamente" />
+                </label>
                 <input
                   type="text"
-                  maxLength={60}
+                  readOnly
                   disabled={isExpired}
-                  placeholder="Ej. Argentina, Alemania, España..."
+                  placeholder="Selecciona una opción sugerida arriba..."
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
                   className="ls-select-input"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: country ? '#f3e8ff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'not-allowed',
+                    border: '1px solid rgba(168, 85, 247, 0.2)',
+                  }}
                 />
               </div>
               <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Provincia / Estado</label>
+                <label className="ls-form-label" style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>Provincia / Estado</span>
+                  <PiLockKeyBold style={{ color: '#c084fc', fontSize: '0.8rem' }} title="Campo corroborado automáticamente" />
+                </label>
                 <input
                   type="text"
-                  maxLength={60}
+                  readOnly
                   disabled={isExpired}
-                  placeholder="Ej. Buenos Aires, Berlín, Madrid..."
+                  placeholder="Selecciona una opción sugerida arriba..."
                   value={province}
-                  onChange={(e) => setProvince(e.target.value)}
                   className="ls-select-input"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: province ? '#f3e8ff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'not-allowed',
+                    border: '1px solid rgba(168, 85, 247, 0.2)',
+                  }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Localidad / Ciudad</label>
+                <label className="ls-form-label" style={{ fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>Localidad / Ciudad</span>
+                  <PiLockKeyBold style={{ color: '#c084fc', fontSize: '0.8rem' }} title="Campo corroborado automáticamente" />
+                </label>
                 <input
                   type="text"
-                  maxLength={60}
+                  readOnly
                   disabled={isExpired}
-                  placeholder="Ej. Palermo, Mitte, Malasaña..."
+                  placeholder="Selecciona una opción sugerida arriba..."
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
                   className="ls-select-input"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: city ? '#f3e8ff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'not-allowed',
+                    border: '1px solid rgba(168, 85, 247, 0.2)',
+                  }}
                 />
               </div>
               <div className="ls-form-group">
-                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Calle y Altura</label>
+                <label className="ls-form-label" style={{ fontSize: '0.74rem' }}>Calle y Altura (Opcional)</label>
                 <input
                   type="text"
-                  maxLength={80}
+                  maxLength={50}
                   disabled={isExpired}
                   placeholder="Ej. Niceto Vega 5510, Skalitzer Str. 130..."
                   value={streetAddress}
@@ -1039,16 +1119,16 @@ export default function CreateEventModal({
           <div className="ls-form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label className="ls-form-label">Descripción / Lineup</label>
-              <span style={{ fontSize: '0.72rem', color: description.length > 450 ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>
-                {description.length}/500 caracteres
+              <span style={{ fontSize: '0.72rem', color: description.length > 220 ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>
+                {description.length}/250 caracteres
               </span>
             </div>
             <textarea
               className="ls-textarea-input"
               rows={3}
-              maxLength={500}
+              maxLength={250}
               disabled={isExpired}
-              placeholder="Describe la propuesta musical, DJs o artistas invitados..."
+              placeholder="Describe la propuesta musical, DJs o artistas invitados (máx 250 caracteres)..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
@@ -1082,7 +1162,7 @@ export default function CreateEventModal({
             <label className="ls-form-label">
               Flyer / Imagen Promocional del Evento <PiImageBold style={{ color: '#c084fc' }} />
             </label>
-            
+
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
               <input
                 ref={fileInputRef}

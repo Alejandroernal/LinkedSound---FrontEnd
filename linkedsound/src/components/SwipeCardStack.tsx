@@ -1,5 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { PiCheckBold, PiXBold, PiFlagBold, PiSparkleBold, PiArrowCounterClockwiseBold } from 'react-icons/pi'
+import {
+  PiCheckBold,
+  PiXBold,
+  PiFlagBold,
+  PiSparkleBold,
+  PiArrowsClockwiseBold,
+  PiCompassBold,
+  PiArrowLeftBold,
+  PiArrowRightBold,
+} from 'react-icons/pi'
+import { FaSpotify } from 'react-icons/fa6'
 import type { ProfileCard } from '../data/mockData'
 import { isUserProfile, type UserProfile } from '../types'
 
@@ -10,6 +20,10 @@ interface SwipeCardStackProps {
   onPreviewProfile: (profile: ProfileCard) => void
   onReport: (targetName: string) => void
   onResetFilters: () => void
+  autoResetCountdown?: number
+  isResettingDeck?: boolean
+  hasExhaustedCards?: boolean
+  isLoading?: boolean
 }
 
 const SWIPE_THRESHOLD = 90 // pixels drag needed to trigger swipe decision
@@ -21,6 +35,10 @@ export default function SwipeCardStack({
   onPreviewProfile,
   onReport,
   onResetFilters,
+  autoResetCountdown = 0,
+  isResettingDeck = false,
+  hasExhaustedCards = false,
+  isLoading = false,
 }: SwipeCardStackProps) {
   const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -121,21 +139,72 @@ export default function SwipeCardStack({
     }
   }
 
-  if (!currentCard) {
+  if (isLoading) {
     return (
       <div className="ls-swipe-card ls-empty-card">
-        <PiSparkleBold className="ls-empty-icon" />
-        <h3>No hay creadores coincidentes</h3>
+        <PiArrowsClockwiseBold className="ls-empty-icon is-spinning" />
+        <h3>Sintonizando radar...</h3>
+        <p>Buscando perfiles musicales disponibles en tu zona.</p>
+      </div>
+    )
+  }
+
+  if (!currentCard) {
+    if (hasExhaustedCards) {
+      const mins = Math.floor(autoResetCountdown / 60)
+      const secs = autoResetCountdown % 60
+      const timerStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`
+
+      return (
+        <div className="ls-swipe-card ls-empty-card">
+          <PiSparkleBold className="ls-empty-icon" />
+          <h3>No hay más perfiles cerca</h3>
+          <p>
+            Ampliá tu radio o ajustá tus filtros para descubrir nuevos talentos en la red.
+            El radar se reiniciará automáticamente.
+          </p>
+
+          <div className="ls-empty-auto-box">
+            <div className="ls-empty-auto-spinner-wrap">
+              <PiArrowsClockwiseBold className={`ls-empty-spin-icon ${isResettingDeck ? 'is-spinning' : ''}`} />
+            </div>
+            <div className="ls-empty-auto-info">
+              <span className="ls-empty-auto-title">
+                {isResettingDeck ? 'Reiniciando perfiles...' : 'Reinicio automático en curso'}
+              </span>
+              <span className="ls-empty-auto-timer">
+                {isResettingDeck ? 'Cargando nuevos perfiles al radar' : `Recarga automática en ${timerStr}`}
+              </span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="ls-swipe-card ls-empty-card">
+        <PiCompassBold className="ls-empty-icon" />
+        <h3>No hay perfiles con estos filtros</h3>
         <p>
-          No se encontraron tarjetas que coincidan con la ubicación, categoría o géneros seleccionados en el radar.
+          No encontramos artistas o productores con los criterios seleccionados. Prueba ajustando la ubicacion, la distancia o los generos.
         </p>
-        <button
-          type="button"
-          className="ls-primary-button"
-          onClick={onResetFilters}
-        >
-          <PiArrowCounterClockwiseBold /> Restablecer Filtros
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '320px', marginTop: '16px' }}>
+          <button
+            type="button"
+            className="ls-primary-button"
+            onClick={onResetFilters}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              borderRadius: '12px',
+            }}
+          >
+            <PiCompassBold /> Restablecer Filtros
+          </button>
+        </div>
       </div>
     )
   }
@@ -293,6 +362,32 @@ export default function SwipeCardStack({
                 <span key={genre}>{genre}</span>
               ))}
             </div>
+          </div>
+
+          {/* Artistas en común o favoritos */}
+          {currentCard.commonArtists && currentCard.commonArtists.length > 0 && (
+            <div className="ls-profile-interest-block" style={{ marginTop: '6px' }}>
+              <span className="ls-interest-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#1DB954' }}>
+                <FaSpotify /> Artistas en común
+              </span>
+              <div className="ls-mini-tags">
+                {currentCard.commonArtists.map((artist: string) => (
+                  <span key={artist} style={{ border: '1px solid rgba(29, 185, 84, 0.4)', background: 'rgba(29, 185, 84, 0.12)', color: '#86efac' }}>
+                    {artist}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Helper visual para interacción táctil en dispositivos móviles */}
+          <div className="ls-mobile-swipe-helper">
+            <span className="ls-swipe-helper-side left">
+              <PiArrowLeftBold /> Deslizar para pasar
+            </span>
+            <span className="ls-swipe-helper-side right">
+              Deslizar para conectar <PiArrowRightBold />
+            </span>
           </div>
         </div>
       </div>

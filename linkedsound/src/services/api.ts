@@ -137,9 +137,10 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(payload),
       }),
-    delete: (id: string) =>
-      request(`/events/${id}`, {
+    delete: (id: string, payload?: Record<string, any>) =>
+      request<{ success: boolean; message?: string }>(`/events/${id}`, {
         method: 'DELETE',
+        ...(payload ? { body: JSON.stringify(payload) } : {}),
       }),
   },
   reports: {
@@ -191,5 +192,20 @@ export const api = {
       }),
     getMatches: () => request<{ matches: any[] }>('/interactions/matches', { method: 'GET' }),
     getUserInteractions: () => request<{ interactions: Array<{ receiverId: string; isLike: boolean }> }>('/interactions/status', { method: 'GET' }),
+    reset: () => request<{ success: boolean; message: string }>('/interactions/reset', { method: 'POST' }),
+  },
+  notifications: {
+    getAll: () => request<{ notifications: any[] }>('/notifications', { method: 'GET' }),
+    markAsRead: (id: string) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
+    markAllAsRead: () => request('/notifications/read-all', { method: 'PATCH' }),
+    clearAll: () => request('/notifications', { method: 'DELETE' }),
+  },
+  spotify: {
+    searchArtists: (query: string, limit: number = 8) =>
+      request<{ success: boolean; artists: any[] }>(
+        `/spotify/artists?q=${encodeURIComponent(query)}&limit=${limit}`,
+        { method: 'GET' }
+      ),
   },
 }
+

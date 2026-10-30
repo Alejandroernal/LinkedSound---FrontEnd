@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import TopBar from '../components/TopBar'
 import { RadarFilters, type RadarFilterState } from '../components/SidebarPanels'
 import Footer from '../components/Footer'
@@ -8,6 +8,18 @@ import SwipeCardStack from '../components/SwipeCardStack'
 import type { ProfileCard } from '../data/mockData'
 import type { AppPage, Profile, NotificationItem } from '../types'
 import { api } from '../services/api'
+import { computeUserAffinity } from '../utils/affinity'
+import {
+  PiUsersBold,
+  PiArrowsClockwiseBold,
+  PiSlidersHorizontalBold,
+} from 'react-icons/pi'
+
+function formatTimer(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60)
+  const secs = totalSeconds % 60
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+}
 
 type DashboardPageProps = {
   activePage?: AppPage
@@ -91,66 +103,128 @@ export default function DashboardPage({
   unreadMessagesCount,
 }: DashboardPageProps) {
   const [cardsList, setCardsList] = useState<ProfileCard[]>([])
+  const EMPTY_RESET_SECONDS = 300 // Tiempo para recargar cuando se consumen todos los perfiles
+  const [autoResetCountdown, setAutoResetCountdown] = useState<number>(EMPTY_RESET_SECONDS)
+  const [isResettingDeck, setIsResettingDeck] = useState(false)
+  const [hasExhaustedCards, setHasExhaustedCards] = useState(false)
+  const [isLoadingCards, setIsLoadingCards] = useState(true)
+  const isResettingRef = useRef(false)
 
-  useEffect(() => {
-    Promise.all([
-      api.auth.getUsers(),
-      api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [] })),
-    ]).then(([res, interRes]) => {
+  const loadDiscoveryCards = useCallback(async (isInitialOrNav = false) => {
+    setIsLoadingCards(true)
+    try {
+      const [res, interRes] = await Promise.all([
+        api.auth.getUsers(),
+        api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [] })),
+      ])
+
       if (res.success && Array.isArray(res.users)) {
         const currentId = profile?.id
         const currentEmail = profile?.email
         const currentNick = profile?.nickname
 
-        const interactedUserIds = new Set(
+        let interactedUserIds = new Set(
           (interRes.interactions || []).map((i: any) => i.receiverId)
         )
 
-        const dbCards: ProfileCard[] = res.users
-          .filter((u: any) => {
-            // Excluir al usuario actual de su propio stack de descubrimiento
+        let candidateUsers = res.users.filter((u: any) => {
+          // Excluir al usuario actual de su propio stack de descubrimiento
+          if (currentId && u.id === currentId) return false
+          if (currentEmail && u.email === currentEmail) return false
+          if (currentNick && u.nickname === currentNick) return false
+          if (u.role === 'Administrador' || u.role === 'Admin') return false
+          // Excluir perfiles con interaccion previa (like o descarte)
+          if (interactedUserIds.has(u.id)) return false
+          return true
+        })
+
+        // Si al navegar o recargar no quedan candidatos porque ya se interactuo con todos previamente,
+        // reiniciamos las interacciones para que el usuario tenga perfiles disponibles de inmediato sin esperar 5 minutos.
+        if (
+          isInitialOrNav &&
+          candidateUsers.length === 0 &&
+          res.users.some((u: any) => u.id !== currentId && u.role !== 'Administrador' && u.role !== 'Admin')
+        ) {
+          await api.interactions.reset().catch(() => {})
+          candidateUsers = res.users.filter((u: any) => {
             if (currentId && u.id === currentId) return false
             if (currentEmail && u.email === currentEmail) return false
             if (currentNick && u.nickname === currentNick) return false
             if (u.role === 'Administrador' || u.role === 'Admin') return false
-            // Excluir perfiles con interaccion previa (like o descarte)
-            if (interactedUserIds.has(u.id)) return false
             return true
           })
-          .map((u: any) => {
-            const coords = (typeof u.latitude === 'number' && typeof u.longitude === 'number')
-              ? { lat: u.latitude, lon: u.longitude }
-              : getCoordinatesForLocation(u.location)
+        }
 
-            return {
-              id: u.id,
-              firstName: u.firstName || '',
-              lastName: u.lastName || '',
-              nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
-              role: u.role || 'Artista',
-              location: u.location || 'No especificada',
-              latitude: coords?.lat,
-              longitude: coords?.lon,
-              description: u.description || '',
-              interestGenres: u.interestGenres || [],
-              tags: u.interestGenres || [],
-              soundcloudUrl: u.soundcloudUrl || '',
-              soundcloudHandle: u.soundcloudHandle || '',
-              spotifyUrl: u.spotifyUrl || '',
-              instagramUrl: u.instagramUrl || '',
-              profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
-              match: '95%',
-              isProfile: true,
-              itemRole: 'Perfil',
-              badge: u.role === 'Productor' ? 'Producer' : 'Artist',
-              tracks: Array.isArray(u.tracks) ? u.tracks : [],
-            }
-          })
+        const dbCards: ProfileCard[] = candidateUsers.map((u: any) => {
+          const coords = (typeof u.latitude === 'number' && typeof u.longitude === 'number')
+            ? { lat: u.latitude, lon: u.longitude }
+            : getCoordinatesForLocation(u.location)
+
+          const affinity = computeUserAffinity(profile, u)
+
+          return {
+            id: u.id,
+            firstName: u.firstName || '',
+            lastName: u.lastName || '',
+            nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
+            role: u.role || 'Artista',
+            location: u.location || 'No especificada',
+            latitude: coords?.lat,
+            longitude: coords?.lon,
+            description: u.description || '',
+            interestGenres: u.interestGenres || [],
+            favoriteArtists: Array.isArray(u.favoriteArtists) ? u.favoriteArtists : [],
+            tags: u.interestGenres || [],
+            soundcloudUrl: u.soundcloudUrl || '',
+            soundcloudHandle: u.soundcloudHandle || '',
+            spotifyUrl: u.spotifyUrl || '',
+            instagramUrl: u.instagramUrl || '',
+            profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+            match: affinity.percentageFormatted,
+            commonArtists: affinity.commonArtists,
+            commonGenres: affinity.commonGenres,
+            affinityReason: affinity.summary,
+            isProfile: true,
+            itemRole: 'Perfil',
+            badge: u.role === 'Productor' ? 'Producer' : 'Artist',
+            tracks: Array.isArray(u.tracks) ? u.tracks : [],
+          }
+        })
 
         setCardsList(dbCards)
+        setCurrentIndex(0)
+        setHasExhaustedCards(false)
+        setAutoResetCountdown(EMPTY_RESET_SECONDS)
       }
-    }).catch(() => {})
+    } catch {
+      // Manejo de error de red
+    } finally {
+      setIsLoadingCards(false)
+    }
   }, [profile?.id, profile?.email, profile?.nickname])
+
+  useEffect(() => {
+    loadDiscoveryCards(true)
+  }, [loadDiscoveryCards])
+
+  // Ejecucion automatica del reinicio de perfiles
+  const performAutoReset = useCallback(async () => {
+    if (isResettingRef.current) return
+    isResettingRef.current = true
+    setIsResettingDeck(true)
+    try {
+      await api.interactions.reset()
+      await loadDiscoveryCards(false)
+      setCurrentIndex(0)
+      setHasExhaustedCards(false)
+    } catch (err) {
+      console.error('Error al auto-reiniciar perfiles:', err)
+    } finally {
+      setIsResettingDeck(false)
+      isResettingRef.current = false
+      setAutoResetCountdown(EMPTY_RESET_SECONDS)
+    }
+  }, [loadDiscoveryCards])
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
@@ -166,6 +240,7 @@ export default function DashboardPage({
       radius: 500,
     }
   })
+  const [showFilters, setShowFilters] = useState(false)
 
   const filteredRecommendations = useMemo(() => {
     let centerLat = filters.centerLat
@@ -239,7 +314,27 @@ export default function DashboardPage({
 
       return true
     })
-  }, [filters])
+  }, [cardsList, filters, profile?.location])
+
+  // El auto-reinicio y contador de 5 minutos se activa UNICAMENTE si el usuario se queda sin opciones tras evaluarlas
+  useEffect(() => {
+    if (!hasExhaustedCards) {
+      setAutoResetCountdown(EMPTY_RESET_SECONDS)
+      return
+    }
+
+    const timer = setInterval(() => {
+      setAutoResetCountdown((prev) => {
+        if (prev <= 1) {
+          performAutoReset()
+          return EMPTY_RESET_SECONDS
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [hasExhaustedCards, performAutoReset])
 
   const handleDecision = (liked: boolean) => {
     if (filteredRecommendations.length === 0) return
@@ -250,10 +345,17 @@ export default function DashboardPage({
           onConnectProfile(currentCard)
         }
       } else if (currentCard.id) {
-        api.interactions.pass(currentCard.id).catch(() => {})
+        api.interactions.pass(currentCard.id).catch(() => { })
       }
     }
-    setCurrentIndex((prev) => prev + 1)
+
+    const nextIndex = currentIndex + 1
+    setCurrentIndex(nextIndex)
+
+    // Solo cuando se hayan recorrido todas las tarjetas activamente se agotan las opciones
+    if (nextIndex >= filteredRecommendations.length && filteredRecommendations.length > 0) {
+      setHasExhaustedCards(true)
+    }
   }
 
   const handleResetFilters = () => {
@@ -267,6 +369,8 @@ export default function DashboardPage({
       radius: 500,
     })
     setCurrentIndex(0)
+    setHasExhaustedCards(false)
+    setAutoResetCountdown(EMPTY_RESET_SECONDS)
   }
 
   return (
@@ -284,8 +388,37 @@ export default function DashboardPage({
         unreadMessagesCount={unreadMessagesCount}
       />
 
-      <main className="ls-layout ls-discovery-swipe-layout">
+      <main className={`ls-layout ls-discovery-swipe-layout ${!showFilters ? 'filters-hidden' : ''}`}>
         <section className="ls-discovery-panel">
+          <div className="ls-discovery-top-actions">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="ls-discovery-status-pill">
+                <PiUsersBold /> {filteredRecommendations.length} {filteredRecommendations.length === 1 ? 'perfil en radar' : 'perfiles en radar'}
+              </span>
+
+              <button
+                type="button"
+                className={`ls-discovery-filter-toggle-btn ${showFilters ? 'is-active' : ''}`}
+                onClick={() => setShowFilters((prev) => !prev)}
+                title={showFilters ? 'Ocultar filtros del radar' : 'Mostrar filtros del radar'}
+              >
+                <PiSlidersHorizontalBold />
+                <span>{showFilters ? 'Ocultar filtros' : 'Filtros'}</span>
+              </button>
+            </div>
+
+            {hasExhaustedCards && (
+              <span className="ls-discovery-auto-status">
+                <PiArrowsClockwiseBold className={isResettingDeck ? 'ls-spin-fast' : ''} />
+                <span>
+                  {isResettingDeck
+                    ? 'Recargando perfiles...'
+                    : `Auto-reinicio: ${formatTimer(autoResetCountdown)}`}
+                </span>
+              </span>
+            )}
+          </div>
+
           <div className="ls-swipe-stage">
             <SwipeCardStack
               cards={filteredRecommendations}
@@ -294,19 +427,28 @@ export default function DashboardPage({
               onPreviewProfile={(p) => setPreviewProfile(p)}
               onReport={(name) => setReportingTarget(name)}
               onResetFilters={handleResetFilters}
+              autoResetCountdown={autoResetCountdown}
+              isResettingDeck={isResettingDeck}
+              hasExhaustedCards={hasExhaustedCards}
+              isLoading={isLoadingCards}
             />
           </div>
         </section>
-        <aside className="ls-sidebar">
-          <RadarFilters
-            filters={filters}
-            onChangeFilters={(newFilters) => {
-              setFilters(newFilters)
-              setCurrentIndex(0)
-            }}
-            onReset={handleResetFilters}
-          />
-        </aside>
+
+        {showFilters && (
+          <aside className="ls-sidebar">
+            <RadarFilters
+              filters={filters}
+              onChangeFilters={(newFilters) => {
+                setFilters(newFilters)
+                setCurrentIndex(0)
+                setHasExhaustedCards(false)
+                setAutoResetCountdown(EMPTY_RESET_SECONDS)
+              }}
+              onReset={handleResetFilters}
+            />
+          </aside>
+        )}
       </main>
 
       <SoundCloudPreviewModal

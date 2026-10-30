@@ -15,6 +15,7 @@ import {
   PiWarningBold,
 } from 'react-icons/pi'
 import type { Message, Conversation } from '../data/mockData'
+import ChatAudioPlayer from './ChatAudioPlayer'
 
 const ALLOWED_AUDIO_EXT = ['.wav', '.mp3', '.flac', '.ogg']
 const ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png']
@@ -318,7 +319,7 @@ export default function ChatThread({
                   }}
                 >
                   {conversation.muted ? <PiBellBold style={{ color: '#00e5ff' }} /> : <PiBellSimpleSlashBold />}
-                  <span>{conversation.muted ? 'Dessilenciar chat' : 'Silenciar chat'}</span>
+                  <span>{conversation.muted ? 'Desactivar silencio' : 'Silenciar chat'}</span>
                 </button>
 
                 <button
@@ -437,7 +438,11 @@ export default function ChatThread({
               )
             )}
 
-            <div className={`ls-message-bubble ${message.sender === 'me' ? 'me' : 'them'}`}>
+            <div
+              className={`ls-message-bubble ${message.sender === 'me' ? 'me' : 'them'} ${
+                message.attachment?.type === 'audio' ? 'has-audio' : ''
+              }`}
+            >
               {message.attachment && (
                 <div className="ls-message-attachment" style={{ marginBottom: message.text ? '8px' : '0' }}>
                   {message.attachment.type === 'image' ? (
@@ -447,32 +452,18 @@ export default function ChatThread({
                       onClick={() => setPreviewImageUrl(message.attachment?.url ?? null)}
                     />
                   ) : (
-                    <div
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '10px',
-                        background: 'rgba(168, 85, 247, 0.15)',
-                        border: '1px solid rgba(168, 85, 247, 0.3)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        minWidth: '220px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 600 }}>
-                        <PiMusicNotesBold style={{ color: '#a855f7', fontSize: '1.1rem' }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.attachment.name}</span>
-                        <span style={{ fontSize: '0.68rem', padding: '2px 6px', background: 'rgba(168, 85, 247, 0.3)', borderRadius: '4px', marginLeft: 'auto' }}>
-                          {message.attachment.format}
-                        </span>
-                      </div>
-                      <audio controls src={message.attachment.url} style={{ width: '100%', height: '32px' }} />
-                    </div>
+                    <ChatAudioPlayer
+                      url={message.attachment.url}
+                      name={message.attachment.name}
+                      format={message.attachment.format}
+                      size={message.attachment.size}
+                      sender={message.sender}
+                    />
                   )}
                 </div>
               )}
               {message.text && <div>{message.text}</div>}
-              <span>{message.time}</span>
+              <span className="ls-message-time">{message.time}</span>
             </div>
           </div>
         ))}

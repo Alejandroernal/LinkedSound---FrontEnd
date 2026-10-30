@@ -74,35 +74,30 @@ export default function MessagesPage({
   const [inspectedProfileCard, setInspectedProfileCard] = useState<ProfileCard | null>(null)
 
   useEffect(() => {
-    // Cargar conversaciones reales de la base de datos
+    // Cargar conversaciones reales de la base de datos sin forzar la apertura automatica de ningun chat
     api.conversations.getAll().then((res) => {
       if (res.success && Array.isArray(res.conversations)) {
-        if (res.conversations.length > 0) {
-          const firstConvId = res.conversations[0].id
-          const targetActiveId = activeId || firstConvId
-          if (!activeId) {
-            setActiveId(firstConvId)
-          }
+        setConversationsList(res.conversations)
 
-          // Marcar la conversacion abierta como leida (unread: 0) para despejar la notificacion
+        // Si ya habia un chat seleccionado previamente por el usuario, cargar sus mensajes y marcarlo leido
+        if (activeId) {
           const updatedConvs = res.conversations.map((c) =>
-            c.id === targetActiveId ? { ...c, unread: 0 } : c
+            c.id === activeId ? { ...c, unread: 0 } : c
           )
           setConversationsList(updatedConvs)
 
-          api.conversations.getMessages(targetActiveId).then((mRes) => {
+          api.conversations.getMessages(activeId).then((mRes) => {
             if (mRes.success && Array.isArray(mRes.messages)) {
               setMessagesMap((prev) => ({
                 ...prev,
-                [targetActiveId]: mRes.messages,
+                [activeId]: mRes.messages,
               }))
             }
           }).catch(() => {})
-        } else {
-          setConversationsList([])
-          setActiveId('')
-          setMessagesMap({})
         }
+      } else {
+        setConversationsList([])
+        setMessagesMap({})
       }
     }).catch(() => {})
 

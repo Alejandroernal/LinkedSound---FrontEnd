@@ -356,7 +356,7 @@ export default function ConversationSidebar({
                         }}
                       >
                         {conversation.muted ? <PiBellBold style={{ color: '#00e5ff' }} /> : <PiBellSimpleSlashBold />}
-                        <span>{conversation.muted ? 'Dessilenciar' : 'Silenciar'}</span>
+                        <span>{conversation.muted ? 'Desactivar silencio' : 'Silenciar'}</span>
                       </button>
 
                       <button

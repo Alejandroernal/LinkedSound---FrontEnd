@@ -118,6 +118,8 @@ export default function AdminPage({
   
   const [userSearchTerm, setUserSearchTerm] = useState('')
   const debouncedUserSearchTerm = useDebounce(userSearchTerm, 300)
+  const [userStatusFilter, setUserStatusFilter] = useState<'All' | 'Active' | 'Suspended' | 'Banned'>('All')
+  const [userStatusError, setUserStatusError] = useState('')
 
   const [explorerSearchTerm, setExplorerSearchTerm] = useState('')
   const debouncedExplorerSearchTerm = useDebounce(explorerSearchTerm, 300)
@@ -308,6 +310,12 @@ export default function AdminPage({
 
   // ── Handlers Usuarios ──
   const handleSaveUserStatus = (updated: UserProfile) => {
+    if ((updated.status === 'Suspended' || updated.status === 'Banned') && !updated.statusJustification?.trim()) {
+      setUserStatusError('La justificación de la suspensión o sanción es obligatoria.')
+      return
+    }
+    setUserStatusError('')
+
     setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
 
     const statusLabel = updated.status === 'Active' ? 'Activo' : updated.status === 'Suspended' ? 'Suspendido' : 'Baneado'
@@ -328,6 +336,7 @@ export default function AdminPage({
     }
 
     setEditingUser(null)
+    setUserStatusError('')
   }
 
   const handleTriggerPasswordReset = (user: UserProfile) => {
@@ -444,11 +453,15 @@ export default function AdminPage({
   const totalReportsPages = Math.ceil(filteredReports.length / pageSize) || 1
   const paginatedReports = filteredReports.slice((reportsPage - 1) * pageSize, reportsPage * pageSize)
 
-  const filteredUsers = users.filter(u =>
-    u.nickname.toLowerCase().includes(debouncedUserSearchTerm.toLowerCase()) ||
-    u.email?.toLowerCase().includes(debouncedUserSearchTerm.toLowerCase()) ||
-    u.role?.toLowerCase().includes(debouncedUserSearchTerm.toLowerCase())
-  )
+  const filteredUsers = users.filter(u => {
+    if (userStatusFilter !== 'All' && (u.status ?? 'Active') !== userStatusFilter) return false
+    const term = debouncedUserSearchTerm.toLowerCase()
+    return (
+      u.nickname.toLowerCase().includes(term) ||
+      u.email?.toLowerCase().includes(term) ||
+      u.role?.toLowerCase().includes(term)
+    )
+  })
   const totalUsersPages = Math.ceil(filteredUsers.length / pageSize) || 1
   const paginatedUsers = filteredUsers.slice((usersPage - 1) * pageSize, usersPage * pageSize)
 
@@ -755,16 +768,49 @@ export default function AdminPage({
                 <h3 className="ls-admin-card-title">Gestión Total de Usuarios</h3>
                 <p className="ls-admin-card-subtitle">Inspecciona la información de cuentas, gestiona el estado y dispara el reseteo de contraseña.</p>
               </div>
-              <input
-                type="text"
-                placeholder="Buscar usuario, email o rol..."
-                value={userSearchTerm}
-                onChange={e => {
-                  setUserSearchTerm(e.target.value)
-                  setUsersPage(1)
-                }}
-                className="ls-admin-search-input"
-              />
+
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div className="ls-admin-filter-group">
+                  {(['All', 'Active', 'Suspended', 'Banned'] as const).map(st => (
+                    <button
+                      key={st}
+                      onClick={() => {
+                        setUserStatusFilter(st)
+                        setUsersPage(1)
+                      }}
+                      className={`ls-admin-filter-btn ${userStatusFilter === st ? 'active' : ''}`}
+                    >
+                      {st === 'All' ? 'Todos los Usuarios' : getNormalizedStatusText(st)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="ls-admin-search-input-wrap">
+                  <input
+                    type="text"
+                    placeholder="Buscar usuario, email o rol..."
+                    value={userSearchTerm}
+                    onChange={e => {
+                      setUserSearchTerm(e.target.value)
+                      setUsersPage(1)
+                    }}
+                    className="ls-admin-search-input"
+                  />
+                  {userSearchTerm && (
+                    <button
+                      type="button"
+                      className="ls-admin-search-clear-btn"
+                      onClick={() => {
+                        setUserSearchTerm('')
+                        setUsersPage(1)
+                      }}
+                      title="Borrar búsqueda"
+                    >
+                      <PiXBold />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="ls-admin-table-container">
@@ -861,16 +907,31 @@ export default function AdminPage({
                   ))}
                 </div>
 
-                <input
-                  type="text"
-                  placeholder="Buscar evento, organizador o ciudad..."
-                  value={explorerSearchTerm}
-                  onChange={e => {
-                    setExplorerSearchTerm(e.target.value)
-                    setExplorerPage(1)
-                  }}
-                  className="ls-admin-search-input"
-                />
+                <div className="ls-admin-search-input-wrap">
+                  <input
+                    type="text"
+                    placeholder="Buscar evento, organizador o ciudad..."
+                    value={explorerSearchTerm}
+                    onChange={e => {
+                      setExplorerSearchTerm(e.target.value)
+                      setExplorerPage(1)
+                    }}
+                    className="ls-admin-search-input"
+                  />
+                  {explorerSearchTerm && (
+                    <button
+                      type="button"
+                      className="ls-admin-search-clear-btn"
+                      onClick={() => {
+                        setExplorerSearchTerm('')
+                        setExplorerPage(1)
+                      }}
+                      title="Borrar búsqueda"
+                    >
+                      <PiXBold />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -972,16 +1033,31 @@ export default function AdminPage({
                 </div>
 
                 {/* Buscador de usuario o IP */}
-                <input
-                  type="text"
-                  placeholder="Buscar por usuario, IP o acción..."
-                  value={activitySearchTerm}
-                  onChange={e => {
-                    setActivitySearchTerm(e.target.value)
-                    setActivityPage(1)
-                  }}
-                  className="ls-admin-search-input"
-                />
+                <div className="ls-admin-search-input-wrap">
+                  <input
+                    type="text"
+                    placeholder="Buscar por usuario, IP o acción..."
+                    value={activitySearchTerm}
+                    onChange={e => {
+                      setActivitySearchTerm(e.target.value)
+                      setActivityPage(1)
+                    }}
+                    className="ls-admin-search-input"
+                  />
+                  {activitySearchTerm && (
+                    <button
+                      type="button"
+                      className="ls-admin-search-clear-btn"
+                      onClick={() => {
+                        setActivitySearchTerm('')
+                        setActivityPage(1)
+                      }}
+                      title="Borrar búsqueda"
+                    >
+                      <PiXBold />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1140,15 +1216,40 @@ export default function AdminPage({
                 <label className="ls-admin-form-label span-2 bold-label">
                   Justificación de la Sanción (Obligatorio - Se notificará al usuario):
                   <textarea
-                    required
                     placeholder="Indica el motivo detallado de la suspensión o ban..."
                     value={editingUser.statusJustification ?? ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, statusJustification: e.target.value })}
+                    onChange={(e) => {
+                      setEditingUser({ ...editingUser, statusJustification: e.target.value })
+                      if (userStatusError && e.target.value.trim()) setUserStatusError('')
+                    }}
                     rows={3}
                     className="ls-admin-form-textarea"
-                    style={{ borderColor: '#ff3c6e' }}
+                    style={{
+                      borderColor: userStatusError ? '#ef4444' : '#ff3c6e',
+                      boxShadow: userStatusError ? '0 0 0 2px rgba(239, 68, 68, 0.25)' : undefined,
+                    }}
                   />
                 </label>
+              )}
+
+              {userStatusError && (
+                <div
+                  className="span-2"
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    color: '#fca5a5',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <PiWarningOctagonBold style={{ fontSize: '1.1rem', flexShrink: 0 }} />
+                  <span>{userStatusError}</span>
+                </div>
               )}
 
               <label className="ls-admin-form-label span-2">
@@ -1337,7 +1438,9 @@ export default function AdminPage({
         <div className="ls-admin-modal-overlay">
           <div className="ls-admin-modal-content w-550">
             <div className="ls-admin-modal-header">
-              <h3 className="ls-admin-modal-title cyan">Detalles del Reporte</h3>
+              <h3 className="ls-admin-modal-title cyan">
+                {editingReport.status !== 'Pending' ? 'Detalles del Reporte (Solo lectura)' : 'Detalles del Reporte'}
+              </h3>
               <span className="ls-admin-modal-id">ID: {editingReport.id}</span>
               <button
                 type="button"
@@ -1348,121 +1451,152 @@ export default function AdminPage({
               </button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveReportDetails(editingReport) }} className="ls-admin-modal-flex-form">
-              <div className="ls-admin-modal-grid-form">
-                <label className="ls-admin-form-label">
-                  Usuario Reportado
-                  <input
-                    type="text"
-                    readOnly
-                    value={editingReport.reportedUser}
-                    className="ls-admin-form-input readonly"
-                  />
-                </label>
-
-                <label className="ls-admin-form-label">
-                  Usuario Denunciante
-                  <input
-                    type="text"
-                    readOnly
-                    value={editingReport.reporterUser}
-                    className="ls-admin-form-input readonly"
-                  />
-                </label>
-              </div>
-
-              <div className="ls-admin-modal-grid-form">
-                <label className="ls-admin-form-label">
-                  Origen
-                  <input
-                    type="text"
-                    readOnly
-                    value={editingReport.origin}
-                    className="ls-admin-form-input readonly"
-                  />
-                </label>
-
-                <label className="ls-admin-form-label">
-                  Tipo Objetivo
-                  <input
-                    type="text"
-                    readOnly
-                    value={editingReport.targetType}
-                    className="ls-admin-form-input readonly"
-                  />
-                </label>
-
-                <label className="ls-admin-form-label">
-                  Severidad (Modificable)
-                  <select
-                    value={editingReport.severity}
-                    onChange={(e) => setEditingReport({ ...editingReport, severity: e.target.value as any })}
-                    className="ls-admin-form-select"
-                  >
-                    <option value="Low">Baja (Low)</option>
-                    <option value="Medium">Media (Medium)</option>
-                    <option value="High">Alta (High)</option>
-                  </select>
-                </label>
-              </div>
-
-              <label className="ls-admin-form-label">
-                Motivo Principal
-                <input
-                  type="text"
-                  readOnly
-                  value={editingReport.reason}
-                  className="ls-admin-form-input readonly"
-                />
-              </label>
-
-              <label className="ls-admin-form-label">
-                Detalles del Incidente (Solo Lectura)
-                <textarea
-                  readOnly
-                  value={editingReport.details}
-                  rows={4}
-                  className="ls-admin-form-textarea readonly"
-                />
-              </label>
-
-              <label className="ls-admin-form-label">
-                Estado Actual
-                <input
-                  type="text"
-                  readOnly
-                  value={getNormalizedStatusText(editingReport.status)}
-                  className="ls-admin-form-input readonly"
-                />
-              </label>
-
-              <label className="ls-admin-form-label">
-                Comentario de Resolución (Administrador)
-                <textarea
-                  placeholder="Detalla los motivos o resolución de la acción tomada..."
-                  value={editingReport.adminComment ?? ''}
-                  onChange={(e) => setEditingReport({ ...editingReport, adminComment: e.target.value })}
-                  rows={3}
-                  className="ls-admin-form-textarea green-border"
-                />
-              </label>
-
-              <div className="ls-admin-form-actions flex-start-margin">
-                <button
-                  type="button"
-                  onClick={() => setEditingReport(null)}
-                  className="ls-admin-btn-cancel"
+            {(() => {
+              const isReadOnly = editingReport.status === 'Resolved' || editingReport.status === 'Dismissed'
+              return (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (!isReadOnly) {
+                      handleSaveReportDetails(editingReport)
+                    } else {
+                      setEditingReport(null)
+                    }
+                  }}
+                  className="ls-admin-modal-flex-form"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="ls-admin-btn-save-cyan"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
-            </form>
+                  <div className="ls-admin-modal-grid-form">
+                    <label className="ls-admin-form-label">
+                      Usuario Reportado
+                      <input
+                        type="text"
+                        readOnly
+                        value={editingReport.reportedUser}
+                        className="ls-admin-form-input readonly"
+                      />
+                    </label>
+
+                    <label className="ls-admin-form-label">
+                      Usuario Denunciante
+                      <input
+                        type="text"
+                        readOnly
+                        value={editingReport.reporterUser}
+                        className="ls-admin-form-input readonly"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="ls-admin-modal-grid-form">
+                    <label className="ls-admin-form-label">
+                      Origen
+                      <input
+                        type="text"
+                        readOnly
+                        value={editingReport.origin}
+                        className="ls-admin-form-input readonly"
+                      />
+                    </label>
+
+                    <label className="ls-admin-form-label">
+                      Tipo Objetivo
+                      <input
+                        type="text"
+                        readOnly
+                        value={editingReport.targetType}
+                        className="ls-admin-form-input readonly"
+                      />
+                    </label>
+
+                    <label className="ls-admin-form-label">
+                      Severidad {isReadOnly ? '(Solo lectura)' : '(Modificable)'}
+                      {isReadOnly ? (
+                        <input
+                          type="text"
+                          readOnly
+                          value={editingReport.severity}
+                          className="ls-admin-form-input readonly"
+                        />
+                      ) : (
+                        <select
+                          value={editingReport.severity}
+                          onChange={(e) => setEditingReport({ ...editingReport, severity: e.target.value as any })}
+                          className="ls-admin-form-select"
+                        >
+                          <option value="Low">Baja (Low)</option>
+                          <option value="Medium">Media (Medium)</option>
+                          <option value="High">Alta (High)</option>
+                        </select>
+                      )}
+                    </label>
+                  </div>
+
+                  <label className="ls-admin-form-label">
+                    Motivo Principal
+                    <input
+                      type="text"
+                      readOnly
+                      value={editingReport.reason}
+                      className="ls-admin-form-input readonly"
+                    />
+                  </label>
+
+                  <label className="ls-admin-form-label">
+                    Detalles del Incidente (Solo Lectura)
+                    <textarea
+                      readOnly
+                      value={editingReport.details}
+                      rows={4}
+                      className="ls-admin-form-textarea readonly"
+                    />
+                  </label>
+
+                  <label className="ls-admin-form-label">
+                    Estado Actual
+                    <input
+                      type="text"
+                      readOnly
+                      value={getNormalizedStatusText(editingReport.status)}
+                      className="ls-admin-form-input readonly"
+                    />
+                  </label>
+
+                  <label className="ls-admin-form-label">
+                    Comentario de Resolución (Administrador)
+                    <textarea
+                      readOnly={isReadOnly}
+                      placeholder={isReadOnly ? 'Sin comentarios registrados.' : 'Detalla los motivos o resolución de la acción tomada...'}
+                      value={editingReport.adminComment ?? ''}
+                      onChange={(e) => {
+                        if (!isReadOnly) {
+                          setEditingReport({ ...editingReport, adminComment: e.target.value })
+                        }
+                      }}
+                      rows={3}
+                      className={`ls-admin-form-textarea ${isReadOnly ? 'readonly' : 'green-border'}`}
+                    />
+                  </label>
+
+                  <div className="ls-admin-form-actions flex-start-margin">
+                    <button
+                      type="button"
+                      onClick={() => setEditingReport(null)}
+                      className="ls-admin-btn-cancel"
+                    >
+                      {isReadOnly ? 'Cerrar' : 'Cancelar'}
+                    </button>
+                    {!isReadOnly && (
+                      <button
+                        type="submit"
+                        className="ls-admin-btn-save-cyan"
+                      >
+                        Guardar Cambios
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )
+            })()}
           </div>
         </div>
       )}

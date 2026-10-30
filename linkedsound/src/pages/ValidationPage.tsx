@@ -575,7 +575,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
               </div>
             </label>
 
-              <div className="ls-tab-hint">
+            <div className="ls-tab-hint">
               <span>Tip:</span>
               <span>
                 Usa <kbd>Tab</kbd> o <kbd>Enter</kbd> para seleccionar la localidad sugerida o haz clic directamente en el mapa.
@@ -773,7 +773,6 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
               <span className="ls-status-indicator" style={{ width: '10px', height: '10px', borderRadius: '50%', background: (soundcloud.trim() && location.trim()) ? '#27ae60' : '#f59e0b', display: 'inline-block' }} />
               <strong style={{ fontSize: '0.9rem', color: '#fff' }}>
-                {(soundcloud.trim() && location.trim()) ? 'Perfil Listo para Discovery' : 'Campos Requeridos'}
               </strong>
             </div>
             <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.4 }}>

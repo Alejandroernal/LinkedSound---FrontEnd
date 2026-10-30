@@ -16,10 +16,11 @@ const AVAILABLE_GENRES = [
 
 // ── Avatar editor modal (reutilizable) ──────────────────────────────────────
 const CANVAS_W = 360
-const CANVAS_H = 300
+const CANVAS_H = 360
 const CX = CANVAS_W / 2
 const CY = CANVAS_H / 2
-const RADIUS = 120
+const CROP_BOX_SIZE = 260
+const HALF_CROP = CROP_BOX_SIZE / 2
 
 export function AvatarEditorModal({
   rawImage,
@@ -47,29 +48,82 @@ export function AvatarEditorModal({
 
     const z = zoomRef.current
     const pan = panRef.current
-    const base = Math.max((RADIUS * 2) / img.naturalWidth, (RADIUS * 2) / img.naturalHeight)
+    const base = Math.max(CROP_BOX_SIZE / img.naturalWidth, CROP_BOX_SIZE / img.naturalHeight)
     const scale = base * z
     const dw = img.naturalWidth * scale
     const dh = img.naturalHeight * scale
     const dx = CX + pan.x - dw / 2
     const dy = CY + pan.y - dh / 2
 
-    // 1. Image
+    // 1. Dibujar imagen completa escalada y desplazada
     ctx.drawImage(img, dx, dy, dw, dh)
 
-    // 2. Dark overlay — evenodd leaves circle transparent
-    ctx.beginPath()
-    ctx.rect(0, 0, CANVAS_W, CANVAS_H)
-    ctx.arc(CX, CY, RADIUS, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(0,0,0,0.62)'
-    ctx.fill('evenodd')
+    // 2. Overlay oscuro dejando transparente el recorte cuadrangular
+    const cropX = CX - HALF_CROP
+    const cropY = CY - HALF_CROP
 
-    // 3. White ring
+    ctx.save()
+    ctx.fillStyle = 'rgba(10, 12, 22, 0.72)'
+    // Sombras alrededor del marco cuadrado
     ctx.beginPath()
-    ctx.arc(CX, CY, RADIUS, 0, Math.PI * 2)
-    ctx.strokeStyle = 'rgba(255,255,255,0.92)'
-    ctx.lineWidth = 3
+    ctx.rect(0, 0, CANVAS_W, cropY) // Top
+    ctx.rect(0, cropY, cropX, CROP_BOX_SIZE) // Left
+    ctx.rect(cropX + CROP_BOX_SIZE, cropY, CANVAS_W - (cropX + CROP_BOX_SIZE), CROP_BOX_SIZE) // Right
+    ctx.rect(0, cropY + CROP_BOX_SIZE, CANVAS_W, CANVAS_H - (cropY + CROP_BOX_SIZE)) // Bottom
+    ctx.fill()
+    ctx.restore()
+
+    // 3. Guia circular tenue para previsualizar como quedara en vistas circulares
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(CX, CY, HALF_CROP, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.45)'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([5, 5])
     ctx.stroke()
+    ctx.restore()
+
+    // 4. Marco cuadrangular principal con esquinas resaltadas
+    ctx.save()
+    ctx.strokeStyle = '#a855f7'
+    ctx.lineWidth = 2
+    ctx.strokeRect(cropX, cropY, CROP_BOX_SIZE, CROP_BOX_SIZE)
+
+    // Esquineros estilizados
+    const cornerLen = 16
+    ctx.strokeStyle = '#c084fc'
+    ctx.lineWidth = 3
+    ctx.setLineDash([])
+
+    // Top-left
+    ctx.beginPath()
+    ctx.moveTo(cropX, cropY + cornerLen)
+    ctx.lineTo(cropX, cropY)
+    ctx.lineTo(cropX + cornerLen, cropY)
+    ctx.stroke()
+
+    // Top-right
+    ctx.beginPath()
+    ctx.moveTo(cropX + CROP_BOX_SIZE - cornerLen, cropY)
+    ctx.lineTo(cropX + CROP_BOX_SIZE, cropY)
+    ctx.lineTo(cropX + CROP_BOX_SIZE, cropY + cornerLen)
+    ctx.stroke()
+
+    // Bottom-left
+    ctx.beginPath()
+    ctx.moveTo(cropX, cropY + CROP_BOX_SIZE - cornerLen)
+    ctx.lineTo(cropX, cropY + CROP_BOX_SIZE)
+    ctx.lineTo(cropX + cornerLen, cropY + CROP_BOX_SIZE)
+    ctx.stroke()
+
+    // Bottom-right
+    ctx.beginPath()
+    ctx.moveTo(cropX + CROP_BOX_SIZE - cornerLen, cropY + CROP_BOX_SIZE)
+    ctx.lineTo(cropX + CROP_BOX_SIZE, cropY + CROP_BOX_SIZE)
+    ctx.lineTo(cropX + CROP_BOX_SIZE, cropY + CROP_BOX_SIZE - cornerLen)
+    ctx.stroke()
+
+    ctx.restore()
   }, [])
 
   useEffect(() => {
@@ -103,26 +157,27 @@ export function AvatarEditorModal({
   const handleApply = () => {
     const img = imgRef.current
     if (!img) return
-    const SIZE = 240
+    // Generar imagen final en proporcion cuadrada limpia 1:1 de 500x500 px
+    const OUTPUT_SIZE = 500
     const out = document.createElement('canvas')
-    out.width = SIZE
-    out.height = SIZE
+    out.width = OUTPUT_SIZE
+    out.height = OUTPUT_SIZE
     const ctx = out.getContext('2d')!
+
     const z = zoomRef.current
     const pan = panRef.current
-    const base = Math.max(SIZE / img.naturalWidth, SIZE / img.naturalHeight)
-    const s = base * z
+    const base = Math.max(CROP_BOX_SIZE / img.naturalWidth, CROP_BOX_SIZE / img.naturalHeight)
+    const factor = OUTPUT_SIZE / CROP_BOX_SIZE
+
+    const s = base * z * factor
     const dw = img.naturalWidth * s
     const dh = img.naturalHeight * s
-    const dx = SIZE / 2 + pan.x - dw / 2
-    const dy = SIZE / 2 + pan.y - dh / 2
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2)
-    ctx.clip()
+    const dx = OUTPUT_SIZE / 2 + (pan.x * factor) - dw / 2
+    const dy = OUTPUT_SIZE / 2 + (pan.y * factor) - dh / 2
+
+    // Guardar imagen cuadrada completa sin recortar en circulo
     ctx.drawImage(img, dx, dy, dw, dh)
-    ctx.restore()
-    onApply(out.toDataURL('image/png'))
+    onApply(out.toDataURL('image/jpeg', 0.92))
   }
 
   return (

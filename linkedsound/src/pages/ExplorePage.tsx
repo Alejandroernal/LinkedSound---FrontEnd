@@ -6,10 +6,12 @@ import Footer from '../components/Footer'
 import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import CreateEventModal from '../components/CreateEventModal'
+import DeleteEventModal from '../components/DeleteEventModal'
 import RejectMatchModal from '../components/RejectMatchModal'
 import GenreFilterPopover from '../components/GenreFilterPopover'
 import {
   PiFlagBold,
+  PiTrashBold,
   PiSoundcloudLogoFill,
   PiCalendarPlusBold,
   PiMagnifyingGlassBold,
@@ -24,9 +26,11 @@ import {
   PiMapPinBold,
   PiXBold,
   PiPencilSimpleBold,
+  PiUserCircleBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
+import { computeUserAffinity } from '../utils/affinity'
 
 type ExplorePageProps = {
   activePage?: AppPage
@@ -56,8 +60,10 @@ export default function ExplorePage({
   unreadMessagesCount,
 }: ExplorePageProps) {
   const [cardsList, setCardsList] = useState<ProfileCard[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const loadData = () => {
+    setIsLoading(true)
     Promise.all([api.auth.getUsers(), api.events.getAll()]).then(([usersRes, eventsRes]) => {
       const combinedCards: ProfileCard[] = []
 
@@ -65,33 +71,40 @@ export default function ExplorePage({
       if (usersRes.success && Array.isArray(usersRes.users)) {
         const userCards: ProfileCard[] = usersRes.users
           .filter((u: any) => u.role !== 'Administrador')
-          .map((u: any) => ({
-            id: u.id,
-            firstName: u.firstName || '',
-            lastName: u.lastName || '',
-            nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
-            role: u.role || 'Artista',
-            location: u.location || 'No especificada',
-            country: u.country || '',
-            province: u.province || '',
-            city: u.city || '',
-            streetAddress: u.streetAddress || '',
-            latitude: u.latitude,
-            longitude: u.longitude,
-            description: u.description || '',
-            interestGenres: u.interestGenres || [],
-            tags: u.interestGenres || [],
-            soundcloudUrl: u.soundcloudUrl || '',
-            soundcloudHandle: u.soundcloudHandle || '',
-            spotifyUrl: u.spotifyUrl || '',
-            instagramUrl: u.instagramUrl || '',
-            profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
-            match: '92%',
-            isProfile: true,
-            itemRole: 'Perfil',
-            badge: u.role === 'Productor' ? 'Producer' : 'Artist',
-            tracks: Array.isArray(u.tracks) ? u.tracks : [],
-          }))
+          .map((u: any) => {
+            const affinity = computeUserAffinity(profile, u)
+            return {
+              id: u.id,
+              firstName: u.firstName || '',
+              lastName: u.lastName || '',
+              nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
+              role: u.role || 'Artista',
+              location: u.location || 'No especificada',
+              country: u.country || '',
+              province: u.province || '',
+              city: u.city || '',
+              streetAddress: u.streetAddress || '',
+              latitude: u.latitude,
+              longitude: u.longitude,
+              description: u.description || '',
+              interestGenres: u.interestGenres || [],
+              favoriteArtists: Array.isArray(u.favoriteArtists) ? u.favoriteArtists : [],
+              tags: u.interestGenres || [],
+              soundcloudUrl: u.soundcloudUrl || '',
+              soundcloudHandle: u.soundcloudHandle || '',
+              spotifyUrl: u.spotifyUrl || '',
+              instagramUrl: u.instagramUrl || '',
+              profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+              match: affinity.percentageFormatted,
+              commonArtists: affinity.commonArtists,
+              commonGenres: affinity.commonGenres,
+              affinityReason: affinity.summary,
+              isProfile: true,
+              itemRole: 'Perfil',
+              badge: u.role === 'Productor' ? 'Producer' : 'Artist',
+              tracks: Array.isArray(u.tracks) ? u.tracks : [],
+            }
+          })
         combinedCards.push(...userCards)
       }
 
@@ -125,12 +138,21 @@ export default function ExplorePage({
           spotifyUrl: ev.spotifyUrl || '',
           instagramUrl: ev.instagramUrl || '',
           tracks: ev.tracks || [],
+          owner: ev.owner || ev.ownerNickname || 'Organizador',
+          ownerId: ev.ownerId,
+          ownerNickname: ev.ownerNickname || '',
+          createdAt: ev.createdAt,
+          updatedAt: ev.updatedAt,
         }))
         combinedCards.push(...eventCards)
       }
 
       setCardsList(combinedCards)
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('Error al cargar datos en ExplorePage:', err)
+    }).finally(() => {
+      setIsLoading(false)
+    })
   }
 
   useEffect(() => {
@@ -148,11 +170,19 @@ export default function ExplorePage({
   const [selectedPreviewCard, setSelectedPreviewCard] = useState<ProfileCard | null>(null)
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<ProfileCard | null>(null)
+  const [deletingEvent, setDeletingEvent] = useState<ProfileCard | null>(null)
 
   const handleCreateEvent = async (newEvent: ProfileCard) => {
     try {
       const eventItem = newEvent as Partial<EventItem>
+      const fallbackOwner = profile
+        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.nickname || 'Organizador'
+        : 'Organizador'
+
       const res = await api.events.create({
+        ownerId: profile?.id,
+        ownerEmail: profile?.email,
+        ownerNickname: profile?.nickname,
         title: newEvent.nickname,
         nickname: newEvent.nickname,
         role: newEvent.role,
@@ -173,18 +203,44 @@ export default function ExplorePage({
       })
 
       if (res.success && res.event) {
+        const ownerName = res.event.owner
+          ? (typeof res.event.owner === 'string'
+              ? res.event.owner
+              : `${res.event.owner.firstName || ''} ${res.event.owner.lastName || ''}`.trim() || res.event.owner.nickname)
+          : fallbackOwner
         const created: ProfileCard = {
           ...newEvent,
           id: res.event.id,
           createdAt: res.event.createdAt,
-          ownerId: res.event.ownerId,
+          ownerId: res.event.ownerId || profile?.id,
+          owner: ownerName,
+          ownerNickname: res.event.ownerNickname || res.event.owner?.nickname || profile?.nickname || '',
         }
         setCardsList((prev) => [created, ...prev])
       } else {
-        setCardsList((prev) => [newEvent, ...prev])
+        setCardsList((prev) => [
+          {
+            ...newEvent,
+            owner: fallbackOwner,
+            ownerId: profile?.id,
+            ownerNickname: profile?.nickname || '',
+          },
+          ...prev,
+        ])
       }
     } catch {
-      setCardsList((prev) => [newEvent, ...prev])
+      const fallbackOwner = profile
+        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.nickname || 'Organizador'
+        : 'Organizador'
+      setCardsList((prev) => [
+        {
+          ...newEvent,
+          owner: fallbackOwner,
+          ownerId: profile?.id,
+          ownerNickname: profile?.nickname || '',
+        },
+        ...prev,
+      ])
     }
   }
 
@@ -193,6 +249,7 @@ export default function ExplorePage({
     try {
       const eventItem = updatedEvent as Partial<EventItem>
       const res = await api.events.update(updatedEvent.id, {
+        ownerId: profile?.id,
         title: updatedEvent.nickname,
         nickname: updatedEvent.nickname,
         role: updatedEvent.role,
@@ -216,11 +273,11 @@ export default function ExplorePage({
         setCardsList((prev) =>
           prev.map((c) =>
             c.id === updatedEvent.id
-              ? {
+              ? ({
                   ...c,
                   ...updatedEvent,
                   updatedAt: res.event.updatedAt,
-                }
+                } as ProfileCard)
               : c
           )
         )
@@ -234,6 +291,22 @@ export default function ExplorePage({
 
   const handleConfirmReject = (cardToReject: ProfileCard) => {
     setCardsList((prev) => prev.filter((c) => (c.id ? c.id !== cardToReject.id : c.nickname !== cardToReject.nickname)))
+  }
+
+  const handleDeleteEvent = async (eventToDelete: ProfileCard) => {
+    if (!eventToDelete.id) return
+    try {
+      const res = await api.events.delete(eventToDelete.id, {
+        ownerId: profile?.id,
+      })
+      if (res.success) {
+        setCardsList((prev) => prev.filter((c) => c.id !== eventToDelete.id))
+      }
+    } catch (err) {
+      console.error('Error al eliminar el evento:', err)
+    } finally {
+      setDeletingEvent(null)
+    }
   }
 
   const filteredCards = useMemo(() => {
@@ -266,8 +339,10 @@ export default function ExplorePage({
       const inDesc = cardBio.toLowerCase().includes(query)
       const inBadge = (card.badge ?? '').toLowerCase().includes(query)
       const inTags = cardTags.some((t) => t.toLowerCase().includes(query))
+      const inVenue = 'venue' in card ? Boolean((card as any).venue?.toLowerCase().includes(query)) : false
+      const inCity = 'city' in card ? Boolean((card as any).city?.toLowerCase().includes(query)) : false
 
-      return inName || inRole || inLocation || inDesc || inBadge || inTags
+      return inName || inRole || inLocation || inDesc || inBadge || inTags || inVenue || inCity
     })
 
     if (sortBy === 'name') {
@@ -315,8 +390,7 @@ export default function ExplorePage({
                   </h3>
                   <span className="ls-explore-subtitle ls-explore-subtitle-row">
                     <span className="ls-live-status-dot" />
-                    Descubre la red global • {filteredCards.length}{' '}
-                    {filteredCards.length === 1 ? 'publicación' : 'publicaciones'}
+                    Descubre la red global • {isLoading ? 'Cargando publicaciones...' : `${filteredCards.length} ${filteredCards.length === 1 ? 'publicación' : 'publicaciones'}`}
                   </span>
                 </div>
               </div>
@@ -348,32 +422,50 @@ export default function ExplorePage({
 
               {/* Grupo unificado de funcionalidades (Derecha) */}
               <div className="ls-explore-functionalities-group">
-                {/* 1. Pestañas icónicas (Todos, Perfiles, Eventos) */}
-                <div className="ls-explore-icon-tabs" title="Filtrar tipo de contenido">
-                  <button
-                    type="button"
-                    className={`ls-icon-tab-btn ${itemRoleFilter === 'Todos' ? 'is-active' : ''}`}
-                    onClick={() => setItemRoleFilter('Todos')}
-                    title="Todos los contenidos"
-                  >
-                    <PiSquaresFourBold />
-                  </button>
-                  <button
-                    type="button"
-                    className={`ls-icon-tab-btn ${itemRoleFilter === 'Perfil' ? 'is-active' : ''}`}
-                    onClick={() => setItemRoleFilter('Perfil')}
-                    title="Solo Perfiles"
-                  >
-                    <PiUsersBold />
-                  </button>
-                  <button
-                    type="button"
-                    className={`ls-icon-tab-btn ${itemRoleFilter === 'Evento' ? 'is-active' : ''}`}
-                    onClick={() => setItemRoleFilter('Evento')}
-                    title="Solo Eventos"
-                  >
-                    <PiTicketBold />
-                  </button>
+                {/* 1. Pestañas icónicas (Todos, Perfiles, Eventos) + Botón Limpiar adyacente */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <div className="ls-explore-icon-tabs" title="Filtrar tipo de contenido">
+                    <button
+                      type="button"
+                      className={`ls-icon-tab-btn ${itemRoleFilter === 'Todos' ? 'is-active' : ''}`}
+                      onClick={() => setItemRoleFilter('Todos')}
+                      title="Todos los contenidos"
+                    >
+                      <PiSquaresFourBold />
+                    </button>
+                    <button
+                      type="button"
+                      className={`ls-icon-tab-btn ${itemRoleFilter === 'Perfil' ? 'is-active' : ''}`}
+                      onClick={() => setItemRoleFilter('Perfil')}
+                      title="Solo Perfiles"
+                    >
+                      <PiUsersBold />
+                    </button>
+                    <button
+                      type="button"
+                      className={`ls-icon-tab-btn ${itemRoleFilter === 'Evento' ? 'is-active' : ''}`}
+                      onClick={() => setItemRoleFilter('Evento')}
+                      title="Solo Eventos"
+                    >
+                      <PiTicketBold />
+                    </button>
+                  </div>
+
+                  {/* Botón Reset / Limpiar directamente al lado del filtro de Perfiles/Eventos */}
+                  {(searchQuery || activeGenre || itemRoleFilter !== 'Todos') && (
+                    <button
+                      type="button"
+                      className="ls-explore-reset-btn-icon"
+                      onClick={() => {
+                        setSearchQuery('')
+                        setActiveGenre('')
+                        setItemRoleFilter('Todos')
+                      }}
+                      title="Limpiar filtros y búsqueda"
+                    >
+                      <PiArrowClockwiseBold />
+                    </button>
+                  )}
                 </div>
 
                 {/* 2. Botón Filtro por Género */}
@@ -411,22 +503,6 @@ export default function ExplorePage({
                 >
                   <PiCalendarPlusBold />
                 </button>
-
-                {/* Botón Reset si hay filtros aplicados */}
-                {(searchQuery || activeGenre || itemRoleFilter !== 'Todos') && (
-                  <button
-                    type="button"
-                    className="ls-explore-reset-btn-icon"
-                    onClick={() => {
-                      setSearchQuery('')
-                      setActiveGenre('')
-                      setItemRoleFilter('Todos')
-                    }}
-                    title="Restablecer todos los filtros"
-                  >
-                    <PiArrowClockwiseBold />
-                  </button>
-                )}
               </div>
             </div>
 
@@ -443,7 +519,20 @@ export default function ExplorePage({
 
 
           <div className="ls-card-grid">
-            {filteredCards.length > 0 ? (
+            {isLoading ? (
+              <div className="ls-explore-loading-state">
+                <div className="ls-explore-spinner-container">
+                  <div className="ls-explore-spinner-ring" />
+                  <div className="ls-explore-spinner-icon">
+                    <PiCompassBold />
+                  </div>
+                </div>
+                <h4 className="ls-explore-loading-title">Cargando creadores y eventos...</h4>
+                <p className="ls-explore-loading-desc">
+                  Sintonizando la red de talentos de LinkedSound
+                </p>
+              </div>
+            ) : filteredCards.length > 0 ? (
               filteredCards.map((card, idx) => {
                 const isProfile = isUserProfile(card)
                 const profileCard = isProfile ? (card as UserProfile) : null
@@ -461,19 +550,15 @@ export default function ExplorePage({
                   (profileCard?.tracks && profileCard.tracks.length > 0)
                 )
 
-                const MIN_DESC_CHARS_PROFILE = 139
-                const MAX_DESC_CHARS_PROFILE = 210
-                const MAX_DESC_CHARS_EVENT = 85
+                const MAX_DESC_CHARS_PROFILE = 160
+                const MAX_DESC_CHARS_EVENT = 120
 
                 let rawDesc = card.description?.trim() || ''
 
-                if (isProfile) {
-                  if (rawDesc.length < MIN_DESC_CHARS_PROFILE) {
-                    const defaultComplement = ' Artista y productor musical colaborando en la plataforma LinkedSound para crear experiencias sonoras innovadoras y conectar con talentos globales.'
-                    rawDesc = rawDesc ? `${rawDesc}${defaultComplement}` : defaultComplement.trim()
-                  }
-                } else if (!rawDesc) {
-                  rawDesc = 'Evento musical destacado en LinkedSound.'
+                if (!rawDesc) {
+                  rawDesc = isProfile
+                    ? 'Perfil musical en LinkedSound.'
+                    : 'Evento musical destacado en LinkedSound.'
                 }
 
                 const maxChars = isProfile ? MAX_DESC_CHARS_PROFILE : MAX_DESC_CHARS_EVENT
@@ -515,15 +600,38 @@ export default function ExplorePage({
                     </div>
                     <div className="ls-card-body">
                       <div className="ls-card-head">
-                        <div>
-                          <h3>{cardDisplayTitle}</h3>
+                        <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                          <h3 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                            {cardDisplayTitle}
+                          </h3>
                           {isProfile && fullName && card.nickname && fullName.toLowerCase() !== card.nickname.toLowerCase() && (
                             <span className="ls-card-fullname-pill">
                               {fullName}
                             </span>
                           )}
+                          {!isProfile && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                fontSize: '0.74rem',
+                                color: '#00e5ff',
+                                marginTop: '4px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                              title={`Creado por: ${card.owner || card.ownerNickname || 'Organizador'}`}
+                            >
+                              <PiUserCircleBold style={{ fontSize: '0.92rem', flexShrink: 0, color: '#00e5ff' }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Creado por: <strong>{card.owner || card.ownerNickname || 'Organizador'}</strong>
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <span className="ls-match-tag">{card.match} match</span>
+                        <span className="ls-match-tag" style={{ flexShrink: 0 }}>{card.match} match</span>
                       </div>
                       {!isProfile && (
                         <p className="ls-card-role">
@@ -580,41 +688,74 @@ export default function ExplorePage({
 
                             const createdAtTime = card.createdAt ? new Date(card.createdAt).getTime() : null
                             const isExpired = createdAtTime ? (Date.now() - createdAtTime) > 24 * 60 * 60 * 1000 : false
+                            const remainingHours = createdAtTime ? Math.max(0, 24 - (Date.now() - createdAtTime) / (1000 * 60 * 60)) : 24
+
+                            return (
+                              <>
+                                <button
+                                  type="button"
+                                  className="ls-card-btn-action edit"
+                                  disabled={isExpired}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (isExpired) return
+                                    setEditingEvent(card)
+                                    setShowCreateEventModal(true)
+                                  }}
+                                  title={isExpired ? 'Plazo de modificación expirado (+24hs transcurridas)' : `Editar Evento (${remainingHours.toFixed(1)}hs restantes)`}
+                                >
+                                  <PiPencilSimpleBold />
+                                  <span>{isExpired ? 'Expirado' : 'Editar'}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="ls-card-btn-action delete"
+                                  disabled={isExpired}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (isExpired) return
+                                    setDeletingEvent(card)
+                                  }}
+                                  title={isExpired ? 'Plazo de eliminación expirado (+24hs transcurridas)' : `Eliminar Evento (${remainingHours.toFixed(1)}hs restantes)`}
+                                >
+                                  <PiTrashBold />
+                                  <span>Eliminar</span>
+                                </button>
+                              </>
+                            )
+                          })()}
+
+                          {(() => {
+                            const isOwnEvent = !isProfile && Boolean(
+                              (profile?.id && card.ownerId && card.ownerId === profile.id) ||
+                              (profile?.nickname && card.ownerNickname && card.ownerNickname.toLowerCase() === profile.nickname.toLowerCase()) ||
+                              (profile?.nickname && card.owner && card.owner.toLowerCase() === profile.nickname.toLowerCase())
+                            )
+
+                            const isOwnProfile = isProfile && Boolean(
+                              (profile?.id && card.id && card.id === profile.id) ||
+                              (profile?.nickname && card.nickname && card.nickname.toLowerCase() === profile.nickname.toLowerCase())
+                            )
+
+                            // Un usuario no debe poder reportar su propio evento ni su propio perfil
+                            if (isOwnEvent || isOwnProfile) return null
 
                             return (
                               <button
                                 type="button"
-                                className="ls-card-btn-action"
-                                style={{
-                                  color: isExpired ? '#94a3b8' : '#00e5ff',
-                                  borderColor: isExpired ? 'rgba(148, 163, 184, 0.3)' : 'rgba(0, 229, 255, 0.4)',
-                                  opacity: isExpired ? 0.6 : 1,
-                                }}
+                                className="ls-card-btn-action report"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  setEditingEvent(card)
-                                  setShowCreateEventModal(true)
+                                  setReportingTarget(card.nickname ?? '')
                                 }}
-                                title={isExpired ? 'Plazo de modificación expirado (+24hs)' : 'Editar Evento'}
+                                title={isProfile ? `Reportar Perfil ${card.nickname ?? ''}` : `Reportar Evento ${card.nickname ?? ''}`}
                               >
-                                <PiPencilSimpleBold />
-                                <span>{isExpired ? 'Expirado' : 'Editar'}</span>
+                                <PiFlagBold />
+                                <span>Reportar</span>
                               </button>
                             )
                           })()}
-
-                          <button
-                            type="button"
-                            className="ls-card-btn-action report"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setReportingTarget(card.nickname ?? '')
-                            }}
-                            title={isProfile ? `Reportar Perfil ${card.nickname ?? ''}` : `Reportar Evento ${card.nickname ?? ''}`}
-                          >
-                            <PiFlagBold />
-                            <span>Reportar</span>
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -654,9 +795,21 @@ export default function ExplorePage({
           setEditingEvent(cardToEdit)
           setShowCreateEventModal(true)
         }}
+        onDeleteEvent={(cardToDelete) => {
+          setSelectedPreviewCard(null)
+          setDeletingEvent(cardToDelete)
+        }}
         currentUserId={profile?.id}
         currentUserNickname={profile?.nickname}
         isAdmin={isAdminSession}
+      />
+
+      {/* Modal de Confirmación para Eliminar Evento */}
+      <DeleteEventModal
+        isOpen={Boolean(deletingEvent)}
+        event={deletingEvent}
+        onClose={() => setDeletingEvent(null)}
+        onConfirmDelete={handleDeleteEvent}
       />
 
       {/* Report Modal */}

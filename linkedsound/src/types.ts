@@ -49,6 +49,30 @@ export type ExplorerItem = {
   image?: string
 }
 
+// Entidad normalizada para Ubicaciones y Lugares
+export type LocationItem = {
+  id?: string
+  name?: string
+  formattedAddress: string
+  country?: string
+  province?: string
+  city?: string
+  streetAddress?: string
+  latitude?: number
+  longitude?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type SpotifyArtist = {
+  id?: string
+  spotifyId?: string
+  name: string
+  imageUrl?: string | null
+  spotifyUrl?: string
+  genres?: string[]
+}
+
 export type UserProfile = {
   // Identificación y Registro
   id?: string
@@ -62,6 +86,10 @@ export type UserProfile = {
   // Perfil Profesional y Descripción
   role?: 'Productor' | 'Artista' | 'Productor y Artista' | 'Administrador' | string
   interestGenres?: string[]
+  favoriteArtists?: SpotifyArtist[]
+  commonArtists?: string[]
+  commonGenres?: string[]
+  affinityReason?: string
   description?: string
   match?: string
   badge?: string
@@ -92,6 +120,8 @@ export type UserProfile = {
   streetAddress?: string // Calle y Altura
   latitude?: number
   longitude?: number
+  locationId?: string
+  locationData?: LocationItem
 
   // Administración y Estado
   status?: 'Active' | 'Suspended' | 'Pending Approval' | 'Banned'
@@ -109,6 +139,13 @@ export type UserProfile = {
 
   // Estado de Match recíproco previo
   preLiked?: boolean
+
+  // Identificación del creador / auditoría
+  owner?: string
+  ownerId?: string
+  ownerNickname?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 // Backward compatibility alias
@@ -135,6 +172,10 @@ export type EventItem = {
 
   // Géneros y etiquetas
   interestGenres: string[]
+  favoriteArtists?: SpotifyArtist[]
+  commonArtists?: string[]
+  commonGenres?: string[]
+  affinityReason?: string
   match?: string
   badge?: string
   category?: string
@@ -152,6 +193,8 @@ export type EventItem = {
   streetAddress?: string // Calle y Altura
   latitude?: number
   longitude?: number
+  locationId?: string
+  locationData?: LocationItem
 
   // Administración y Estado
   status?: 'Active' | 'Suspended' | 'Pending Approval' | 'Banned'
@@ -188,7 +231,7 @@ export type NotificationItem = {
   message: string
   timestamp: string
   read: boolean
-  type: 'match' | 'message' | 'system' | 'report' | 'like'
+  type: 'match' | 'message' | 'system' | 'report' | 'like' | 'match_request'
   linkPage?: AppPage
 }
 

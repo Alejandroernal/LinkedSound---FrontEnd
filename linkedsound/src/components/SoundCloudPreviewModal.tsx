@@ -17,6 +17,8 @@ import {
   PiWarningBold,
   PiTimerBold,
   PiPencilSimpleBold,
+  PiUserCircleBold,
+  PiTrashBold,
 } from 'react-icons/pi'
 import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
@@ -29,6 +31,7 @@ type SoundCloudPreviewModalProps = {
   onConnectProfile?: (card: ProfileCard) => void
   onDiscardProfile?: (card: ProfileCard) => void
   onEditEvent?: (card: ProfileCard) => void
+  onDeleteEvent?: (card: ProfileCard) => void
   currentUserId?: string
   currentUserNickname?: string
   isAdmin?: boolean
@@ -50,6 +53,7 @@ export default function SoundCloudPreviewModal({
   onConnectProfile,
   onDiscardProfile,
   onEditEvent,
+  onDeleteEvent,
   currentUserId,
   currentUserNickname,
   isAdmin,
@@ -267,8 +271,11 @@ export default function SoundCloudPreviewModal({
                 />
               </div>
             )}
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '4px', textAlign: 'left', color: '#ffffff' }}>{profileName}</h3>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start', margin: '4px 0 10px 0' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '4px', textAlign: 'left', color: '#ffffff', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+              {profileName}
+            </h3>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-start', margin: '4px 0 10px 0', flexWrap: 'wrap' }}>
               <span
                 style={{
                   display: 'inline-flex',
@@ -293,14 +300,37 @@ export default function SoundCloudPreviewModal({
                   </>
                 )}
               </span>
+
+              {/* Identificación del creador / organizador */}
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  background: 'rgba(0, 229, 255, 0.12)',
+                  color: '#67e8f9',
+                  border: '1px solid rgba(0, 229, 255, 0.35)',
+                  maxWidth: '100%',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'anywhere',
+                }}
+                title={`Organizado por: ${card.owner || card.ownerNickname || 'Organizador'}`}
+              >
+                <PiUserCircleBold style={{ fontSize: '0.95rem', flexShrink: 0, color: '#00e5ff' }} />
+                <span>Creado por: <strong>{card.owner || card.ownerNickname || 'Organizador'}</strong></span>
+              </span>
             </div>
 
-            <p className="ls-notice-text" style={{ fontSize: '0.84rem', marginBottom: '10px', textAlign: 'left' }}>
+            <p className="ls-notice-text" style={{ fontSize: '0.84rem', marginBottom: '10px', textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               <strong>Evento / Sesión en Vivo</strong> • {card.role} ({card.location}).
             </p>
 
             {card.eventDate && (
-              <div style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '12px 14px', borderRadius: '12px', margin: '10px 0', border: '1px solid rgba(168, 85, 247, 0.25)', fontSize: '0.82rem', textAlign: 'left' }}>
+              <div style={{ background: 'rgba(168, 85, 247, 0.1)', padding: '12px 14px', borderRadius: '12px', margin: '10px 0', border: '1px solid rgba(168, 85, 247, 0.25)', fontSize: '0.82rem', textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                 <p style={{ margin: 0, fontWeight: 600, color: '#e9d5ff', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', textAlign: 'left' }}>
                   <PiCalendarBold style={{ color: '#c084fc' }} />
                   <span>Fecha: {formatEventDate(card.eventDate)}</span>
@@ -313,18 +343,18 @@ export default function SoundCloudPreviewModal({
                   )}
                 </p>
                 {card.venue && (
-                  <p style={{ margin: '6px 0 0 0', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px', textAlign: 'left' }}>
-                    <PiMapPinBold />
+                  <p style={{ margin: '6px 0 0 0', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px', textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                    <PiMapPinBold style={{ flexShrink: 0 }} />
                     <span>Venue / Lugar: {card.venue}</span>
                   </p>
                 )}
                 {(card.streetAddress || card.city || card.province || card.country) && (
-                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed rgba(168, 85, 247, 0.25)', fontSize: '0.78rem', color: '#e9d5ff', textAlign: 'left' }}>
-                    {card.streetAddress && <div style={{ marginBottom: '3px', textAlign: 'left' }}><strong>Calle y Altura:</strong> {card.streetAddress}</div>}
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed rgba(168, 85, 247, 0.25)', fontSize: '0.78rem', color: '#e9d5ff', textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                    {card.streetAddress && <div style={{ marginBottom: '3px', textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}><strong>Calle y Altura:</strong> {card.streetAddress}</div>}
                     {(card.city || card.province) && (
-                      <div style={{ marginBottom: '3px', textAlign: 'left' }}><strong>Localidad / Provincia:</strong> {[card.city, card.province].filter(Boolean).join(', ')}</div>
+                      <div style={{ marginBottom: '3px', textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}><strong>Localidad / Provincia:</strong> {[card.city, card.province].filter(Boolean).join(', ')}</div>
                     )}
-                    {card.country && <div style={{ textAlign: 'left' }}><strong>País:</strong> {card.country}</div>}
+                    {card.country && <div style={{ textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}><strong>País:</strong> {card.country}</div>}
                   </div>
                 )}
                 {card.ticketUrl && card.ticketUrl.trim() && !card.isFinished && (
@@ -340,6 +370,7 @@ export default function SoundCloudPreviewModal({
                       color: '#a855f7',
                       fontWeight: 'bold',
                       textDecoration: 'underline',
+                      wordBreak: 'break-all',
                     }}
                   >
                     <PiTicketBold /> Adquirir Entradas <PiArrowSquareOutBold />
@@ -349,15 +380,15 @@ export default function SoundCloudPreviewModal({
             )}
 
             {card.description && (
-              <p className="ls-notice-text" style={{ fontStyle: 'italic', opacity: 0.9, marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem', textAlign: 'left' }}>
+              <p className="ls-notice-text" style={{ fontStyle: 'italic', opacity: 0.9, marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem', textAlign: 'left', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                 "{card.description}"
               </p>
             )}
 
             {/* Mapa de Localización del Evento */}
             <div style={{ marginTop: '10px', marginBottom: '12px', textAlign: 'left' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: '#a855f7', fontWeight: 600, fontSize: '0.82rem' }}>
-                <PiMapPinBold />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: '#a855f7', fontWeight: 600, fontSize: '0.82rem', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                <PiMapPinBold style={{ flexShrink: 0 }} />
                 <span>Ubicación en Mapa: {card.location}</span>
               </div>
               <div
@@ -433,10 +464,7 @@ export default function SoundCloudPreviewModal({
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <button type="button" className="ls-secondary-button" onClick={handleCloseModal}>
-                      Cerrar Vista Previa
-                    </button>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {isOwner && onEditEvent && (
                       <button
                         type="button"
@@ -453,8 +481,30 @@ export default function SoundCloudPreviewModal({
                           opacity: isEventExpired ? 0.5 : 1,
                           cursor: isEventExpired ? 'not-allowed' : 'pointer',
                         }}
+                        title={isEventExpired ? 'Plazo de modificación expirado (+24hs transcurridas)' : `Editar Evento (${remainingEventHours.toFixed(1)}hs restantes)`}
                       >
                         <PiPencilSimpleBold /> Editar Evento
+                      </button>
+                    )}
+                    {isOwner && onDeleteEvent && (
+                      <button
+                        type="button"
+                        className="ls-danger-button"
+                        disabled={isEventExpired}
+                        onClick={() => {
+                          onDeleteEvent(card)
+                          handleCloseModal()
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          opacity: isEventExpired ? 0.5 : 1,
+                          cursor: isEventExpired ? 'not-allowed' : 'pointer',
+                        }}
+                        title={isEventExpired ? 'Plazo de eliminación expirado (+24hs transcurridas)' : `Eliminar Evento (${remainingEventHours.toFixed(1)}hs restantes)`}
+                      >
+                        <PiTrashBold /> Eliminar Evento
                       </button>
                     )}
                   </div>
@@ -535,6 +585,65 @@ export default function SoundCloudPreviewModal({
 
             <p className="ls-sc-bio">{card.description || ''}</p>
 
+            {/* Spotify Favorite Artists & Shared Affinity */}
+            {((card.favoriteArtists && card.favoriteArtists.length > 0) || (card.commonArtists && card.commonArtists.length > 0)) && (
+              <div className="ls-sc-artists-section" style={{ marginBottom: '14px', textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1DB954', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <FaSpotify />
+                    <span>Artistas Favoritos (Spotify)</span>
+                  </div>
+                  {card.affinityReason && (
+                    <span style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: 500 }}>
+                      {card.affinityReason}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {(card.favoriteArtists || []).map((art) => {
+                    const isCommon = (card.commonArtists || []).some(
+                      (ca) => ca.toLowerCase() === art.name.toLowerCase()
+                    )
+                    return (
+                      <div
+                        key={art.spotifyId || art.name}
+                        className={`ls-spotify-artist-chip read-only ${isCommon ? 'is-common' : ''}`}
+                        style={{
+                          background: isCommon ? 'rgba(29, 185, 84, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                          border: isCommon ? '1px solid #1DB954' : '1px solid rgba(255, 255, 255, 0.1)',
+                        }}
+                      >
+                        {art.imageUrl ? (
+                          <img src={art.imageUrl} alt={art.name} className="ls-spotify-chip-avatar" />
+                        ) : (
+                          <div className="ls-spotify-chip-placeholder">
+                            <FaSpotify />
+                          </div>
+                        )}
+                        <span className="ls-spotify-chip-name">{art.name}</span>
+                        {isCommon && (
+                          <span style={{ fontSize: '0.68rem', color: '#1DB954', fontWeight: 700, marginLeft: '2px' }}>
+                            Común
+                          </span>
+                        )}
+                        {art.spotifyUrl && (
+                          <a
+                            href={art.spotifyUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="ls-spotify-chip-link"
+                            title="Abrir en Spotify"
+                          >
+                            <PiArrowSquareOutBold />
+                          </a>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Official SoundCloud Embedded Player Widget */}
             <div className="ls-sc-embed-widget">
               <div className="ls-sc-embed-header">
@@ -597,7 +706,7 @@ export default function SoundCloudPreviewModal({
 
                           <div className="ls-sc-track-meta">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <PiPlayFill style={{ fontSize: '0.72rem', color: '#ffaa71' }} /> {track.plays} reproducciones
+                              <PiPlayFill style={{ fontSize: '0.72rem', color: '#ffaa71' }} /> {String(track.plays).includes('reproducciones') ? track.plays : `${track.plays} reproducciones`}
                             </span>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                               <PiTimerBold style={{ fontSize: '0.75rem', color: '#ffaa71' }} /> {track.duration}

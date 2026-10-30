@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 import DashboardPage from './pages/DashboardPage'
@@ -12,6 +12,7 @@ import AdminPage from './pages/AdminPage'
 import MatchModal from './components/MatchModal'
 import type { AppPage, Profile, NotificationItem } from './types'
 import { api, getToken, setToken, clearToken } from './services/api'
+import { PiHandshakeBold, PiXBold } from 'react-icons/pi'
 import type {
   ProfileCard,
   Conversation,
@@ -164,12 +165,62 @@ function App() {
   // Estado de notificaciones para usuario normal y administrador
   const [userNotifs, setUserNotifs] = useState<NotificationItem[]>([])
   const [adminNotifs, setAdminNotifs] = useState<NotificationItem[]>([])
+  const [toastMatchRequest, setToastMatchRequest] = useState<NotificationItem | null>(null)
+  const knownNotifIdsRef = useRef<Set<string>>(new Set())
+
+  // Sincronizar notificaciones en tiempo real desde la base de datos
+  useEffect(() => {
+    if (!authSession.isLoggedIn || authSession.role === 'admin') return
+
+    const fetchNotifications = () => {
+      api.notifications.getAll().then((res) => {
+        if (res.success && Array.isArray(res.notifications)) {
+          const fresh = res.notifications as NotificationItem[]
+          setUserNotifs(fresh)
+
+          // Detectar nuevas solicitudes de match para alertar en el extremo superior derecho
+          const newMatch = fresh.find(
+            (n) => n.type === 'match_request' && !n.read && !knownNotifIdsRef.current.has(n.id)
+          )
+          if (newMatch) {
+            setToastMatchRequest(newMatch)
+            setTimeout(() => {
+              setToastMatchRequest((curr) => (curr?.id === newMatch.id ? null : curr))
+            }, 7000)
+          }
+
+          fresh.forEach((n) => knownNotifIdsRef.current.add(n.id))
+        }
+      }).catch(() => {})
+    }
+
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 8000)
+    return () => clearInterval(interval)
+  }, [authSession.isLoggedIn, authSession.role])
 
   // Estado global para mensajes y conversaciones matcheadas
   const [conversationsList, setConversationsList] = useState<Conversation[]>([])
   const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>({})
   const [activeChatId, setActiveChatId] = useState<string>('')
   const [matchedCard, setMatchedCard] = useState<ProfileCard | null>(null)
+
+  // Sincronizar conversaciones y calcular contador no leídos para la campana y la pestaña Messages en tiempo real
+  useEffect(() => {
+    if (!authSession.isLoggedIn || authSession.role === 'admin') return
+
+    const fetchConversations = () => {
+      api.conversations.getAll().then((res) => {
+        if (res.success && Array.isArray(res.conversations)) {
+          setConversationsList(res.conversations)
+        }
+      }).catch(() => {})
+    }
+
+    fetchConversations()
+    const interval = setInterval(fetchConversations, 8000)
+    return () => clearInterval(interval)
+  }, [authSession.isLoggedIn, authSession.role])
 
   const activeNotifications = isAdminLoggedIn ? adminNotifs : userNotifs
 
@@ -178,6 +229,7 @@ function App() {
       setAdminNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
     } else {
       setUserNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+      api.notifications.markAsRead(id).catch(() => {})
     }
   }
 
@@ -186,6 +238,7 @@ function App() {
       setAdminNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
     } else {
       setUserNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
+      api.notifications.markAllAsRead().catch(() => {})
     }
   }
 
@@ -194,6 +247,7 @@ function App() {
       setAdminNotifs([])
     } else {
       setUserNotifs([])
+      api.notifications.clearAll().catch(() => {})
     }
   }
 
@@ -296,7 +350,14 @@ function App() {
       const savedUser: Profile = res.user
         ? {
             ...EMPTY_PROFILE,
+            ...finalProfile,
             ...res.user,
+            soundcloudUrl: res.user.soundcloudUrl || finalProfile.soundcloudUrl || finalProfile.soundcloud || '',
+            soundcloud: res.user.soundcloudUrl || finalProfile.soundcloudUrl || finalProfile.soundcloud || '',
+            instagramUrl: res.user.instagramUrl || finalProfile.instagramUrl || finalProfile.instagram || '',
+            instagram: res.user.instagramUrl || finalProfile.instagramUrl || finalProfile.instagram || '',
+            spotifyUrl: res.user.spotifyUrl || finalProfile.spotifyUrl || finalProfile.spotify || '',
+            spotify: res.user.spotifyUrl || finalProfile.spotifyUrl || finalProfile.spotify || '',
             interestGenres: res.user.interestGenres || finalProfile.interestGenres || [],
             allowEdit: true,
             allowPostRegister: true,
@@ -606,6 +667,38 @@ function App() {
           }
         />
       </Routes>
+
+      {/* Aviso flotante en el extremo superior derecho cuando alguien quiere conectar */}
+      {toastMatchRequest && (
+        <div className="ls-corner-match-toast">
+          <div className="ls-corner-toast-icon">
+            <PiHandshakeBold />
+          </div>
+          <div className="ls-corner-toast-body">
+            <strong className="ls-corner-toast-title">{toastMatchRequest.title}</strong>
+            <p className="ls-corner-toast-desc">{toastMatchRequest.message}</p>
+            <button
+              type="button"
+              className="ls-corner-toast-action"
+              onClick={() => {
+                handleMarkNotificationAsRead(toastMatchRequest.id)
+                setToastMatchRequest(null)
+                handleNavigate('Discovery')
+              }}
+            >
+              Explorar en Radar
+            </button>
+          </div>
+          <button
+            type="button"
+            className="ls-corner-toast-close"
+            onClick={() => setToastMatchRequest(null)}
+            title="Cerrar aviso"
+          >
+            <PiXBold />
+          </button>
+        </div>
+      )}
 
       {/* Modal de Conexión Profesional (Match de Colaboración) */}
       <MatchModal

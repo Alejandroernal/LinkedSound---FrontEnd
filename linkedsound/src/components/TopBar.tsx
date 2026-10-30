@@ -9,7 +9,8 @@ import {
   PiBellBold,
   PiSignOutBold,
   PiCheckCircleBold,
-  PiTrashBold
+  PiTrashBold,
+  PiHandshakeBold,
 } from 'react-icons/pi'
 import type { AppPage, Profile, NotificationItem } from '../types'
 import { navItems } from '../types'
@@ -151,13 +152,13 @@ export default function TopBar({
             {showNotifications && (
               <div className="ls-notif-dropdown">
                 <div className="ls-notif-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="ls-notif-header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 'max-content' }}>
                     <span className="ls-notif-title">Notificaciones</span>
                     {unreadCount > 0 && (
                       <span className="ls-notif-count-chip">{unreadCount} nuevas</span>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div className="ls-notif-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                     {unreadCount > 0 && (
                       <button
                         type="button"
@@ -201,10 +202,32 @@ export default function TopBar({
                       >
                         <div className="ls-notif-item-body">
                           <div className="ls-notif-item-head">
-                            <span className="ls-notif-item-title">{item.title}</span>
+                            <span className="ls-notif-item-title">
+                              {item.type === 'match_request' && (
+                                <PiHandshakeBold style={{ color: '#00e5ff', marginRight: '6px', verticalAlign: 'middle', fontSize: '1rem' }} />
+                              )}
+                              {item.title}
+                            </span>
                             <span className="ls-notif-item-time">{item.timestamp}</span>
                           </div>
                           <p className="ls-notif-item-msg">{item.message}</p>
+                          {item.type === 'match_request' && (
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                marginTop: '4px',
+                                fontSize: '0.68rem',
+                                color: '#00e5ff',
+                                background: 'rgba(0, 229, 255, 0.1)',
+                                border: '1px solid rgba(0, 229, 255, 0.25)',
+                                borderRadius: '4px',
+                                padding: '2px 6px',
+                                fontWeight: 600,
+                              }}
+                            >
+                              Explorar en Discovery
+                            </span>
+                          )}
                         </div>
                         {!item.read && <span className="ls-notif-unread-dot" />}
                       </div>

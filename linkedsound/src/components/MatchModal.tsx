@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { PiXBold, PiChatTeardropTextBold, PiBriefcaseBold } from 'react-icons/pi'
+import { FaSpotify } from 'react-icons/fa6'
 import { ImLink } from 'react-icons/im'
 import type { ProfileCard } from '../data/mockData'
 
@@ -84,6 +85,20 @@ export default function MatchModal({
           <h4>{cardName}</h4>
           <p>{cardRole} • {matchedCard.location || 'LinkedSound Network'}</p>
           <span className="ls-match-percent-tag">{matchedCard.match || '95%'} Afinidad laboral</span>
+          {((matchedCard.commonArtists && matchedCard.commonArtists.length > 0) || (matchedCard.commonGenres && matchedCard.commonGenres.length > 0)) && (
+            <div style={{ marginTop: '10px', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+              {matchedCard.commonArtists && matchedCard.commonArtists.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#1DB954', marginBottom: '4px' }}>
+                  <FaSpotify /> Artistas en común: <strong>{matchedCard.commonArtists.slice(0, 3).join(', ')}</strong>
+                </div>
+              )}
+              {matchedCard.commonGenres && matchedCard.commonGenres.length > 0 && (
+                <div style={{ color: '#a855f7' }}>
+                  Géneros compartidos: <strong>{matchedCard.commonGenres.slice(0, 3).join(', ')}</strong>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Modal Buttons */}
