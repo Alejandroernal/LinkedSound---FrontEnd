@@ -9,16 +9,17 @@ import {
   PiXBold,
   PiCropBold,
   PiUploadSimpleBold,
-  PiMagnifyingGlassBold,
-  PiArrowSquareOutBold,
+  PiEyeBold,
 } from 'react-icons/pi'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import { AvatarEditorModal } from './RegisterPage'
-import type { AppPage, Profile, NotificationItem, SpotifyArtist } from '../types'
+import type { AppPage, Profile, NotificationItem, SoundCloudTrack, ProfileCard } from '../types'
 import { api } from '../services/api'
+import AudioSampleTrackUploader from '../components/AudioSampleTrackUploader'
+import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 
 type ProfilePageProps = {
   activePage?: AppPage
@@ -100,17 +101,35 @@ export default function ProfilePage({
   const [isSaving, setIsSaving] = useState(false)
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null)
 
-  // Buscador de artistas Spotify
-  const [artistSearchInput, setArtistSearchInput] = useState('')
-  const [artistSearchResults, setArtistSearchResults] = useState<SpotifyArtist[]>([])
-  const [isSearchingArtists, setIsSearchingArtists] = useState(false)
-  const [showArtistDropdown, setShowArtistDropdown] = useState(false)
-  const artistSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   // Editor modal recortador de imagen
   const [rawImage, setRawImage] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
+
+  // Modal de Vista Externa (como ven tu perfil los demas usuarios)
+  const [isExternalPreviewOpen, setIsExternalPreviewOpen] = useState(false)
+
+  const previewProfileCard: ProfileCard = {
+    ...profile,
+    id: profile.id,
+    firstName: profile.firstName || '',
+    lastName: profile.lastName || '',
+    nickname: profile.nickname || 'Mi Perfil',
+    role: profile.role || profile.category || 'Artista',
+    location: profile.location || 'LinkedSound Network',
+    description: profile.description || '',
+    interestGenres: profile.interestGenres || [],
+    tags: profile.interestGenres || profile.tags || [],
+    soundcloudUrl: profile.soundcloudUrl || profile.soundcloud || '',
+    spotifyUrl: profile.spotifyUrl || profile.spotify || '',
+    instagramUrl: profile.instagramUrl || profile.instagram || '',
+    profileImage: profile.profileImage || '',
+    tracks: profile.tracks || [],
+    match: '100% (Tu perfil)',
+    isProfile: true,
+    itemRole: 'Perfil',
+    badge: (profile.role || '').toLowerCase().includes('productor') ? 'Producer' : 'Artist',
+  }
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -143,66 +162,6 @@ export default function ProfilePage({
     return trimmed
   }
 
-  const handleArtistSearchChange = (query: string) => {
-    setArtistSearchInput(query)
-    if (artistSearchTimeoutRef.current) {
-      clearTimeout(artistSearchTimeoutRef.current)
-    }
-    if (!query || query.trim().length < 2) {
-      setArtistSearchResults([])
-      setShowArtistDropdown(false)
-      setIsSearchingArtists(false)
-      return
-    }
-    setIsSearchingArtists(true)
-    artistSearchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await api.spotify.searchArtists(query.trim())
-        if (res.success && res.artists) {
-          setArtistSearchResults(res.artists)
-          setShowArtistDropdown(true)
-        } else {
-          setArtistSearchResults([])
-        }
-      } catch (e) {
-        setArtistSearchResults([])
-      } finally {
-        setIsSearchingArtists(false)
-      }
-    }, 350)
-  }
-
-  const handleSelectArtist = (artist: SpotifyArtist) => {
-    const currentFavs = profile.favoriteArtists || []
-    const alreadySelected = currentFavs.some(
-      (a) => (a.spotifyId && a.spotifyId === artist.spotifyId) || a.name.toLowerCase() === artist.name.toLowerCase()
-    )
-    if (alreadySelected) {
-      setShowArtistDropdown(false)
-      setArtistSearchInput('')
-      return
-    }
-    if (currentFavs.length >= 6) {
-      setShowArtistDropdown(false)
-      setArtistSearchInput('')
-      return
-    }
-    handleChange('favoriteArtists', [...currentFavs, artist])
-    setArtistSearchInput('')
-    setShowArtistDropdown(false)
-    setArtistSearchResults([])
-  }
-
-  const handleRemoveArtist = (artistToRemove: SpotifyArtist) => {
-    const currentFavs = profile.favoriteArtists || []
-    const nextList = currentFavs.filter(
-      (a) =>
-        (a.spotifyId ? a.spotifyId !== artistToRemove.spotifyId : true) &&
-        a.name.toLowerCase() !== artistToRemove.name.toLowerCase()
-    )
-    handleChange('favoriteArtists', nextList)
-  }
-
   const handleStartEdit = () => {
     setInitialProfileSnapshot({ ...profile })
     setVerifiedLocation(profile.location || '')
@@ -232,12 +191,10 @@ export default function ProfilePage({
     const rawSpotify = (profile.spotifyUrl || profile.spotify || '').trim()
     const rawInstagram = (profile.instagramUrl || profile.instagram || '').trim()
     const rawSoundcloud = (profile.soundcloudUrl || profile.soundcloud || '').trim()
-    const trackLink = (profile.tracks && profile.tracks[1]?.soundcloudLink ? profile.tracks[1].soundcloudLink : '').trim()
 
     const normSpotify = rawSpotify ? normalizeUrl(rawSpotify) : ''
     const normInstagram = rawInstagram ? normalizeUrl(rawInstagram) : ''
     const normSoundcloud = rawSoundcloud ? normalizeUrl(rawSoundcloud) : ''
-    const normTrackLink = trackLink ? normalizeUrl(trackLink) : ''
 
     if (rawSpotify && !isValidPlatformUrl('spotify', rawSpotify)) {
       errors.spotifyUrl = true
@@ -247,9 +204,6 @@ export default function ProfilePage({
     }
     if (rawSoundcloud && !isValidPlatformUrl('soundcloud', rawSoundcloud)) {
       errors.soundcloudUrl = true
-    }
-    if (trackLink && !isValidPlatformUrl('soundcloud', trackLink)) {
-      errors.trackDestacado = true
     }
 
     if (Object.keys(errors).length > 0) {
@@ -266,15 +220,15 @@ export default function ProfilePage({
         lastName: profile.lastName?.trim(),
         nickname: profile.nickname?.trim(),
         role: profile.role || profile.category || 'Artista',
+        accountRole: profile.accountRole || 'Usuario',
         location: locTrim,
         description: descTrimmed,
         interestGenres: profile.interestGenres || [],
-        favoriteArtists: profile.favoriteArtists || [],
+        tracks: profile.tracks || [],
         soundcloudUrl: normSoundcloud,
         spotifyUrl: normSpotify,
         instagramUrl: normInstagram,
         profileImage: profile.profileImage,
-        trackUrl: normTrackLink,
       })
 
       if (!response.success) {
@@ -291,11 +245,13 @@ export default function ProfilePage({
           onProfileChange('role', u.role)
           onProfileChange('category', u.role)
         }
+        if (u.accountRole) {
+          onProfileChange('accountRole', u.accountRole)
+        }
         if (u.location) onProfileChange('location', u.location)
         if (u.description) onProfileChange('description', u.description)
         if (u.profileImage) onProfileChange('profileImage', u.profileImage)
         if (Array.isArray(u.interestGenres)) onProfileChange('interestGenres', u.interestGenres)
-        if (Array.isArray(u.favoriteArtists)) onProfileChange('favoriteArtists', u.favoriteArtists)
         if (Array.isArray(u.tracks) && u.tracks.length > 0) {
           onProfileChange('tracks', u.tracks)
         }
@@ -312,24 +268,6 @@ export default function ProfilePage({
         onProfileChange('instagram', normInstagram)
         onProfileChange('soundcloudUrl', normSoundcloud)
         onProfileChange('soundcloud', normSoundcloud)
-      }
-
-      if (trackLink) {
-        const currentTracks = profile.tracks || [
-          { id: 't0', title: 'Último tema subido', plays: '0', duration: '--:--', genre: 'Principal' }
-        ]
-        const updatedTracks = [
-          currentTracks[0],
-          {
-            id: 't_custom',
-            title: 'Track Destacado',
-            plays: 'Muestra',
-            duration: 'SoundCloud',
-            genre: 'Destacado',
-            soundcloudLink: normTrackLink
-          }
-        ]
-        onProfileChange('tracks', updatedTracks)
       }
 
       setIsEditing(false)
@@ -425,6 +363,7 @@ export default function ProfilePage({
       profile.password !== initialProfileSnapshot.password ||
       profile.category !== initialProfileSnapshot.category ||
       profile.role !== initialProfileSnapshot.role ||
+      profile.accountRole !== initialProfileSnapshot.accountRole ||
       profile.location !== initialProfileSnapshot.location ||
       profile.description !== initialProfileSnapshot.description ||
       profile.spotifyUrl !== initialProfileSnapshot.spotifyUrl ||
@@ -432,7 +371,7 @@ export default function ProfilePage({
       profile.soundcloudUrl !== initialProfileSnapshot.soundcloudUrl ||
       profile.profileImage !== initialProfileSnapshot.profileImage ||
       JSON.stringify(profile.interestGenres ?? []) !== JSON.stringify(initialProfileSnapshot.interestGenres ?? []) ||
-      JSON.stringify(profile.favoriteArtists ?? []) !== JSON.stringify(initialProfileSnapshot.favoriteArtists ?? [])
+      JSON.stringify(profile.tracks ?? []) !== JSON.stringify(initialProfileSnapshot.tracks ?? [])
 
     if (hasChanges) {
       setShowDiscardModal(true)
@@ -730,7 +669,6 @@ export default function ProfilePage({
   const getSpotifyUrl = () => normalizeUrl(profile.spotifyUrl || profile.spotify || '')
   const getInstagramUrl = () => normalizeUrl(profile.instagramUrl || profile.instagram || '')
   const getSoundcloudUrl = () => normalizeUrl(profile.soundcloudUrl || profile.soundcloud || '')
-  const getTrackSampleUrl = () => normalizeUrl((profile.tracks && profile.tracks[1]?.soundcloudLink) || '')
 
   return (
     <div className="ls-app-shell">
@@ -825,9 +763,19 @@ export default function ProfilePage({
                 </button>
               </div>
             ) : (
-              <button type="button" className="ls-primary-button" onClick={handleStartEdit}>
-                Editar perfil
-              </button>
+              <div className="ls-profile-header-actions">
+                <button type="button" className="ls-primary-button" onClick={handleStartEdit}>
+                  Editar perfil
+                </button>
+                <button
+                  type="button"
+                  className="ls-secondary-button ls-btn-external-view"
+                  onClick={() => setIsExternalPreviewOpen(true)}
+                  title="Ver como ven tu perfil los demas usuarios"
+                >
+                  <PiEyeBold /> Vista Externa
+                </button>
+              </div>
             )}
           </div>
 
@@ -883,7 +831,7 @@ export default function ProfilePage({
             </div>
 
             <div className="ls-profile-field">
-              <label>Rol</label>
+              <label>Rol (Especialidad Musical)</label>
               {isEditing ? (
                 <select
                   value={profile.role || profile.category || 'Productor y Artista'}
@@ -903,15 +851,18 @@ export default function ProfilePage({
 
             {isAdminSession && (
               <div className="ls-profile-field">
-                <label>Role (Tipo de cuenta)</label>
+                <label>Tipo de cuenta</label>
                 {isEditing ? (
-                  <select value={profile.role ?? 'Usuario'} onChange={(event) => handleChange('role', event.target.value)}>
+                  <select
+                    value={profile.accountRole ?? 'Usuario'}
+                    onChange={(event) => handleChange('accountRole', event.target.value)}
+                  >
                     <option value="Usuario">Usuario</option>
                     <option value="Administrador">Administrador</option>
                   </select>
                 ) : (
-                  <span className={`ls-role-pill-badge ${profile.role === 'Administrador' ? 'admin' : 'user'}`}>
-                    {profile.role || 'Usuario'}
+                  <span className={`ls-role-pill-badge ${profile.accountRole === 'Administrador' ? 'admin' : 'user'}`}>
+                    {profile.accountRole || 'Usuario'}
                   </span>
                 )}
               </div>
@@ -1237,202 +1188,6 @@ export default function ProfilePage({
               )}
             </div>
 
-            {/* 5.1 Artistas Favoritos (Spotify) para afinidad de Match */}
-            <div className="ls-profile-field wide-field ls-spotify-artists-field">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FaSpotify style={{ color: '#1DB954', fontSize: '1.1rem' }} />
-                <span>Artistas Favoritos (Spotify)</span>
-                <span style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 400 }}>
-                  ({(profile.favoriteArtists || []).length} / 6)
-                </span>
-              </label>
-
-              {isEditing ? (
-                <div className="ls-spotify-artists-editor">
-                  <div style={{ position: 'relative', marginBottom: '12px' }}>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <PiMagnifyingGlassBold
-                        style={{
-                          position: 'absolute',
-                          left: '12px',
-                          color: 'rgba(255, 255, 255, 0.4)',
-                          fontSize: '1rem',
-                          pointerEvents: 'none',
-                        }}
-                      />
-                      <input
-                        type="text"
-                        value={artistSearchInput}
-                        onChange={(e) => handleArtistSearchChange(e.target.value)}
-                        onFocus={() => {
-                          if (artistSearchResults.length > 0) setShowArtistDropdown(true)
-                        }}
-                        disabled={(profile.favoriteArtists || []).length >= 6}
-                        placeholder={
-                          (profile.favoriteArtists || []).length >= 6
-                            ? 'Límite alcanzado (máximo 6 artistas)'
-                            : 'Buscar artista en Spotify (ej. Bizarrap, Daft Punk, Rufus Du Sol...)'
-                        }
-                        style={{
-                          width: '100%',
-                          paddingLeft: '38px',
-                          paddingRight: isSearchingArtists ? '40px' : '12px',
-                        }}
-                      />
-                      {isSearchingArtists && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            right: '12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <span
-                            className="ls-spinner"
-                            style={{
-                              width: '16px',
-                              height: '16px',
-                              borderWidth: '2px',
-                              borderColor: '#1DB954 #1DB954 transparent transparent',
-                              display: 'inline-block',
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {showArtistDropdown && artistSearchResults.length > 0 && (
-                      <div className="ls-spotify-artist-dropdown">
-                        {artistSearchResults.map((artist) => {
-                          const isAlreadyAdded = (profile.favoriteArtists || []).some(
-                            (a) =>
-                              (a.spotifyId && a.spotifyId === artist.spotifyId) ||
-                              a.name.toLowerCase() === artist.name.toLowerCase()
-                          )
-                          return (
-                            <button
-                              key={artist.spotifyId || artist.name}
-                              type="button"
-                              className={`ls-spotify-artist-item ${isAlreadyAdded ? 'is-disabled' : ''}`}
-                              disabled={isAlreadyAdded}
-                              onClick={() => handleSelectArtist(artist)}
-                            >
-                              {artist.imageUrl ? (
-                                <img
-                                  src={artist.imageUrl}
-                                  alt={artist.name}
-                                  className="ls-spotify-artist-item-img"
-                                />
-                              ) : (
-                                <div className="ls-spotify-artist-item-placeholder">
-                                  <FaSpotify />
-                                </div>
-                              )}
-                              <div className="ls-spotify-artist-item-info">
-                                <span className="ls-spotify-artist-item-name">{artist.name}</span>
-                                {artist.genres && artist.genres.length > 0 && (
-                                  <span className="ls-spotify-artist-item-genres">
-                                    {artist.genres.slice(0, 3).join(', ')}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="ls-spotify-artist-item-action">
-                                {isAlreadyAdded ? 'Agregado' : 'Añadir'}
-                              </span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Lista de chips seleccionados en edición */}
-                  <div className="ls-spotify-selected-artists">
-                    {(profile.favoriteArtists || []).length === 0 ? (
-                      <span style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.45)' }}>
-                        No has seleccionado ningún artista favorito aún. Busca y agrega hasta 6 artistas.
-                      </span>
-                    ) : (
-                      (profile.favoriteArtists || []).map((artist) => (
-                        <div key={artist.spotifyId || artist.name} className="ls-spotify-artist-chip">
-                          {artist.imageUrl ? (
-                            <img
-                              src={artist.imageUrl}
-                              alt={artist.name}
-                              className="ls-spotify-chip-avatar"
-                            />
-                          ) : (
-                            <div className="ls-spotify-chip-placeholder">
-                              <FaSpotify />
-                            </div>
-                          )}
-                          <span className="ls-spotify-chip-name">{artist.name}</span>
-                          {artist.spotifyUrl && (
-                            <a
-                              href={artist.spotifyUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="ls-spotify-chip-link"
-                              title="Abrir en Spotify"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <PiArrowSquareOutBold />
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            className="ls-spotify-chip-remove"
-                            onClick={() => handleRemoveArtist(artist)}
-                            title="Quitar artista"
-                          >
-                            <PiXBold />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Modo lectura */
-                <div className="ls-spotify-selected-artists">
-                  {(profile.favoriteArtists || []).length === 0 ? (
-                    <span style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.45)' }}>
-                      No tienes artistas favoritos seleccionados.
-                    </span>
-                  ) : (
-                    (profile.favoriteArtists || []).map((artist) => (
-                      <div key={artist.spotifyId || artist.name} className="ls-spotify-artist-chip read-only">
-                        {artist.imageUrl ? (
-                          <img
-                            src={artist.imageUrl}
-                            alt={artist.name}
-                            className="ls-spotify-chip-avatar"
-                          />
-                        ) : (
-                          <div className="ls-spotify-chip-placeholder">
-                            <FaSpotify />
-                          </div>
-                        )}
-                        <span className="ls-spotify-chip-name">{artist.name}</span>
-                        {artist.spotifyUrl && (
-                          <a
-                            href={artist.spotifyUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="ls-spotify-chip-link"
-                            title="Abrir en Spotify"
-                          >
-                            <PiArrowSquareOutBold />
-                          </a>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
             {/* 6. Email | Password */}
             <div className="ls-profile-field">
               <label>Email</label>
@@ -1553,47 +1308,18 @@ export default function ProfilePage({
               )}
             </div>
 
+            {/* Pistas de Muestra de Audio (.WAV, .MP3, .FLAC, .OGG) */}
             <div className="ls-profile-field wide-field">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FaSoundcloud style={{ color: '#FF7700' }} /> Track o Muestra Destacada
-              </label>
-              {isEditing ? (
-                <input
-                  placeholder="https://soundcloud.com/tu-usuario/tu-cancion-destacada"
-                  value={(profile.tracks && profile.tracks[1]?.soundcloudLink) || ''}
-                  onChange={(event) => {
-                    const val = event.target.value
-                    const currentTracks = profile.tracks || [
-                      { id: 't0', title: 'Último tema subido', plays: '0', duration: '--:--', genre: 'Principal' }
-                    ]
-                    const updatedTracks = [
-                      currentTracks[0],
-                      {
-                        id: 't_custom',
-                        title: 'Track Destacado',
-                        plays: 'Muestra',
-                        duration: 'SoundCloud',
-                        genre: 'Destacado',
-                        soundcloudLink: val
-                      }
-                    ]
-                    handleChange('tracks', updatedTracks)
-                  }}
-                />
-              ) : getTrackSampleUrl() && getTrackSampleUrl() !== 'No vinculado' ? (
-                <a
-                  href={getTrackSampleUrl()}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  {getTrackSampleUrl()}
-                </a>
-              ) : (
-                <span style={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.45)', cursor: 'default' }}>
-                  No se configuró una muestra adicional
-                </span>
-              )}
+              <AudioSampleTrackUploader
+                tracks={profile.tracks || []}
+                onChange={(updatedTracks: SoundCloudTrack[]) => {
+                  handleChange('tracks', updatedTracks)
+                }}
+                isEditable={isEditing}
+                isRequired={true}
+                minTracks={1}
+                maxTracks={5}
+              />
             </div>
           </div>
         </section>
@@ -1675,6 +1401,14 @@ export default function ProfilePage({
           </div>
         </div>
       )}
+
+      {/* Modal de Vista Externa de perfil */}
+      <SoundCloudPreviewModal
+        isOpen={isExternalPreviewOpen}
+        card={previewProfileCard}
+        onClose={() => setIsExternalPreviewOpen(false)}
+        isExternalPreview={true}
+      />
 
       <Footer />
     </div>

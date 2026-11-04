@@ -18,6 +18,8 @@ import {
   PiTrashBold,
   PiWarningOctagonBold,
   PiLockKeyBold,
+  PiStarFill,
+  PiPlusBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 
@@ -106,7 +108,8 @@ export default function CreateEventModal({
   const [description, setDescription] = useState('')
   const [ticketUrl, setTicketUrl] = useState('')
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Live', 'Techno'])
-  const [profileImage, setProfileImage] = useState('')
+  const [images, setImages] = useState<string[]>([])
+  const [imageUrlInput, setImageUrlInput] = useState('')
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -142,7 +145,11 @@ export default function CreateEventModal({
       setDescription(ev.description || '')
       setTicketUrl(ev.ticketUrl || '')
       setSelectedGenres(ev.interestGenres && ev.interestGenres.length > 0 ? ev.interestGenres : ['Live', 'Techno'])
-      setProfileImage(ev.profileImage || '')
+      const initialImages: string[] = Array.isArray(ev.images) && ev.images.length > 0
+        ? ev.images
+        : (ev.profileImage ? [ev.profileImage] : [])
+      setImages(initialImages)
+      setImageUrlInput('')
       setHighlightedIndex(0)
     } else {
       setTitle('')
@@ -160,7 +167,8 @@ export default function CreateEventModal({
       setDescription('')
       setTicketUrl('')
       setSelectedGenres(['Live', 'Techno'])
-      setProfileImage('')
+      setImages([])
+      setImageUrlInput('')
       setHighlightedIndex(0)
     }
     setValidationError(null)
@@ -336,38 +344,95 @@ export default function CreateEventModal({
   }
 
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
 
-    // Validar tipo de archivo (imagen)
-    if (!file.type.startsWith('image/')) {
-      setValidationError('El archivo seleccionado no es una imagen válida. Formatos permitidos: JPG, PNG, WEBP, GIF.')
+    if (images.length + files.length > 5) {
+      setValidationError(`Solo puedes cargar hasta 5 imágenes por evento (actualmente tienes ${images.length}).`)
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
 
     const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif']
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || ''
-    if (!validExtensions.includes(fileExt)) {
-      setValidationError('Extensión de archivo no permitida. Formatos válidos: JPG, PNG, WEBP, GIF.')
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      return
+    const validFiles: File[] = []
+
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        setValidationError(`El archivo "${file.name}" no es una imagen válida. Formatos permitidos: JPG, PNG, WEBP, GIF.`)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        return
+      }
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || ''
+      if (!validExtensions.includes(fileExt)) {
+        setValidationError(`Extensión de "${file.name}" no permitida. Formatos válidos: JPG, PNG, WEBP, GIF.`)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setValidationError(`El archivo "${file.name}" excede el límite permitido de 10 MB.`)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        return
+      }
+      validFiles.push(file)
     }
 
-    // Validar tamaño máximo de imagen (10 MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setValidationError('El archivo de imagen excede el límite permitido de 10 MB.')
-      if (fileInputRef.current) fileInputRef.current.value = ''
+    let loadedCount = 0
+    const newResults: string[] = []
+
+    validFiles.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (loadEvt) => {
+        const result = loadEvt.target?.result as string
+        if (result) newResults.push(result)
+        loadedCount++
+        if (loadedCount === validFiles.length) {
+          setImages((prev) => {
+            const combined = [...prev, ...newResults].slice(0, 5)
+            return combined
+          })
+          setValidationError(null)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleAddImageUrl = () => {
+    const trimmed = imageUrlInput.trim()
+    if (!trimmed) return
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      setValidationError('La URL de la imagen debe comenzar con http:// o https://')
       return
     }
-
-    const reader = new FileReader()
-    reader.onload = (loadEvt) => {
-      const result = loadEvt.target?.result as string
-      setProfileImage(result)
-      setValidationError(null)
+    if (images.length >= 5) {
+      setValidationError('Ya has alcanzado el límite máximo de 5 imágenes para este evento.')
+      return
     }
-    reader.readAsDataURL(file)
+    setImages((prev) => {
+      const combined = [...prev, trimmed]
+      return combined
+    })
+    setImageUrlInput('')
+    setValidationError(null)
+  }
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages((prev) => {
+      const filtered = prev.filter((_, idx) => idx !== indexToRemove)
+      return filtered
+    })
+    setValidationError(null)
+  }
+
+  const handleSetCoverImage = (indexToCover: number) => {
+    setImages((prev) => {
+      const target = prev[indexToCover]
+      const rest = prev.filter((_, idx) => idx !== indexToCover)
+      const reordered = [target, ...rest]
+      return reordered
+    })
+    setValidationError(null)
   }
 
   useEffect(() => {
@@ -509,9 +574,13 @@ export default function CreateEventModal({
       return
     }
 
-    // 5. Validación de Imagen
-    if (profileImage && !profileImage.startsWith('data:image/') && !profileImage.startsWith('http://') && !profileImage.startsWith('https://')) {
-      setValidationError('La imagen promocional debe ser un archivo de imagen válido o una URL web (http/https).')
+    // 5. Validación de Imágenes del Evento (mínimo 1, máximo 5)
+    if (images.length === 0) {
+      setValidationError('Debes cargar al menos 1 imagen o flyer para el evento (mínimo 1, máximo 5).')
+      return
+    }
+    if (images.length > 5) {
+      setValidationError('No puedes cargar más de 5 imágenes para el evento.')
       return
     }
 
@@ -543,7 +612,8 @@ export default function CreateEventModal({
         city: city.trim() || undefined,
         streetAddress: streetAddress.trim().slice(0, 50) || undefined,
         interestGenres: selectedGenres,
-        profileImage: profileImage.trim() || undefined,
+        profileImage: images[0] || undefined,
+        images,
         description: description.trim().slice(0, 250) || undefined,
         eventDate,
         eventTime: eventTime || '22:00',
@@ -562,7 +632,8 @@ export default function CreateEventModal({
         city: city.trim(),
         streetAddress: streetAddress.trim().slice(0, 50),
         interestGenres: selectedGenres,
-        profileImage: profileImage.trim() || undefined,
+        profileImage: images[0] || undefined,
+        images,
         match: '100%',
         description: description.trim().slice(0, 250) || 'Nuevo evento publicado por la comunidad en LinkedSound.',
         badge: 'Evento',
@@ -1157,100 +1228,128 @@ export default function CreateEventModal({
             </div>
           </div>
 
-          {/* Imagen Promocional del Evento con Validación de Imagen */}
+          {/* Imagenes Promocionales del Evento (Minimo 1, Maximo 5) */}
           <div className="ls-form-group">
-            <label className="ls-form-label">
-              Flyer / Imagen Promocional del Evento <PiImageBold style={{ color: '#c084fc' }} />
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+              <label className="ls-form-label" style={{ margin: 0 }}>
+                Flyers e Imagenes del Evento <PiImageBold style={{ color: '#c084fc' }} />
+              </label>
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  background: images.length >= 1 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  color: images.length >= 1 ? '#86efac' : '#fca5a5',
+                  border: `1px solid ${images.length >= 1 ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+                  fontFamily: 'monospace',
+                }}
+              >
+                {images.length} / 5 {images.length === 0 ? '(Minimo 1 requerido)' : 'cargadas'}
+              </span>
+            </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept="image/png, image/jpeg, image/jpg, image/webp, image/gif"
                 style={{ display: 'none' }}
-                disabled={isExpired}
+                disabled={isExpired || images.length >= 5}
                 onChange={handleImageFileUpload}
               />
               <button
                 type="button"
                 className="ls-secondary-button"
-                disabled={isExpired}
+                disabled={isExpired || images.length >= 5}
                 onClick={() => fileInputRef.current?.click()}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 14px',
                   fontSize: '0.8rem',
                 }}
               >
-                <PiUploadSimpleBold /> Subir Archivo de Imagen
+                <PiUploadSimpleBold /> Subir Imagen Local
               </button>
-              <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)' }}>
-                Formatos permitidos: JPG, PNG, WEBP, GIF (máx 10 MB)
-              </span>
+
+              <div style={{ display: 'flex', gap: '6px', flex: 1, minWidth: '220px' }}>
+                <input
+                  type="url"
+                  disabled={isExpired || images.length >= 5}
+                  placeholder="O pega una URL de imagen (https://...)"
+                  value={imageUrlInput}
+                  onChange={(e) => {
+                    setImageUrlInput(e.target.value)
+                    if (validationError) setValidationError(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddImageUrl()
+                    }
+                  }}
+                  className="ls-select-input"
+                  style={{ height: '36px', fontSize: '0.8rem' }}
+                />
+                <button
+                  type="button"
+                  className="ls-primary-button"
+                  disabled={isExpired || images.length >= 5 || !imageUrlInput.trim()}
+                  onClick={handleAddImageUrl}
+                  style={{
+                    padding: '0 12px',
+                    height: '36px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.78rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  <PiPlusBold /> Agregar
+                </button>
+              </div>
             </div>
 
-            <input
-              type="url"
-              disabled={isExpired}
-              placeholder="O escribe una URL directa de imagen (https://...)"
-              value={profileImage.startsWith('data:image/') ? '' : profileImage}
-              onChange={(e) => {
-                setProfileImage(e.target.value)
-                if (validationError) setValidationError(null)
-              }}
-              className="ls-select-input"
-            />
-
-            {profileImage && (
-              <div
-                style={{
-                  marginTop: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(168, 85, 247, 0.3)',
-                }}
-              >
-                <img
-                  src={profileImage}
-                  alt="Vista previa del flyer"
-                  style={{ width: '70px', height: '52px', objectFit: 'cover', borderRadius: '6px' }}
-                />
-                <div style={{ flex: 1 }}>
-                  <span style={{ display: 'block', fontSize: '0.78rem', color: '#c084fc', fontWeight: 600 }}>
-                    Imagen promocional cargada
-                  </span>
-                  {!isExpired && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProfileImage('')
-                        if (fileInputRef.current) fileInputRef.current.value = ''
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ef4444',
-                        cursor: 'pointer',
-                        fontSize: '0.74rem',
-                        padding: 0,
-                        marginTop: '2px',
-                        textDecoration: 'underline',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <PiTrashBold /> Quitar imagen
-                    </button>
-                  )}
-                </div>
+            {/* Cuadricula de fotos subidas (1 a 5) */}
+            {images.length > 0 && (
+              <div className="ls-event-thumbs-grid">
+                {images.map((imgSrc, idx) => (
+                  <div key={idx} className={`ls-event-thumb-card ${idx === 0 ? 'is-cover' : ''}`}>
+                    <img src={imgSrc} alt={`Flyer ${idx + 1}`} className="ls-event-thumb-img" />
+                    <span className={`ls-event-thumb-badge ${idx === 0 ? 'cover' : ''}`}>
+                      {idx === 0 ? 'Portada' : `#${idx + 1}`}
+                    </span>
+                    {!isExpired && (
+                      <div className="ls-event-thumb-actions">
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            className="ls-event-thumb-btn star"
+                            onClick={() => handleSetCoverImage(idx)}
+                            title="Establecer como foto principal"
+                            aria-label="Establecer como foto principal"
+                          >
+                            <PiStarFill />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="ls-event-thumb-btn delete"
+                          onClick={() => handleRemoveImage(idx)}
+                          title="Eliminar imagen"
+                          aria-label="Eliminar imagen"
+                        >
+                          <PiTrashBold />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

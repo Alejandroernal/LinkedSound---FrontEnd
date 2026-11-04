@@ -124,6 +124,46 @@ export const api = {
         }
       }
     },
+    audio: async (
+      file: File
+    ): Promise<
+      ApiResponse<{
+        url: string
+        format: string
+        duration: string
+        fileSize: string
+        originalName: string
+      }>
+    > => {
+      const token = getToken()
+      const formData = new FormData()
+      formData.append('audio', file)
+
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/upload/audio`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        })
+        const data = await response.json().catch(() => ({}))
+        return {
+          success: response.ok,
+          status: response.status,
+          ...data,
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          status: 0,
+          message: err.message || 'Error al subir el archivo de audio',
+        }
+      }
+    },
   },
   events: {
     getAll: () => request<{ events: any[] }>('/events', { method: 'GET' }),
@@ -199,13 +239,6 @@ export const api = {
     markAsRead: (id: string) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
     markAllAsRead: () => request('/notifications/read-all', { method: 'PATCH' }),
     clearAll: () => request('/notifications', { method: 'DELETE' }),
-  },
-  spotify: {
-    searchArtists: (query: string, limit: number = 8) =>
-      request<{ success: boolean; artists: any[] }>(
-        `/spotify/artists?q=${encodeURIComponent(query)}&limit=${limit}`,
-        { method: 'GET' }
-      ),
   },
 }
 

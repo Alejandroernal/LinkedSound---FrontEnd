@@ -334,6 +334,7 @@ function App() {
         spotifyUrl: finalProfile.spotifyUrl || finalProfile.spotify,
         instagramUrl: finalProfile.instagramUrl || finalProfile.instagram,
         profileImage: finalProfile.profileImage,
+        tracks: finalProfile.tracks || [],
       })
 
       if (!res.success) {

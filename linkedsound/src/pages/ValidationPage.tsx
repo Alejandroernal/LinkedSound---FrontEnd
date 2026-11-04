@@ -3,7 +3,8 @@ import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { FaSoundcloud, FaSpotify, FaInstagram } from 'react-icons/fa6'
 import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold, PiWarningOctagonBold, PiCheckBold } from 'react-icons/pi'
-import type { AppPage, Profile } from '../types'
+import type { AppPage, Profile, SoundCloudTrack } from '../types'
+import AudioSampleTrackUploader from '../components/AudioSampleTrackUploader'
 
 type ValidationPageProps = {
   onNavigate?: (page: AppPage) => void
@@ -348,6 +349,14 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
       return
     }
 
+    const currentTracks = profile?.tracks || []
+    if (currentTracks.length < 1) {
+      errors.tracks = true
+      setInvalidFields(errors)
+      setValidationError('Es obligatorio subir al menos 1 pista de muestra de audio (.WAV, .MP3, .FLAC, .OGG) para completar tu perfil.')
+      return
+    }
+
     setInvalidFields({})
     setValidationError(null)
 
@@ -379,6 +388,12 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
   }
 
   const handleSkip = async () => {
+    const currentTracks = profile?.tracks || []
+    if (currentTracks.length < 1) {
+      setValidationError('Es obligatorio subir al menos 1 pista de muestra de audio (.WAV, .MP3, .FLAC, .OGG) para poder continuar.')
+      return
+    }
+
     if (soundcloud.trim()) {
       onProfileChange?.('soundcloudUrl', soundcloud.trim())
       onProfileChange?.('soundcloud', soundcloud.trim())
@@ -414,7 +429,13 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     <div className="ls-auth-shell">
       <div className="ls-auth-card validation-card">
         <div className="ls-auth-brand">
-          <div className="ls-brand-mark">L</div>
+          <div className="ls-brand-mark">
+            <img
+              src="/4147b18c-9b5d-49fe-86fe-07a9023d1d1e.png"
+              alt="LinkedSound"
+              className="ls-brand-img"
+            />
+          </div>
           <div>
             <div className="ls-brand-name">LinkedSound</div>
             <small>completa tu perfil</small>
@@ -520,6 +541,21 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
               }}
             />
           </label>
+
+          {/* Subida obligatoria de Pistas de Muestra de Audio (.WAV, .MP3, .FLAC, .OGG) */}
+          <AudioSampleTrackUploader
+            tracks={profile?.tracks || []}
+            onChange={(updatedTracks: SoundCloudTrack[]) => {
+              onProfileChange?.('tracks', updatedTracks)
+              if (updatedTracks.length >= 1 && validationError) {
+                setValidationError(null)
+              }
+            }}
+            isEditable={true}
+            isRequired={true}
+            minTracks={1}
+            maxTracks={5}
+          />
 
           <div className="ls-location-group">
 

@@ -19,10 +19,14 @@ import {
   PiPencilSimpleBold,
   PiUserCircleBold,
   PiTrashBold,
+  PiEyeBold,
+  PiCaretLeftBold,
+  PiCaretRightBold,
 } from 'react-icons/pi'
 import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
-import { formatEventDate, isUserProfile } from '../types'
+import { formatEventDate, isUserProfile, isLocalAudioTrack, isSoundCloudTrack } from '../types'
+import LocalDemosPlayer from './LocalDemosPlayer'
 
 type SoundCloudPreviewModalProps = {
   isOpen: boolean
@@ -35,6 +39,7 @@ type SoundCloudPreviewModalProps = {
   currentUserId?: string
   currentUserNickname?: string
   isAdmin?: boolean
+  isExternalPreview?: boolean
 }
 
 const PRESET_COORDINATES: Record<string, [number, number]> = {
@@ -57,21 +62,32 @@ export default function SoundCloudPreviewModal({
   currentUserId,
   currentUserNickname,
   isAdmin,
+  isExternalPreview = false,
 }: SoundCloudPreviewModalProps) {
   const [activeEmbedUrl, setActiveEmbedUrl] = useState<string | null>(null)
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null)
   const [shouldAutoplay, setShouldAutoplay] = useState<boolean>(false)
+  const [eventImageIndex, setEventImageIndex] = useState<number>(0)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
 
   useEffect(() => {
-    const mainScUrl = card?.soundcloudUrl
+    const rawTracks: SoundCloudTrack[] = card?.tracks ?? []
+    const scTracks = rawTracks.filter((t) => isSoundCloudTrack(t))
+    const firstScTrack = scTracks.find((t) => t.soundcloudLink && t.soundcloudLink.toLowerCase().includes('soundcloud.com'))
+    const mainScUrl = firstScTrack?.soundcloudLink || (card?.soundcloudUrl && card.soundcloudUrl.toLowerCase().includes('soundcloud.com') ? card.soundcloudUrl : null)
+
     if (mainScUrl) {
       setActiveEmbedUrl(mainScUrl)
-      setActiveTrackId(null)
+      setActiveTrackId(firstScTrack?.id || null)
       setShouldAutoplay(false) // User decision: do not autoplay on modal open
+    } else {
+      setActiveEmbedUrl(null)
+      setActiveTrackId(null)
+      setShouldAutoplay(false)
     }
+    setEventImageIndex(0)
   }, [card, isOpen])
 
   // Inicializar o actualizar el mapa de localización para Eventos (instancia única con geocodificación exacta)
@@ -191,19 +207,40 @@ export default function SoundCloudPreviewModal({
   const lastName = isProfile ? card.lastName : ''
   const fullName = [firstName, lastName].filter(Boolean).join(' ')
   const profileName = card.nickname?.trim() || fullName || 'Usuario'
-  const tracks: SoundCloudTrack[] = card.tracks ?? []
-  const visibleTracks = tracks.slice(0, 2) // Muestra el último tema subido + 1 opcional subido por el usuario
+  const rawTracks: SoundCloudTrack[] = card.tracks ?? []
+
+  // 1. Tracks locales: ÚNICAMENTE archivos de audio (.WAV, .MP3, .FLAC, .OGG) subidos de manera local
+  const localTracks = rawTracks.filter((t) => isLocalAudioTrack(t))
+
+  // 2. Tracks de SoundCloud: ÚNICAMENTE temas y enlaces de SoundCloud
+  const soundCloudTracks = rawTracks.filter((t) => isSoundCloudTrack(t))
+
   const scUrl = card.soundcloudUrl
-  const handleUrl = scUrl || `https://soundcloud.com/search?q=${encodeURIComponent(profileName)}`
+  const hasSoundCloudUrl = Boolean(scUrl && scUrl.toLowerCase().includes('soundcloud.com'))
+  const handleUrl = hasSoundCloudUrl ? scUrl : `https://soundcloud.com/search?q=${encodeURIComponent(profileName)}`
+
+  // Pistas visibles en la sección inferior de SoundCloud (NUNCA mezclar con localTracks)
+  const visibleSoundCloudTracks = soundCloudTracks.length > 0
+    ? soundCloudTracks
+    : (hasSoundCloudUrl ? [
+        {
+          id: 'sc_profile_catalog',
+          title: `${profileName} - Catálogo en SoundCloud`,
+          genre: card.category || 'SoundCloud',
+          duration: 'SoundCloud',
+          plays: 'Oficial',
+          soundcloudLink: scUrl,
+        }
+      ] : [])
 
   const spotifyUrl = card.spotifyUrl
   const instagramUrl = card.instagramUrl
 
   // Effective embed URL: user selected track or profile URL
-  const embedTargetUrl = activeEmbedUrl ?? handleUrl
+  const embedTargetUrl = activeEmbedUrl || (soundCloudTracks[0]?.soundcloudLink || (hasSoundCloudUrl ? scUrl : null))
 
   const handleSelectTrack = (track: SoundCloudTrack) => {
-    setActiveTrackId(track.id)
+    setActiveTrackId(track.id || null)
     setActiveEmbedUrl(track.soundcloudLink || card.soundcloudUrl || null)
     setShouldAutoplay(true) // Start playback on explicit user action
   }
@@ -232,45 +269,101 @@ export default function SoundCloudPreviewModal({
 
         {!isProfile ? (
           <div className="ls-non-profile-notice" style={{ textAlign: 'left' }}>
-            {card.profileImage && (
-              <div
-                className="ls-notice-image-wrap"
-                style={{
-                  width: '100%',
-                  height: '220px',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  marginTop: '28px',
-                  marginBottom: '16px',
-                  position: 'relative',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                  border: '1px solid rgba(168, 85, 247, 0.3)',
-                }}
-              >
-                <img
-                  src={card.profileImage}
-                  alt={profileName}
+            {(() => {
+              const eventImages: string[] = (card && (card as any).images && Array.isArray((card as any).images) && (card as any).images.length > 0)
+                ? (card as any).images
+                : (card?.profileImage ? [card.profileImage] : [])
+              const currentEventImage = eventImages[eventImageIndex] || eventImages[0] || card?.profileImage
+
+              if (!currentEventImage) return null
+
+              return (
+                <div
+                  className="ls-notice-image-wrap ls-event-carousel-wrap"
                   style={{
                     width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'center 35%',
-                    display: 'block',
+                    height: '240px',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    marginTop: '28px',
+                    marginBottom: '16px',
+                    position: 'relative',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+                    border: '1px solid rgba(168, 85, 247, 0.3)',
                   }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '60px',
-                    background: 'linear-gradient(to top, rgba(20, 22, 40, 0.9), transparent)',
-                    pointerEvents: 'none',
-                  }}
-                />
-              </div>
-            )}
+                >
+                  <img
+                    src={currentEventImage}
+                    alt={`${profileName} - Foto ${eventImageIndex + 1}`}
+                    className="ls-event-carousel-img"
+                  />
+
+                  {/* Degradado inferior */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '60px',
+                      background: 'linear-gradient(to top, rgba(20, 22, 40, 0.9), transparent)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+
+                  {/* Controles del Carrusel cuando hay mas de 1 imagen */}
+                  {eventImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        className="ls-event-carousel-btn prev"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEventImageIndex((prev) => (prev > 0 ? prev - 1 : eventImages.length - 1))
+                        }}
+                        title="Foto anterior"
+                        aria-label="Foto anterior"
+                      >
+                        <PiCaretLeftBold />
+                      </button>
+                      <button
+                        type="button"
+                        className="ls-event-carousel-btn next"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEventImageIndex((prev) => (prev < eventImages.length - 1 ? prev + 1 : 0))
+                        }}
+                        title="Siguiente foto"
+                        aria-label="Siguiente foto"
+                      >
+                        <PiCaretRightBold />
+                      </button>
+
+                      {/* Contador de fotos */}
+                      <div className="ls-event-carousel-counter">
+                        <span>{eventImageIndex + 1} / {eventImages.length}</span>
+                      </div>
+
+                      {/* Puntos de navegacion */}
+                      <div className="ls-event-carousel-dots">
+                        {eventImages.map((_, dotIdx) => (
+                          <button
+                            key={dotIdx}
+                            type="button"
+                            className={`ls-event-carousel-dot ${dotIdx === eventImageIndex ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEventImageIndex(dotIdx)
+                            }}
+                            aria-label={`Ver foto ${dotIdx + 1}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })()}
             <h3 style={{ fontSize: '1.25rem', marginBottom: '4px', textAlign: 'left', color: '#ffffff', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               {profileName}
             </h3>
@@ -311,16 +404,16 @@ export default function SoundCloudPreviewModal({
                   borderRadius: '12px',
                   fontSize: '0.72rem',
                   fontWeight: 600,
-                  background: 'rgba(0, 229, 255, 0.12)',
-                  color: '#67e8f9',
-                  border: '1px solid rgba(0, 229, 255, 0.35)',
+                  background: 'rgba(168, 85, 247, 0.12)',
+                  color: '#c084fc',
+                  border: '1px solid rgba(168, 85, 247, 0.35)',
                   maxWidth: '100%',
                   wordBreak: 'break-word',
                   overflowWrap: 'anywhere',
                 }}
                 title={`Organizado por: ${card.owner || card.ownerNickname || 'Organizador'}`}
               >
-                <PiUserCircleBold style={{ fontSize: '0.95rem', flexShrink: 0, color: '#00e5ff' }} />
+                <PiUserCircleBold style={{ fontSize: '0.95rem', flexShrink: 0, color: '#c084fc' }} />
                 <span>Creado por: <strong>{card.owner || card.ownerNickname || 'Organizador'}</strong></span>
               </span>
             </div>
@@ -529,7 +622,9 @@ export default function SoundCloudPreviewModal({
                       </span>
                     )}
                   </div>
-                  <span className="ls-sc-match">{card.match} match</span>
+                  <span className="ls-sc-match">
+                    {isExternalPreview ? 'Tu Perfil' : (card.match?.includes('match') ? card.match : `${card.match || '90%'} match`)}
+                  </span>
                 </div>
                 <p className="ls-sc-role">
                   {card.role} {card.location && `• ${card.location}`}
@@ -585,227 +680,249 @@ export default function SoundCloudPreviewModal({
 
             <p className="ls-sc-bio">{card.description || ''}</p>
 
-            {/* Spotify Favorite Artists & Shared Affinity */}
-            {((card.favoriteArtists && card.favoriteArtists.length > 0) || (card.commonArtists && card.commonArtists.length > 0)) && (
-              <div className="ls-sc-artists-section" style={{ marginBottom: '14px', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1DB954', fontSize: '0.85rem', fontWeight: 600 }}>
-                    <FaSpotify />
-                    <span>Artistas Favoritos (Spotify)</span>
-                  </div>
-                  {card.affinityReason && (
-                    <span style={{ fontSize: '0.75rem', color: '#a855f7', fontWeight: 500 }}>
-                      {card.affinityReason}
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {(card.favoriteArtists || []).map((art) => {
-                    const isCommon = (card.commonArtists || []).some(
-                      (ca) => ca.toLowerCase() === art.name.toLowerCase()
-                    )
-                    return (
-                      <div
-                        key={art.spotifyId || art.name}
-                        className={`ls-spotify-artist-chip read-only ${isCommon ? 'is-common' : ''}`}
-                        style={{
-                          background: isCommon ? 'rgba(29, 185, 84, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                          border: isCommon ? '1px solid #1DB954' : '1px solid rgba(255, 255, 255, 0.1)',
-                        }}
-                      >
-                        {art.imageUrl ? (
-                          <img src={art.imageUrl} alt={art.name} className="ls-spotify-chip-avatar" />
-                        ) : (
-                          <div className="ls-spotify-chip-placeholder">
-                            <FaSpotify />
-                          </div>
-                        )}
-                        <span className="ls-spotify-chip-name">{art.name}</span>
-                        {isCommon && (
-                          <span style={{ fontSize: '0.68rem', color: '#1DB954', fontWeight: 700, marginLeft: '2px' }}>
-                            Común
-                          </span>
-                        )}
-                        {art.spotifyUrl && (
-                          <a
-                            href={art.spotifyUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="ls-spotify-chip-link"
-                            title="Abrir en Spotify"
-                          >
-                            <PiArrowSquareOutBold />
-                          </a>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+            {/* PARTE SUPERIOR: Demos y Fragmentos Locales (.WAV, .MP3, .FLAC, .OGG) */}
+            {localTracks.length > 0 && (
+              <LocalDemosPlayer
+                tracks={localTracks}
+                userName={profileName}
+              />
             )}
 
-            {/* Official SoundCloud Embedded Player Widget */}
-            <div className="ls-sc-embed-widget">
-              <div className="ls-sc-embed-header">
-                <PiSpeakerHighBold className="ls-sc-orange-icon" />
-                <span>Reproducción Oficial en SoundCloud</span>
-              </div>
-              <iframe
-                width="100%"
-                height="166"
-                scrolling="no"
-                frameBorder="no"
-                allow="autoplay"
-                src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(
-                  embedTargetUrl,
-                )}&color=%23ff5500&auto_play=${shouldAutoplay ? 'true' : 'false'}&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`}
-                title="Reproductor de SoundCloud"
-              />
-            </div>
-
-            {/* SoundCloud Tracks / Profile Catalog */}
-            <div className="ls-sc-tracks-section">
-              <div className="ls-sc-section-title">
-                <div className="ls-sc-title-left">
-                  <PiMusicNotesFill className="ls-sc-orange-icon" />
-                  <h3>Ultimas Actividades Musicales</h3>
+            {/* PARTE INFERIOR: Exclusivo Reproductor y Catálogo de SoundCloud */}
+            <div className="ls-sc-bottom-container">
+              {/* Official SoundCloud Embedded Player Widget */}
+              <div className="ls-sc-embed-widget">
+                <div className="ls-sc-embed-header">
+                  <PiSpeakerHighBold className="ls-sc-orange-icon" />
+                  <span>Reproducción Oficial en SoundCloud</span>
                 </div>
-                <span className="ls-sc-track-count">
-                  {visibleTracks.length > 0 ? `${visibleTracks.length} tema${visibleTracks.length > 1 ? 's' : ''}` : 'Sin trabajos'}
-                </span>
+                {embedTargetUrl ? (
+                  <iframe
+                    width="100%"
+                    height="166"
+                    scrolling="no"
+                    frameBorder="no"
+                    allow="autoplay"
+                    src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(
+                      embedTargetUrl,
+                    )}&color=%23ff5500&auto_play=${shouldAutoplay ? 'true' : 'false'}&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`}
+                    title="Reproductor de SoundCloud"
+                  />
+                ) : (
+                  <div className="ls-sc-no-embed">
+                    <p style={{ margin: 0 }}>No hay reproductor de SoundCloud vinculado para este perfil.</p>
+                  </div>
+                )}
               </div>
 
-              {visibleTracks.length > 0 ? (
-                <div className="ls-sc-tracks-list">
-                  {visibleTracks.map((track) => {
-                    const isSelected = activeTrackId === track.id
+              {/* SoundCloud Tracks / Profile Catalog */}
+              <div className="ls-sc-tracks-section">
+                <div className="ls-sc-section-title">
+                  <div className="ls-sc-title-left">
+                    <PiMusicNotesFill className="ls-sc-orange-icon" />
+                    <h3>Ultimas Actividades Musicales</h3>
+                  </div>
+                  <span className="ls-sc-track-count">
+                    {visibleSoundCloudTracks.length > 0
+                      ? `${visibleSoundCloudTracks.length} tema${visibleSoundCloudTracks.length > 1 ? 's' : ''}`
+                      : 'Sin trabajos'}
+                  </span>
+                </div>
 
-                    return (
-                      <div
-                        key={track.id}
-                        className={`ls-sc-track-card ${isSelected ? 'is-playing' : ''}`}
-                        onClick={() => handleSelectTrack(track)}
-                      >
-                        <button
-                          type="button"
-                          className="ls-sc-play-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleSelectTrack(track)
-                          }}
-                          title="Cargar y reproducir en SoundCloud"
+                {visibleSoundCloudTracks.length > 0 ? (
+                  <div className="ls-sc-tracks-list">
+                    {visibleSoundCloudTracks.map((track) => {
+                      const isSelected = activeTrackId === track.id || activeEmbedUrl === track.soundcloudLink
+
+                      return (
+                        <div
+                          key={track.id}
+                          className={`ls-sc-track-card ${isSelected ? 'is-playing' : ''}`}
+                          onClick={() => handleSelectTrack(track)}
                         >
-                          <PiPlayFill />
-                        </button>
+                          <button
+                            type="button"
+                            className="ls-sc-play-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSelectTrack(track)
+                            }}
+                            title="Cargar y reproducir en SoundCloud"
+                          >
+                            <PiPlayFill />
+                          </button>
 
-                        <div className="ls-sc-track-info">
-                          <div className="ls-sc-track-main">
-                            <span className="ls-sc-track-title">{track.title}</span>
-                            <span className="ls-sc-genre-tag">{track.genre}</span>
-                          </div>
+                          <div className="ls-sc-track-info">
+                            <div className="ls-sc-track-main">
+                              <span className="ls-sc-track-title">{track.title}</span>
+                              <span className="ls-sc-genre-tag">{track.genre || 'SoundCloud'}</span>
+                            </div>
 
-                          <div className="ls-sc-track-meta">
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <PiPlayFill style={{ fontSize: '0.72rem', color: '#ffaa71' }} /> {String(track.plays).includes('reproducciones') ? track.plays : `${track.plays} reproducciones`}
-                            </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <PiTimerBold style={{ fontSize: '0.75rem', color: '#ffaa71' }} /> {track.duration}
-                            </span>
-                            {isSelected && (
-                              <span style={{ color: '#ff5500', fontWeight: 'bold' }}>
-                                ● CARGADO EN REPRODUCTOR
+                            <div className="ls-sc-track-meta">
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <PiPlayFill style={{ fontSize: '0.72rem', color: '#ffaa71' }} />{' '}
+                                {String(track.plays).includes('reproducciones')
+                                  ? track.plays
+                                  : `${track.plays || '0'} reproducciones`}
                               </span>
-                            )}
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <PiTimerBold style={{ fontSize: '0.75rem', color: '#ffaa71' }} />{' '}
+                                {track.duration || 'SoundCloud'}
+                              </span>
+                              {isSelected && (
+                                <span style={{ color: '#ff5500', fontWeight: 'bold' }}>
+                                  ● CARGADO EN REPRODUCTOR
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        <a
-                          href={track.soundcloudLink ?? handleUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ls-sc-listen-btn"
-                          onClick={(e) => e.stopPropagation()}
-                          title="Abrir tema en SoundCloud"
-                        >
-                          <PiSoundcloudLogoFill /> Abrir
-                        </a>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="ls-sc-empty-tracks">
-                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', padding: '12px 0' }}>
-                    No tiene trabajos realizados de momento
-                  </p>
-                </div>
-              )}
+                          <a
+                            href={track.soundcloudLink ?? handleUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ls-sc-listen-btn"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Abrir tema en SoundCloud"
+                          >
+                            <PiSoundcloudLogoFill /> Abrir
+                          </a>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="ls-sc-empty-tracks">
+                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', padding: '12px 0' }}>
+                      No tiene trabajos realizados de momento
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Footer action link & match action buttons */}
             <div className="ls-sc-modal-footer" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-                <button
-                  type="button"
-                  className="ls-card-btn-action pass"
-                  onClick={() => {
-                    if (onDiscardProfile && card) {
-                      onDiscardProfile(card)
-                    }
-                    onClose()
-                  }}
-                  style={{
-                    flex: 1,
-                    height: '44px',
-                    borderRadius: '12px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                    color: '#fca5a5',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  title="Descartar Perfil"
-                >
-                  <PiXBold style={{ fontSize: '1.15rem' }} /> Descartar
-                </button>
+              {isExternalPreview ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      background: 'rgba(168, 85, 247, 0.12)',
+                      border: '1px solid rgba(168, 85, 247, 0.35)',
+                      color: '#d8b4fe',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <PiEyeBold style={{ fontSize: '1.1rem', color: '#c084fc', flexShrink: 0 }} />
+                    <span>Modo Vista Externa: Asi visualizan tu perfil los demas usuarios en Discovery y Explorer</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="ls-primary-button"
+                    onClick={handleCloseModal}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <PiXBold /> Cerrar Vista Previa
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                    <button
+                      type="button"
+                      className="ls-card-btn-action pass"
+                      onClick={() => {
+                        if (onDiscardProfile && card) {
+                          onDiscardProfile(card)
+                        }
+                        onClose()
+                      }}
+                      style={{
+                        flex: 1,
+                        height: '44px',
+                        borderRadius: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        color: '#fca5a5',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      title="Descartar Perfil"
+                    >
+                      <PiXBold style={{ fontSize: '1.15rem' }} /> Descartar
+                    </button>
 
-                <button
-                  type="button"
-                  className="ls-card-btn-action like"
-                  onClick={() => {
-                    if (onConnectProfile && card) {
-                      onConnectProfile(card)
-                    }
-                    onClose()
-                  }}
-                  style={{
-                    flex: 1,
-                    height: '44px',
-                    borderRadius: '12px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                    background: 'linear-gradient(135deg, #a855f7, #8b5cf6)',
-                    border: 'none',
-                    color: '#ffffff',
-                    boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  title="Conectar / Aceptar Match"
-                >
-                  <PiCheckBold style={{ fontSize: '1.15rem' }} /> Conectar Match
-                </button>
-              </div>
+                    <button
+                      type="button"
+                      className="ls-card-btn-action like"
+                      onClick={() => {
+                        if (onConnectProfile && card) {
+                          onConnectProfile(card)
+                        }
+                        onClose()
+                      }}
+                      style={{
+                        flex: 1,
+                        height: '44px',
+                        borderRadius: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                        border: 'none',
+                        color: '#ffffff',
+                        boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      title="Conectar / Aceptar Match"
+                    >
+                      <PiCheckBold style={{ fontSize: '1.15rem' }} /> Conectar Match
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.76rem',
+                      color: 'rgba(255, 255, 255, 0.65)',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <span style={{ color: '#a855f7' }}>•</span>
+                    <span>Al conectar podrás intercambiar stems, loops y proyectos vía chat cifrado.</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

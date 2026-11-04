@@ -9,7 +9,6 @@ import {
   PiArrowLeftBold,
   PiArrowRightBold,
 } from 'react-icons/pi'
-import { FaSpotify } from 'react-icons/fa6'
 import type { ProfileCard } from '../data/mockData'
 import { isUserProfile, type UserProfile } from '../types'
 
@@ -363,22 +362,6 @@ export default function SwipeCardStack({
               ))}
             </div>
           </div>
-
-          {/* Artistas en común o favoritos */}
-          {currentCard.commonArtists && currentCard.commonArtists.length > 0 && (
-            <div className="ls-profile-interest-block" style={{ marginTop: '6px' }}>
-              <span className="ls-interest-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#1DB954' }}>
-                <FaSpotify /> Artistas en común
-              </span>
-              <div className="ls-mini-tags">
-                {currentCard.commonArtists.map((artist: string) => (
-                  <span key={artist} style={{ border: '1px solid rgba(29, 185, 84, 0.4)', background: 'rgba(29, 185, 84, 0.12)', color: '#86efac' }}>
-                    {artist}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Helper visual para interacción táctil en dispositivos móviles */}
           <div className="ls-mobile-swipe-helper">

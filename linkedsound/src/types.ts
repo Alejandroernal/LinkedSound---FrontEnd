@@ -1,13 +1,75 @@
 export type AppPage = 'Discovery' | 'Explorer' | 'Messages' | 'Profile' | 'Login' | 'Register' | 'Validation' | 'Onboarding' | 'Admin'
 
 export type SoundCloudTrack = {
-  id: string
+  id?: string
   title: string
-  plays: string
-  duration: string
-  genre: string
+  plays?: string | number
+  duration?: string
+  genre?: string
   audioUrl?: string
   soundcloudLink?: string
+  format?: string
+  snippetType?: string
+  bpm?: string
+  key?: string
+  fileSize?: string
+  order?: number
+}
+
+export function isLocalAudioTrack(track?: SoundCloudTrack | null): boolean {
+  if (!track) return false
+
+  const scLink = (track.soundcloudLink || '').toLowerCase().trim()
+  const aUrl = (track.audioUrl || '').toLowerCase().trim()
+
+  // Si tiene enlace directo a soundcloud.com y no posee un archivo local en audioUrl
+  if (scLink.includes('soundcloud.com') && (!aUrl || aUrl.includes('soundcloud.com'))) {
+    return false
+  }
+
+  // Si tiene URL de archivo de audio local (Storage, blob, mp3, wav, flac, ogg)
+  if (aUrl && !aUrl.includes('soundcloud.com')) {
+    return true
+  }
+
+  // Si tiene formato de archivo local explicito
+  const fmt = (track.format || '').toUpperCase().trim()
+  if (['WAV', 'MP3', 'FLAC', 'OGG'].includes(fmt)) {
+    return true
+  }
+
+  // Si tiene metadata generada por el uploader de muestras locales
+  if (track.snippetType || track.fileSize || track.bpm || track.key) {
+    return true
+  }
+
+  if (track.id && (track.id.startsWith('sample_track_') || track.id.startsWith('local_'))) {
+    return true
+  }
+
+  return false
+}
+
+export function isSoundCloudTrack(track?: SoundCloudTrack | null): boolean {
+  if (!track) return false
+
+  // Si es un track local de audio subido, queda excluido de SoundCloud
+  if (isLocalAudioTrack(track)) {
+    return false
+  }
+
+  const scLink = (track.soundcloudLink || '').toLowerCase().trim()
+  const aUrl = (track.audioUrl || '').toLowerCase().trim()
+
+  if (scLink.includes('soundcloud.com') || aUrl.includes('soundcloud.com')) {
+    return true
+  }
+
+  if (track.duration?.toLowerCase().includes('soundcloud') || track.genre?.toLowerCase().includes('soundcloud')) {
+    return true
+  }
+
+  return false
 }
 
 export type UserReport = {
@@ -49,6 +111,13 @@ export type ExplorerItem = {
   image?: string
 }
 
+export type ImageItem = {
+  id?: string
+  url: string
+  alt?: string
+  order?: number
+}
+
 // Entidad normalizada para Ubicaciones y Lugares
 export type LocationItem = {
   id?: string
@@ -64,15 +133,6 @@ export type LocationItem = {
   updatedAt?: string
 }
 
-export type SpotifyArtist = {
-  id?: string
-  spotifyId?: string
-  name: string
-  imageUrl?: string | null
-  spotifyUrl?: string
-  genres?: string[]
-}
-
 export type UserProfile = {
   // Identificación y Registro
   id?: string
@@ -83,11 +143,11 @@ export type UserProfile = {
   password?: string
   profileImage?: string
 
-  // Perfil Profesional y Descripción
-  role?: 'Productor' | 'Artista' | 'Productor y Artista' | 'Administrador' | string
+  // Perfil Profesional y Rol de Cuenta
+  role?: 'Productor' | 'Artista' | 'Productor y Artista' | string
+  accountRole?: 'Usuario' | 'Administrador' | string
+  isAdmin?: boolean
   interestGenres?: string[]
-  favoriteArtists?: SpotifyArtist[]
-  commonArtists?: string[]
   commonGenres?: string[]
   affinityReason?: string
   description?: string
@@ -107,6 +167,7 @@ export type UserProfile = {
   // Campos específicos de CREADORES / PERFILES
   soundcloudHandle?: string
   tracks?: SoundCloudTrack[]
+  userImages?: ImageItem[]
 
   // Discriminador de tipo
   itemRole?: 'Perfil'
@@ -169,11 +230,11 @@ export type EventItem = {
   // Descripción e imágenes
   description?: string
   profileImage?: string
+  images?: string[]
+  eventImages?: ImageItem[]
 
   // Géneros y etiquetas
   interestGenres: string[]
-  favoriteArtists?: SpotifyArtist[]
-  commonArtists?: string[]
   commonGenres?: string[]
   affinityReason?: string
   match?: string

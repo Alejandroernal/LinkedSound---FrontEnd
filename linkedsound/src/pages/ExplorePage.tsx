@@ -88,7 +88,6 @@ export default function ExplorePage({
               longitude: u.longitude,
               description: u.description || '',
               interestGenres: u.interestGenres || [],
-              favoriteArtists: Array.isArray(u.favoriteArtists) ? u.favoriteArtists : [],
               tags: u.interestGenres || [],
               soundcloudUrl: u.soundcloudUrl || '',
               soundcloudHandle: u.soundcloudHandle || '',
@@ -96,7 +95,6 @@ export default function ExplorePage({
               instagramUrl: u.instagramUrl || '',
               profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
               match: affinity.percentageFormatted,
-              commonArtists: affinity.commonArtists,
               commonGenres: affinity.commonGenres,
               affinityReason: affinity.summary,
               isProfile: true,
@@ -124,6 +122,7 @@ export default function ExplorePage({
           interestGenres: ev.interestGenres || [],
           tags: ev.interestGenres || [],
           profileImage: ev.profileImage || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80',
+          images: Array.isArray(ev.images) && ev.images.length > 0 ? ev.images : (ev.profileImage ? [ev.profileImage] : []),
           match: '100%',
           description: ev.description || '',
           badge: 'Evento',
@@ -179,6 +178,10 @@ export default function ExplorePage({
         ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.nickname || 'Organizador'
         : 'Organizador'
 
+      const eventImages = Array.isArray(eventItem.images) && eventItem.images.length > 0
+        ? eventItem.images
+        : (newEvent.profileImage ? [newEvent.profileImage] : [])
+
       const res = await api.events.create({
         ownerId: profile?.id,
         ownerEmail: profile?.email,
@@ -200,6 +203,7 @@ export default function ExplorePage({
         interestGenres: newEvent.interestGenres,
         description: newEvent.description,
         profileImage: newEvent.profileImage,
+        images: eventImages,
       })
 
       if (res.success && res.event) {
@@ -215,6 +219,8 @@ export default function ExplorePage({
           ownerId: res.event.ownerId || profile?.id,
           owner: ownerName,
           ownerNickname: res.event.ownerNickname || res.event.owner?.nickname || profile?.nickname || '',
+          profileImage: res.event.profileImage || newEvent.profileImage,
+          images: res.event.images || eventImages,
         }
         setCardsList((prev) => [created, ...prev])
       } else {
@@ -224,11 +230,16 @@ export default function ExplorePage({
             owner: fallbackOwner,
             ownerId: profile?.id,
             ownerNickname: profile?.nickname || '',
+            images: eventImages,
           },
           ...prev,
         ])
       }
     } catch {
+      const eventItem = newEvent as Partial<EventItem>
+      const eventImages = Array.isArray(eventItem.images) && eventItem.images.length > 0
+        ? eventItem.images
+        : (newEvent.profileImage ? [newEvent.profileImage] : [])
       const fallbackOwner = profile
         ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.nickname || 'Organizador'
         : 'Organizador'
@@ -238,6 +249,7 @@ export default function ExplorePage({
           owner: fallbackOwner,
           ownerId: profile?.id,
           ownerNickname: profile?.nickname || '',
+          images: eventImages,
         },
         ...prev,
       ])
@@ -248,6 +260,10 @@ export default function ExplorePage({
     if (!updatedEvent.id) return
     try {
       const eventItem = updatedEvent as Partial<EventItem>
+      const eventImages = Array.isArray(eventItem.images) && eventItem.images.length > 0
+        ? eventItem.images
+        : (updatedEvent.profileImage ? [updatedEvent.profileImage] : [])
+
       const res = await api.events.update(updatedEvent.id, {
         ownerId: profile?.id,
         title: updatedEvent.nickname,
@@ -267,6 +283,7 @@ export default function ExplorePage({
         interestGenres: updatedEvent.interestGenres,
         description: updatedEvent.description,
         profileImage: updatedEvent.profileImage,
+        images: eventImages,
       })
 
       if (res.success && res.event) {
@@ -276,6 +293,8 @@ export default function ExplorePage({
               ? ({
                   ...c,
                   ...updatedEvent,
+                  profileImage: res.event.profileImage || updatedEvent.profileImage,
+                  images: res.event.images || eventImages,
                   updatedAt: res.event.updatedAt,
                 } as ProfileCard)
               : c

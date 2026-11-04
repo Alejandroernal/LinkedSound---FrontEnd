@@ -66,7 +66,7 @@ export default function LoginPage({
         }
 
         // Si el usuario registrado en la base de datos tiene rol de Administrador
-        if (response.user.role === 'Administrador' || response.user.role === 'Admin') {
+        if (response.user.accountRole === 'Administrador' || response.user.role === 'Administrador' || response.user.role === 'Admin') {
           onLoginAsAdmin?.(response.user)
           onNavigate?.('Admin')
           return
@@ -94,7 +94,13 @@ export default function LoginPage({
     <div className="ls-auth-shell">
       <div className="ls-auth-card">
         <div className="ls-auth-brand">
-          <div className="ls-brand-mark">L</div>
+          <div className="ls-brand-mark">
+            <img
+              src="/4147b18c-9b5d-49fe-86fe-07a9023d1d1e.png"
+              alt="LinkedSound"
+              className="ls-brand-img"
+            />
+          </div>
           <div>
             <div className="ls-brand-name">LinkedSound</div>
             <small>conecta tu música</small>

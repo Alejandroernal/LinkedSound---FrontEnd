@@ -325,7 +325,13 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
       <div className="ls-auth-shell">
         <div className="ls-auth-card">
           <div className="ls-auth-brand">
-            <div className="ls-brand-mark">L</div>
+            <div className="ls-brand-mark">
+              <img
+                src="/4147b18c-9b5d-49fe-86fe-07a9023d1d1e.png"
+                alt="LinkedSound"
+                className="ls-brand-img"
+              />
+            </div>
             <div>
               <div className="ls-brand-name">LinkedSound</div>
               <small>crea tu perfil</small>

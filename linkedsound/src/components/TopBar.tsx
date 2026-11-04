@@ -49,9 +49,9 @@ export default function TopBar({
   unreadMessagesCount,
 }: TopBarProps) {
   const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Administrador' : 'Mi Perfil'))
-  const userRole = profile?.role === 'Administrador'
+  const userRole = isAdminSession || profile?.accountRole === 'Administrador'
     ? 'Administrador'
-    : (profile?.role || profile?.category || (isAdminSession ? 'Administrador' : 'Artista'))
+    : (profile?.role || profile?.category || 'Artista')
   const userProfileImage = profile?.profileImage ?? ''
 
   // Control del dropdown de notificaciones
