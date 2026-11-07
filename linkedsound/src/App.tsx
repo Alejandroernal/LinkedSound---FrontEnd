@@ -459,19 +459,9 @@ function App() {
 
         // 3. Abrir Modal de Celebracion de Match
         setMatchedCard(card)
-      } else if (res.success) {
-        // Like registrado pero pendiente de reciprocidad
-        const likeSentNotif: NotificationItem = {
-          id: `notif_like_${Date.now()}`,
-          title: `Like enviado a ${cardName}`,
-          message: `Has enviado un like a ${cardName}. Si coincide contigo, se creara el chat.`,
-          timestamp: 'Justo ahora',
-          read: false,
-          type: 'like',
-          linkPage: 'Messages',
-        }
-        setUserNotifs((prev) => [likeSentNotif, ...prev])
       }
+      // Cuando la solicitud de like esta pendiente de reciprocidad (no hay match todavia),
+      // no se notifica al usuario que envia la solicitud, unicamente al destinatario (quien la recibe en su bandeja de notificaciones).
     } catch (error) {
       console.error('Error al conectar perfil:', error)
     }

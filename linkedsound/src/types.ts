@@ -118,6 +118,36 @@ export type ImageItem = {
   order?: number
 }
 
+export type EventCommentItem = {
+  id: string
+  eventId: string
+  userId: string
+  content: string
+  createdAt: string
+  updatedAt?: string
+  user?: {
+    id: string
+    nickname: string
+    firstName?: string
+    lastName?: string
+    profileImage?: string
+  } | null
+}
+
+export type SnippetTypeItem = {
+  id: string
+  name: string
+  description?: string
+  order?: number
+}
+
+export type MusicalKeyItem = {
+  id: string
+  name: string
+  description?: string
+  order?: number
+}
+
 // Entidad normalizada para Ubicaciones y Lugares
 export type LocationItem = {
   id?: string
@@ -273,6 +303,7 @@ export type EventItem = {
   spotifyUrl?: string
   instagramUrl?: string
   tracks?: SoundCloudTrack[]
+  comments?: EventCommentItem[]
 
   // Estado de Match recíproco previo
   preLiked?: boolean

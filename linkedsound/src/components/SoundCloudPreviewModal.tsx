@@ -22,10 +22,13 @@ import {
   PiEyeBold,
   PiCaretLeftBold,
   PiCaretRightBold,
+  PiChatCircleTextBold,
+  PiPaperPlaneRightBold,
 } from 'react-icons/pi'
 import { FaSpotify, FaInstagram } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
-import { formatEventDate, isUserProfile, isLocalAudioTrack, isSoundCloudTrack } from '../types'
+import { formatEventDate, isUserProfile, isLocalAudioTrack, isSoundCloudTrack, type EventCommentItem } from '../types'
+import { api } from '../services/api'
 import LocalDemosPlayer from './LocalDemosPlayer'
 
 type SoundCloudPreviewModalProps = {
@@ -68,9 +71,83 @@ export default function SoundCloudPreviewModal({
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null)
   const [shouldAutoplay, setShouldAutoplay] = useState<boolean>(false)
   const [eventImageIndex, setEventImageIndex] = useState<number>(0)
+  const [eventComments, setEventComments] = useState<EventCommentItem[]>([])
+  const [newCommentText, setNewCommentText] = useState<string>('')
+  const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false)
+  const [commentError, setCommentError] = useState<string | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
+
+  const isOwner = Boolean(
+    isAdmin ||
+    (currentUserId && card?.ownerId && card.ownerId === currentUserId) ||
+    (currentUserNickname && (card as any)?.ownerNickname && (card as any).ownerNickname.toLowerCase() === currentUserNickname.toLowerCase()) ||
+    (currentUserNickname && card?.owner && card.owner.toLowerCase() === currentUserNickname.toLowerCase())
+  )
+
+  const handleAddComment = async () => {
+    if (!card?.id || !newCommentText.trim()) return
+    setIsSubmittingComment(true)
+    setCommentError(null)
+    try {
+      const res = await api.events.addComment(card.id, {
+        content: newCommentText.trim(),
+        userId: currentUserId,
+        userRole: isAdmin ? 'Administrador' : undefined,
+      })
+      if (res.success && res.comment) {
+        setEventComments((prev) => [res.comment, ...prev])
+        if ((card as any).comments && Array.isArray((card as any).comments)) {
+          (card as any).comments.unshift(res.comment)
+        } else {
+          (card as any).comments = [res.comment]
+        }
+        setNewCommentText('')
+      } else {
+        setCommentError(res.message || 'No se pudo publicar la actualización.')
+      }
+    } catch (err: any) {
+      setCommentError(err.message || 'Error al conectar con el servidor.')
+    } finally {
+      setIsSubmittingComment(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!card?.id) return
+    try {
+      const res = await api.events.deleteComment(card.id, commentId, {
+        userId: currentUserId,
+        userRole: isAdmin ? 'Administrador' : undefined,
+      })
+      if (res.success) {
+        setEventComments((prev) => prev.filter((c) => c.id !== commentId))
+        if ((card as any).comments && Array.isArray((card as any).comments)) {
+          (card as any).comments = (card as any).comments.filter((c: any) => c.id !== commentId)
+        }
+      }
+    } catch (err) {
+      console.error('Error al eliminar comentario:', err)
+    }
+  }
+
+  const formatCommentDate = (dateStr?: string): string => {
+    if (!dateStr) return ''
+    try {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return dateStr
+      return d.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return dateStr
+    }
+  }
 
   useEffect(() => {
     const rawTracks: SoundCloudTrack[] = card?.tracks ?? []
@@ -88,6 +165,18 @@ export default function SoundCloudPreviewModal({
       setShouldAutoplay(false)
     }
     setEventImageIndex(0)
+    if (card && (card as any).comments && Array.isArray((card as any).comments)) {
+      const sorted = [...(card as any).comments].sort((a: any, b: any) => {
+        const timeA = new Date(a.createdAt || 0).getTime()
+        const timeB = new Date(b.createdAt || 0).getTime()
+        return timeB - timeA
+      })
+      setEventComments(sorted)
+    } else {
+      setEventComments([])
+    }
+    setNewCommentText('')
+    setCommentError(null)
   }, [card, isOpen])
 
   // Inicializar o actualizar el mapa de localización para Eventos (instancia única con geocodificación exacta)
@@ -223,15 +312,15 @@ export default function SoundCloudPreviewModal({
   const visibleSoundCloudTracks = soundCloudTracks.length > 0
     ? soundCloudTracks
     : (hasSoundCloudUrl ? [
-        {
-          id: 'sc_profile_catalog',
-          title: `${profileName} - Catálogo en SoundCloud`,
-          genre: card.category || 'SoundCloud',
-          duration: 'SoundCloud',
-          plays: 'Oficial',
-          soundcloudLink: scUrl,
-        }
-      ] : [])
+      {
+        id: 'sc_profile_catalog',
+        title: `${profileName} - Catálogo en SoundCloud`,
+        genre: card.category || 'SoundCloud',
+        duration: 'SoundCloud',
+        plays: 'Oficial',
+        soundcloudLink: scUrl,
+      }
+    ] : [])
 
   const spotifyUrl = card.spotifyUrl
   const instagramUrl = card.instagramUrl
@@ -500,6 +589,96 @@ export default function SoundCloudPreviewModal({
               {(card.interestGenres ?? card.tags ?? []).map((tag) => (
                 <span key={tag}>{tag}</span>
               ))}
+            </div>
+
+            {/* Seccion de Actualizaciones / Comentarios del Creador del Evento */}
+            <div className="ls-event-updates-section">
+              <div className="ls-event-updates-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <PiChatCircleTextBold style={{ fontSize: '1.2rem', color: '#c084fc' }} />
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#ffffff', fontWeight: 600 }}>
+                    Información del Evento
+                  </h4>
+                </div>
+                <span className="ls-event-updates-badge">
+                  {eventComments.length} {eventComments.length === 1 ? 'comentario' : 'comentarios'}
+                </span>
+              </div>
+
+              {/* Si es el creador del evento, mostrar el formulario para agregar comentarios */}
+              {isOwner && (
+                <div className="ls-event-comment-form">
+                  <textarea
+                    rows={2}
+                    className="ls-event-comment-textarea"
+                    placeholder="Escribe una actualización o novedad del evento (cambios de horario, line-up, avisos)..."
+                    value={newCommentText}
+                    onChange={(e) => {
+                      setNewCommentText(e.target.value)
+                      if (commentError) setCommentError(null)
+                    }}
+                    maxLength={500}
+                    disabled={isSubmittingComment}
+                  />
+                  <div className="ls-event-comment-form-footer">
+                    <span className="ls-event-comment-counter">
+                      {newCommentText.length} / 500
+                    </span>
+                    <button
+                      type="button"
+                      className="ls-event-comment-submit-btn"
+                      disabled={isSubmittingComment || !newCommentText.trim()}
+                      onClick={handleAddComment}
+                    >
+                      <PiPaperPlaneRightBold />
+                      <span>{isSubmittingComment ? 'Publicando...' : 'Publicar'}</span>
+                    </button>
+                  </div>
+                  {commentError && (
+                    <div className="ls-event-comment-error">
+                      <PiWarningBold size={14} />
+                      <span>{commentError}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Lista de comentarios / actualizaciones */}
+              <div className="ls-event-comments-list">
+                {eventComments.length === 0 ? (
+                  <p className="ls-event-no-comments">
+                    No hay actualizaciones publicadas por el organizador hasta el momento.
+                  </p>
+                ) : (
+                  [...eventComments]
+                    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                    .map((comm) => (
+                    <div key={comm.id} className="ls-event-comment-card">
+                      <div className="ls-event-comment-top">
+                        <div className="ls-event-comment-meta">
+                          <span className="ls-event-comment-author-badge">
+                            Organizador
+                          </span>
+                          <span className="ls-event-comment-date">
+                            {formatCommentDate(comm.createdAt)}
+                          </span>
+                        </div>
+                        {isOwner && (
+                          <button
+                            type="button"
+                            className="ls-event-comment-del-btn"
+                            title="Eliminar actualización"
+                            onClick={() => handleDeleteComment(comm.id)}
+                          >
+                            <PiTrashBold />
+                          </button>
+                        )}
+                      </div>
+                      <p className="ls-event-comment-content">{comm.content}</p>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             {/* Acciones de Vista Previa y Edición */}

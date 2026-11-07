@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   PiUploadSimpleBold,
   PiTrashBold,
@@ -9,7 +9,7 @@ import {
   PiWarningOctagonBold,
   PiCheckBold,
 } from 'react-icons/pi'
-import type { SoundCloudTrack } from '../types'
+import type { SoundCloudTrack, SnippetTypeItem, MusicalKeyItem } from '../types'
 import { api } from '../services/api'
 
 interface AudioSampleTrackUploaderProps {
@@ -21,21 +21,6 @@ interface AudioSampleTrackUploaderProps {
   maxTracks?: number
 }
 
-const SNIPPET_TYPE_OPTIONS = [
-  '01 - DEMO EXCLUSIVA',
-  'SNIPPET 02 - PRE-MEZCLA',
-  'STEMS / MULTI-PISTA',
-  'WORK IN PROGRESS',
-  'DROP SNIPPET 30S',
-  'SOLO GUITARRA / LEAD',
-  'BASSLINE / DROP',
-]
-
-const COMMON_KEYS = [
-  'C Major', 'A Minor', 'G Major', 'E Minor', 'D Major', 'B Minor',
-  'F Major', 'D Minor', 'F Minor', 'A# Minor', 'C# Minor', 'F# Minor',
-]
-
 export default function AudioSampleTrackUploader({
   tracks,
   onChange,
@@ -44,11 +29,44 @@ export default function AudioSampleTrackUploader({
   minTracks = 1,
   maxTracks = 5,
 }: AudioSampleTrackUploaderProps) {
+  const [snippetTypes, setSnippetTypes] = useState<SnippetTypeItem[]>([])
+  const [musicalKeys, setMusicalKeys] = useState<MusicalKeyItem[]>([])
+  const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(true)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+    const fetchTrackOptions = async () => {
+      setIsLoadingOptions(true)
+      try {
+        const res = await api.tracks.getOptions()
+        if (isMounted && res) {
+          if (Array.isArray(res.snippetTypes)) {
+            setSnippetTypes(res.snippetTypes)
+          }
+          if (Array.isArray(res.musicalKeys)) {
+            setMusicalKeys(res.musicalKeys)
+          }
+        }
+      } catch (err) {
+        console.error('Error al cargar opciones de tracks desde la base de datos:', err)
+      } finally {
+        if (isMounted) {
+          setIsLoadingOptions(false)
+        }
+      }
+    }
+
+    fetchTrackOptions()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -92,15 +110,22 @@ export default function AudioSampleTrackUploader({
         const sizeStr = res.success && res.fileSize ? res.fileSize : `${(file.size / (1024 * 1024)).toFixed(1)} MB`
 
         const trackIndex = newTracks.length + 1
+        const defaultSnippet = snippetTypes.length > 0
+          ? snippetTypes[(trackIndex - 1) % snippetTypes.length]?.name || ''
+          : ''
+        const defaultKey = musicalKeys.length > 0
+          ? musicalKeys[0]?.name || ''
+          : ''
+
         newTracks.push({
           id: `sample_track_${Date.now()}_${i}`,
           title: baseName.slice(0, 50),
           audioUrl: trackUrl,
           duration: durStr,
           format: formatStr,
-          snippetType: SNIPPET_TYPE_OPTIONS[(trackIndex - 1) % SNIPPET_TYPE_OPTIONS.length],
+          snippetType: defaultSnippet,
           bpm: '126 BPM',
-          key: 'F Minor (Fm)',
+          key: defaultKey,
           fileSize: sizeStr,
           plays: Math.floor(Math.random() * 80) + 10,
           order: newTracks.length,
@@ -109,15 +134,22 @@ export default function AudioSampleTrackUploader({
         // Fallback local instantáneo para desarrollo o cortes de red
         const trackUrl = URL.createObjectURL(file)
         const trackIndex = newTracks.length + 1
+        const defaultSnippet = snippetTypes.length > 0
+          ? snippetTypes[(trackIndex - 1) % snippetTypes.length]?.name || ''
+          : ''
+        const defaultKey = musicalKeys.length > 0
+          ? musicalKeys[0]?.name || ''
+          : ''
+
         newTracks.push({
           id: `sample_track_local_${Date.now()}_${i}`,
           title: baseName.slice(0, 50),
           audioUrl: trackUrl,
           duration: '0:30',
           format: ext,
-          snippetType: SNIPPET_TYPE_OPTIONS[(trackIndex - 1) % SNIPPET_TYPE_OPTIONS.length],
+          snippetType: defaultSnippet,
           bpm: '126 BPM',
-          key: 'F Minor (Fm)',
+          key: defaultKey,
           fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
           plays: Math.floor(Math.random() * 80) + 10,
           order: newTracks.length,
@@ -267,12 +299,13 @@ export default function AudioSampleTrackUploader({
                   <div className="ls-track-detail-field">
                     <label>Tipo de muestra</label>
                     <select
-                      value={track.snippetType || SNIPPET_TYPE_OPTIONS[0]}
+                      disabled={isLoadingOptions}
+                      value={track.snippetType || (snippetTypes[0]?.name || '')}
                       onChange={(e) => handleUpdateTrackField(idx, 'snippetType', e.target.value)}
                     >
-                      {SNIPPET_TYPE_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
+                      {snippetTypes.map((opt) => (
+                        <option key={opt.id} value={opt.name}>
+                          {opt.name}
                         </option>
                       ))}
                     </select>
@@ -300,8 +333,8 @@ export default function AudioSampleTrackUploader({
                       onChange={(e) => handleUpdateTrackField(idx, 'key', e.target.value)}
                     />
                     <datalist id={`keys-${idx}`}>
-                      {COMMON_KEYS.map((k) => (
-                        <option key={k} value={k} />
+                      {musicalKeys.map((k) => (
+                        <option key={k.id} value={k.name} />
                       ))}
                     </datalist>
                   </div>

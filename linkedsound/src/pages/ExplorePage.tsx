@@ -137,6 +137,7 @@ export default function ExplorePage({
           spotifyUrl: ev.spotifyUrl || '',
           instagramUrl: ev.instagramUrl || '',
           tracks: ev.tracks || [],
+          comments: Array.isArray(ev.comments) ? ev.comments : [],
           owner: ev.owner || ev.ownerNickname || 'Organizador',
           ownerId: ev.ownerId,
           ownerNickname: ev.ownerNickname || '',
@@ -377,7 +378,7 @@ export default function ExplorePage({
     }
 
     return result
-  }, [cardsList, searchQuery, activeGenre, itemRoleFilter, sortBy])
+  }, [cardsList, debouncedSearchQuery, activeGenre, itemRoleFilter, sortBy])
 
   return (
     <div className="ls-app-shell">

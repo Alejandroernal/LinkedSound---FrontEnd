@@ -113,9 +113,10 @@ export default function DashboardPage({
   const loadDiscoveryCards = useCallback(async (isInitialOrNav = false) => {
     setIsLoadingCards(true)
     try {
-      const [res, interRes] = await Promise.all([
+      const [res, interRes, matchesRes] = await Promise.all([
         api.auth.getUsers(),
-        api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [] })),
+        api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [], incomingLikes: [] })),
+        api.interactions.getMatches().catch(() => ({ success: false, matches: [] })),
       ])
 
       if (res.success && Array.isArray(res.users)) {
@@ -123,9 +124,13 @@ export default function DashboardPage({
         const currentEmail = profile?.email
         const currentNick = profile?.nickname
 
-        let interactedUserIds = new Set(
+        const interactedUserIds = new Set(
           (interRes.interactions || []).map((i: any) => i.receiverId)
         )
+        const matchedUserIds = new Set(
+          (matchesRes.matches || []).map((m: any) => m.partnerId)
+        )
+        const incomingLikesSet = new Set<string>(interRes.incomingLikes || [])
 
         let candidateUsers = res.users.filter((u: any) => {
           // Excluir al usuario actual de su propio stack de descubrimiento
@@ -133,27 +138,40 @@ export default function DashboardPage({
           if (currentEmail && u.email === currentEmail) return false
           if (currentNick && u.nickname === currentNick) return false
           if (u.role === 'Administrador' || u.role === 'Admin') return false
+          // Excluir perfiles con los que ya existe un Match mutuo activo
+          if (matchedUserIds.has(u.id)) return false
           // Excluir perfiles con interaccion previa (like o descarte)
           if (interactedUserIds.has(u.id)) return false
           return true
         })
 
-        // Si al navegar o recargar no quedan candidatos porque ya se interactuo con todos previamente,
-        // reiniciamos las interacciones para que el usuario tenga perfiles disponibles de inmediato sin esperar 5 minutos.
+        // Si al navegar o recargar no quedan candidatos porque se descartaron todos previamente,
+        // reiniciamos unicamente los descartes (preservando los likes) para que el usuario tenga perfiles disponibles
         if (
           isInitialOrNav &&
           candidateUsers.length === 0 &&
-          res.users.some((u: any) => u.id !== currentId && u.role !== 'Administrador' && u.role !== 'Admin')
+          res.users.some((u: any) => u.id !== currentId && u.role !== 'Administrador' && u.role !== 'Admin' && !matchedUserIds.has(u.id))
         ) {
           await api.interactions.reset().catch(() => {})
+          const updatedInterRes = await api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [] }))
+          const updatedInteractedIds = new Set((updatedInterRes.interactions || []).map((i: any) => i.receiverId))
           candidateUsers = res.users.filter((u: any) => {
             if (currentId && u.id === currentId) return false
             if (currentEmail && u.email === currentEmail) return false
             if (currentNick && u.nickname === currentNick) return false
             if (u.role === 'Administrador' || u.role === 'Admin') return false
+            if (matchedUserIds.has(u.id)) return false
+            if (updatedInteractedIds.has(u.id)) return false
             return true
           })
         }
+
+        // Priorizar perfiles que ya te enviaron un like para conectar de inmediato
+        candidateUsers.sort((a: any, b: any) => {
+          const aLiked = incomingLikesSet.has(a.id) ? 1 : 0
+          const bLiked = incomingLikesSet.has(b.id) ? 1 : 0
+          return bLiked - aLiked
+        })
 
         const dbCards: ProfileCard[] = candidateUsers.map((u: any) => {
           const coords = (typeof u.latitude === 'number' && typeof u.longitude === 'number')

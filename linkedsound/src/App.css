@@ -1272,6 +1272,12 @@ button {
   filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.4));
 }
 
+.ls-empty-icon.is-spinning {
+  display: inline-block;
+  animation: lsSpin 1.3s linear infinite;
+  transform-origin: center center;
+}
+
 .ls-swipe-image-wrap {
   position: relative;
   height: 360px;
@@ -9044,5 +9050,207 @@ button {
   background: rgba(168, 85, 247, 0.3);
   border-color: #a855f7;
   color: #c084fc;
+}
+
+/* Seccion de Comentarios y Actualizaciones del Evento */
+.ls-event-updates-section {
+  margin-top: 14px;
+  margin-bottom: 12px;
+  background: rgba(20, 22, 40, 0.7);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: left;
+}
+
+.ls-event-updates-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ls-event-updates-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.ls-event-comment-form {
+  margin-bottom: 14px;
+  background: rgba(15, 19, 37, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 10px;
+  padding: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.ls-event-comment-form:focus-within {
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+}
+
+.ls-event-comment-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 0.82rem;
+  resize: vertical;
+  min-height: 52px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.ls-event-comment-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ls-event-comment-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ls-event-comment-counter {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: monospace;
+}
+
+.ls-event-comment-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ls-event-comment-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c084fc, #9333ea);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+  transform: translateY(-1px);
+}
+
+.ls-event-comment-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ls-event-comment-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: #fca5a5;
+  font-size: 0.74rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.ls-event-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ls-event-no-comments {
+  margin: 6px 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.ls-event-comment-card {
+  background: rgba(15, 19, 37, 0.75);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease;
+}
+
+.ls-event-comment-card:hover {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.ls-event-comment-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ls-event-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ls-event-comment-author-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 1px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.ls-event-comment-date {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.ls-event-comment-del-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.ls-event-comment-del-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.ls-event-comment-content {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #f1f5f9;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 

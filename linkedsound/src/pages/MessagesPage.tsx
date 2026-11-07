@@ -266,9 +266,19 @@ export default function MessagesPage({
     }
   }
 
-  const handleConfirmUnmatch = () => {
+  const handleConfirmUnmatch = async () => {
     if (!unmatchingTarget) return
     const targetId = unmatchingTarget.id
+    const partnerId = (unmatchingTarget as any).partnerId || (unmatchingTarget as any).partnerUserId
+
+    try {
+      await api.conversations.delete(targetId)
+    } catch (err) {
+      console.error('Error al desconectar conversación:', err)
+      if (partnerId) {
+        api.interactions.unmatch(partnerId).catch(() => {})
+      }
+    }
 
     setConversationsList((prev) => {
       const updated = prev.filter((c) => c.id !== targetId)
@@ -276,6 +286,11 @@ export default function MessagesPage({
         setActiveId('')
       }
       return updated
+    })
+
+    setNewMatchesList((prev) => {
+      if (!partnerId) return prev
+      return prev.filter((m) => m.id !== partnerId)
     })
 
     setMessagesMap((prev) => {

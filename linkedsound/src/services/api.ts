@@ -182,6 +182,24 @@ export const api = {
         method: 'DELETE',
         ...(payload ? { body: JSON.stringify(payload) } : {}),
       }),
+    addComment: (id: string, payload: { content: string; userId?: string; userRole?: string }) =>
+      request<{ success: boolean; comment: any; message?: string }>(`/events/${id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    deleteComment: (id: string, commentId: string, payload?: { userId?: string; userRole?: string }) =>
+      request<{ success: boolean; message?: string }>(`/events/${id}/comments/${commentId}`, {
+        method: 'DELETE',
+        ...(payload ? { body: JSON.stringify(payload) } : {}),
+      }),
+  },
+  tracks: {
+    getOptions: () =>
+      request<{ snippetTypes: any[]; musicalKeys: any[] }>('/tracks/options', { method: 'GET' }),
+    getSnippetTypes: () =>
+      request<{ snippetTypes: any[] }>('/tracks/snippet-types', { method: 'GET' }),
+    getMusicalKeys: () =>
+      request<{ musicalKeys: any[] }>('/tracks/musical-keys', { method: 'GET' }),
   },
   reports: {
     getAll: () => request<{ reports: any[] }>('/reports', { method: 'GET' }),
@@ -213,6 +231,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    delete: (id: string) =>
+      request<{ success: boolean; message: string }>(`/conversations/${id}`, {
+        method: 'DELETE',
+      }),
   },
   interactions: {
     like: (targetUserId: string) =>
@@ -230,8 +252,17 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ targetUserId }),
       }),
+    unmatch: (targetUserId: string) =>
+      request<{ success: boolean; message: string }>('/interactions/unmatch', {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId }),
+      }),
     getMatches: () => request<{ matches: any[] }>('/interactions/matches', { method: 'GET' }),
-    getUserInteractions: () => request<{ interactions: Array<{ receiverId: string; isLike: boolean }> }>('/interactions/status', { method: 'GET' }),
+    getUserInteractions: () =>
+      request<{
+        interactions: Array<{ receiverId: string; isLike: boolean }>
+        incomingLikes?: string[]
+      }>('/interactions/status', { method: 'GET' }),
     reset: () => request<{ success: boolean; message: string }>('/interactions/reset', { method: 'POST' }),
   },
   notifications: {

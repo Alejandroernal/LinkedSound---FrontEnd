@@ -149,7 +149,7 @@ export default function LocalDemosPlayer({ tracks, userName = 'Artista' }: Local
   }, [isPlaying, activeTrack.audioUrl, duration])
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
-  const snippetBadge = activeTrack.snippetType || `0${currentIndex + 1} - DEMO EXCLUSIVA`
+  const snippetBadge = activeTrack.snippetType || `Pista 0${currentIndex + 1}`
   const formatBadge = activeTrack.format || 'WAV 24bit'
   const bpmText = activeTrack.bpm ? `${activeTrack.bpm}` : '126 BPM'
   const keyText = activeTrack.key ? `${activeTrack.key}` : 'F Minor (Fm)'
