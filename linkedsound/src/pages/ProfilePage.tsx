@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { FaSoundcloud, FaSpotify, FaInstagram } from 'react-icons/fa6'
+import { FaSoundcloud, FaSpotify } from 'react-icons/fa6'
 import {
   PiMapPinBold,
   PiEyeSlashBold,
@@ -8,7 +8,7 @@ import {
   PiWarningOctagonBold,
   PiXBold,
   PiCropBold,
-  PiUploadSimpleBold,
+  PiCameraBold,
   PiEyeBold,
 } from 'react-icons/pi'
 import * as maplibregl from 'maplibre-gl'
@@ -122,7 +122,6 @@ export default function ProfilePage({
     tags: profile.interestGenres || profile.tags || [],
     soundcloudUrl: profile.soundcloudUrl || profile.soundcloud || '',
     spotifyUrl: profile.spotifyUrl || profile.spotify || '',
-    instagramUrl: profile.instagramUrl || profile.instagram || '',
     profileImage: profile.profileImage || '',
     tracks: profile.tracks || [],
     match: '100% (Tu perfil)',
@@ -134,17 +133,15 @@ export default function ProfilePage({
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const isValidPlatformUrl = (platform: 'spotify' | 'instagram' | 'soundcloud', url?: string): boolean => {
+  const isValidPlatformUrl = (platform: 'spotify' | 'soundcloud', url?: string): boolean => {
     if (!url) return true
     const trimmed = url.trim()
     if (!trimmed) return true
     const lower = trimmed.toLowerCase()
     if (platform === 'spotify') {
       return lower.includes('spotify.com')
-    }
-    if (platform === 'instagram') {
-      return lower.includes('instagram.com')
     }
     if (platform === 'soundcloud') {
       return lower.includes('soundcloud.com')
@@ -177,11 +174,16 @@ export default function ProfilePage({
     if (!profile.lastName?.trim()) errors.lastName = true
     if (!profile.nickname?.trim()) errors.nickname = true
     if (!profile.email?.trim()) errors.email = true
-    if (!profile.password?.trim()) errors.password = true
+
+    // La contraseña solo es requerida si el usuario ingresa una nueva para modificarla
+    if (profile.password && profile.password.trim().length > 0 && profile.password.trim().length < 6) {
+      errors.password = true
+    }
 
     const locTrim = profile.location?.trim() || ''
-    const isLocValid = isLocationVerified && locTrim.length > 0 && locTrim.toLowerCase() === verifiedLocation.trim().toLowerCase()
-    if (!isLocValid) errors.location = true
+    if (!locTrim) {
+      errors.location = true
+    }
 
     const descTrimmed = profile.description?.trim() || ''
     if (descTrimmed.length > 150) {
@@ -189,18 +191,13 @@ export default function ProfilePage({
     }
 
     const rawSpotify = (profile.spotifyUrl || profile.spotify || '').trim()
-    const rawInstagram = (profile.instagramUrl || profile.instagram || '').trim()
     const rawSoundcloud = (profile.soundcloudUrl || profile.soundcloud || '').trim()
 
     const normSpotify = rawSpotify ? normalizeUrl(rawSpotify) : ''
-    const normInstagram = rawInstagram ? normalizeUrl(rawInstagram) : ''
     const normSoundcloud = rawSoundcloud ? normalizeUrl(rawSoundcloud) : ''
 
     if (rawSpotify && !isValidPlatformUrl('spotify', rawSpotify)) {
       errors.spotifyUrl = true
-    }
-    if (rawInstagram && !isValidPlatformUrl('instagram', rawInstagram)) {
-      errors.instagramUrl = true
     }
     if (rawSoundcloud && !isValidPlatformUrl('soundcloud', rawSoundcloud)) {
       errors.soundcloudUrl = true
@@ -208,6 +205,19 @@ export default function ProfilePage({
 
     if (Object.keys(errors).length > 0) {
       setInvalidFields(errors)
+      const fieldLabels: Record<string, string> = {
+        firstName: 'Nombre (First Name)',
+        lastName: 'Apellido (Last Name)',
+        nickname: 'NickName / Nombre Artistico',
+        email: 'Correo electronico',
+        password: 'Contrasena (minimo 6 caracteres)',
+        location: 'Ubicacion',
+        description: 'Descripcion (maximo 150 caracteres)',
+        spotifyUrl: 'Enlace de Spotify (debe contener spotify.com)',
+        soundcloudUrl: 'Enlace de SoundCloud (debe contener soundcloud.com)',
+      }
+      const missing = Object.keys(errors).map((k) => fieldLabels[k] || k).join(', ')
+      setSaveErrorMessage(`Por favor completa o corrige los siguientes campos antes de guardar: ${missing}.`)
       return
     }
 
@@ -219,6 +229,7 @@ export default function ProfilePage({
         firstName: profile.firstName?.trim(),
         lastName: profile.lastName?.trim(),
         nickname: profile.nickname?.trim(),
+        ...(profile.password?.trim() ? { password: profile.password.trim() } : {}),
         role: profile.role || profile.category || 'Artista',
         accountRole: profile.accountRole || 'Usuario',
         location: locTrim,
@@ -227,8 +238,7 @@ export default function ProfilePage({
         tracks: profile.tracks || [],
         soundcloudUrl: normSoundcloud,
         spotifyUrl: normSpotify,
-        instagramUrl: normInstagram,
-        profileImage: profile.profileImage,
+        profileImage: profile.profileImage ?? null,
       })
 
       if (!response.success) {
@@ -249,23 +259,19 @@ export default function ProfilePage({
           onProfileChange('accountRole', u.accountRole)
         }
         if (u.location) onProfileChange('location', u.location)
-        if (u.description) onProfileChange('description', u.description)
-        if (u.profileImage) onProfileChange('profileImage', u.profileImage)
+        if (u.description !== undefined) onProfileChange('description', u.description || '')
+        if (u.profileImage !== undefined) onProfileChange('profileImage', u.profileImage || '')
         if (Array.isArray(u.interestGenres)) onProfileChange('interestGenres', u.interestGenres)
-        if (Array.isArray(u.tracks) && u.tracks.length > 0) {
+        if (Array.isArray(u.tracks)) {
           onProfileChange('tracks', u.tracks)
         }
         onProfileChange('spotifyUrl', u.spotifyUrl ?? normSpotify)
         onProfileChange('spotify', u.spotifyUrl ?? normSpotify)
-        onProfileChange('instagramUrl', u.instagramUrl ?? normInstagram)
-        onProfileChange('instagram', u.instagramUrl ?? normInstagram)
         onProfileChange('soundcloudUrl', u.soundcloudUrl ?? normSoundcloud)
         onProfileChange('soundcloud', u.soundcloudUrl ?? normSoundcloud)
       } else {
         onProfileChange('spotifyUrl', normSpotify)
         onProfileChange('spotify', normSpotify)
-        onProfileChange('instagramUrl', normInstagram)
-        onProfileChange('instagram', normInstagram)
         onProfileChange('soundcloudUrl', normSoundcloud)
         onProfileChange('soundcloud', normSoundcloud)
       }
@@ -321,17 +327,17 @@ export default function ProfilePage({
         </small>
       )
     }
-    if (fieldName === 'instagramUrl') {
-      return (
-        <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
-          El enlace debe pertenecer a Instagram (ejemplo: https://www.instagram.com/tu_usuario).
-        </small>
-      )
-    }
     if (fieldName === 'soundcloudUrl') {
       return (
         <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
           El enlace debe pertenecer a SoundCloud (ejemplo: https://soundcloud.com/tu_usuario).
+        </small>
+      )
+    }
+    if (fieldName === 'password') {
+      return (
+        <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+          La contraseña debe tener como mínimo 6 caracteres.
         </small>
       )
     }
@@ -360,14 +366,13 @@ export default function ProfilePage({
       profile.lastName !== initialProfileSnapshot.lastName ||
       profile.nickname !== initialProfileSnapshot.nickname ||
       profile.email !== initialProfileSnapshot.email ||
-      profile.password !== initialProfileSnapshot.password ||
+      (Boolean(profile.password?.trim()) && profile.password !== initialProfileSnapshot.password) ||
       profile.category !== initialProfileSnapshot.category ||
       profile.role !== initialProfileSnapshot.role ||
       profile.accountRole !== initialProfileSnapshot.accountRole ||
       profile.location !== initialProfileSnapshot.location ||
       profile.description !== initialProfileSnapshot.description ||
       profile.spotifyUrl !== initialProfileSnapshot.spotifyUrl ||
-      profile.instagramUrl !== initialProfileSnapshot.instagramUrl ||
       profile.soundcloudUrl !== initialProfileSnapshot.soundcloudUrl ||
       profile.profileImage !== initialProfileSnapshot.profileImage ||
       JSON.stringify(profile.interestGenres ?? []) !== JSON.stringify(initialProfileSnapshot.interestGenres ?? []) ||
@@ -403,6 +408,9 @@ export default function ProfilePage({
         setShowEditor(true)
       }
       reader.readAsDataURL(file)
+    }
+    if (event.target) {
+      event.target.value = ''
     }
   }
 
@@ -667,7 +675,6 @@ export default function ProfilePage({
   }, [showMap])
 
   const getSpotifyUrl = () => normalizeUrl(profile.spotifyUrl || profile.spotify || '')
-  const getInstagramUrl = () => normalizeUrl(profile.instagramUrl || profile.instagram || '')
   const getSoundcloudUrl = () => normalizeUrl(profile.soundcloudUrl || profile.soundcloud || '')
 
   return (
@@ -698,33 +705,99 @@ export default function ProfilePage({
           <div className="ls-profile-toolbar">
             <div className="ls-profile-spotlight">
               {isEditing ? (
-                <div className="ls-profile-upload-wrap">
-                  {profile.profileImage ? (
-                    <img src={profile.profileImage} alt={profile.nickname} className="ls-avatar huge" style={{ objectFit: 'cover', borderRadius: '50%' }} />
-                  ) : (
-                    <div className="ls-avatar huge">
-                      {profile.nickname.slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <label className="ls-profile-upload-label">
-                      <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                      <PiUploadSimpleBold /> Subir Foto
-                    </label>
-                    {profile.profileImage && (
-                      <button
-                        type="button"
-                        className="ls-profile-reedit-btn"
-                        onClick={() => {
-                          setRawImage(profile.profileImage!)
-                          setShowEditor(true)
-                        }}
-                        title="Reajustar encuadre y zoom de la foto actual"
-                      >
-                        <PiCropBold /> Reajustar
-                      </button>
+                <div
+                  className="ls-profile-avatar-edit-container"
+                  style={{ position: 'relative', display: 'inline-block' }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="ls-avatar huge ls-avatar-editable"
+                    title="Haz clic en el contorno circular para cambiar la foto"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        fileInputRef.current?.click()
+                      }
+                    }}
+                    style={{
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      borderRadius: '50%',
+                      boxShadow: '0 0 0 3px rgba(168, 85, 247, 0.6), 0 8px 24px rgba(168, 85, 247, 0.25)',
+                      transition: 'all 0.25s ease',
+                    }}
+                  >
+                    {profile.profileImage ? (
+                      <img
+                        src={profile.profileImage}
+                        alt={profile.nickname}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #a855f7, #6366f1)', gap: '4px' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{profile.nickname.slice(0, 2).toUpperCase()}</span>
+                        <PiCameraBold style={{ fontSize: '1.1rem', color: 'rgba(255, 255, 255, 0.9)' }} />
+                      </div>
                     )}
+
+                    {/* Overlay sutil solo al pasar el cursor por el contorno circular */}
+                    <div
+                      className="ls-avatar-hover-badge"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        backdropFilter: 'blur(3px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                      }}
+                    >
+                      <PiCameraBold style={{ fontSize: '1.6rem', color: '#fff' }} />
+                    </div>
                   </div>
+
+                  {/* Icono sutil de reajuste si ya tiene foto cargada */}
+                  {profile.profileImage && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setRawImage(profile.profileImage!)
+                        setShowEditor(true)
+                      }}
+                      title="Reajustar encuadre y zoom de la foto actual"
+                      style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: '#141628',
+                        border: '2px solid #a855f7',
+                        color: '#c084fc',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.5)',
+                        transition: 'transform 0.2s ease, background 0.2s ease',
+                      }}
+                    >
+                      <PiCropBold style={{ fontSize: '0.85rem' }} />
+                    </button>
+                  )}
                 </div>
               ) : (
                 profile.profileImage ? (
@@ -1212,6 +1285,7 @@ export default function ProfilePage({
                 <>
                   <input
                     type="password"
+                    placeholder="•••••••• (dejar en blanco para conservar)"
                     value={profile.password ?? ''}
                     onChange={(event) => handleChange('password', event.target.value)}
                     style={getInputStyle('password')}
@@ -1244,34 +1318,6 @@ export default function ProfilePage({
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   {getSpotifyUrl()}
-                </a>
-              ) : (
-                <span style={{ color: 'rgba(255, 255, 255, 0.45)', cursor: 'default' }}>
-                  No vinculado
-                </span>
-              )}
-            </div>
-
-            <div className="ls-profile-field">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FaInstagram style={{ color: '#E4405F' }} /> Instagram
-              </label>
-              {isEditing ? (
-                <input
-                  value={profile.instagramUrl ?? profile.instagram ?? ''}
-                  onChange={(event) => {
-                    handleChange('instagramUrl', event.target.value)
-                    handleChange('instagram', event.target.value)
-                  }}
-                />
-              ) : getInstagramUrl() && getInstagramUrl() !== 'No vinculado' ? (
-                <a
-                  href={getInstagramUrl()}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  {getInstagramUrl()}
                 </a>
               ) : (
                 <span style={{ color: 'rgba(255, 255, 255, 0.45)', cursor: 'default' }}>

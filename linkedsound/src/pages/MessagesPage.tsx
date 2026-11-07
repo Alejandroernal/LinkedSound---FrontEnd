@@ -133,7 +133,6 @@ export default function MessagesPage({
           tags: u.interestGenres || [],
           soundcloudUrl: u.soundcloudUrl || '',
           spotifyUrl: u.spotifyUrl || '',
-          instagramUrl: u.instagramUrl || '',
           profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
           match: '94%',
           isProfile: true,
@@ -257,7 +256,6 @@ export default function MessagesPage({
         tags: [],
         soundcloudUrl: '',
         spotifyUrl: '',
-        instagramUrl: '',
         soundcloudHandle: '',
         tracks: [],
       }
@@ -369,25 +367,55 @@ export default function MessagesPage({
   const handleToggleMute = (id?: string) => {
     const targetId = id ?? activeId
     if (!targetId) return
+    const targetConv = conversationsList.find((c) => c.id === targetId)
+    const nextVal = targetConv ? !targetConv.muted : true
+
     setConversationsList((prev) =>
-      prev.map((c) => (c.id === targetId ? { ...c, muted: !c.muted } : c))
+      prev.map((c) => (c.id === targetId ? { ...c, muted: nextVal } : c))
     )
+
+    api.conversations.update(targetId, { muted: nextVal }).catch((err) => {
+      console.error('Error al actualizar silencio de conversación:', err)
+      setConversationsList((prev) =>
+        prev.map((c) => (c.id === targetId ? { ...c, muted: !nextVal } : c))
+      )
+    })
   }
 
   const handleTogglePin = (id?: string) => {
     const targetId = id ?? activeId
     if (!targetId) return
+    const targetConv = conversationsList.find((c) => c.id === targetId)
+    const nextVal = targetConv ? !targetConv.pinned : true
+
     setConversationsList((prev) =>
-      prev.map((c) => (c.id === targetId ? { ...c, pinned: !c.pinned } : c))
+      prev.map((c) => (c.id === targetId ? { ...c, pinned: nextVal } : c))
     )
+
+    api.conversations.update(targetId, { pinned: nextVal }).catch((err) => {
+      console.error('Error al actualizar fijado de conversación:', err)
+      setConversationsList((prev) =>
+        prev.map((c) => (c.id === targetId ? { ...c, pinned: !nextVal } : c))
+      )
+    })
   }
 
   const handleToggleBlock = (id?: string) => {
     const targetId = id ?? activeId
     if (!targetId) return
+    const targetConv = conversationsList.find((c) => c.id === targetId)
+    const nextVal = targetConv ? !targetConv.blocked : true
+
     setConversationsList((prev) =>
-      prev.map((c) => (c.id === targetId ? { ...c, blocked: !c.blocked } : c))
+      prev.map((c) => (c.id === targetId ? { ...c, blocked: nextVal } : c))
     )
+
+    api.conversations.update(targetId, { blocked: nextVal }).catch((err) => {
+      console.error('Error al alternar bloqueo de conversación:', err)
+      setConversationsList((prev) =>
+        prev.map((c) => (c.id === targetId ? { ...c, blocked: !nextVal } : c))
+      )
+    })
   }
 
   const unreadMessagesCount = conversationsList.reduce((acc, c) => acc + (c.unread || 0), 0)

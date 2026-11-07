@@ -25,7 +25,7 @@ import {
   PiChatCircleTextBold,
   PiPaperPlaneRightBold,
 } from 'react-icons/pi'
-import { FaSpotify, FaInstagram } from 'react-icons/fa6'
+import { FaSpotify } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
 import { formatEventDate, isUserProfile, isLocalAudioTrack, isSoundCloudTrack, type EventCommentItem } from '../types'
 import { api } from '../services/api'
@@ -323,7 +323,6 @@ export default function SoundCloudPreviewModal({
     ] : [])
 
   const spotifyUrl = card.spotifyUrl
-  const instagramUrl = card.instagramUrl
 
   // Effective embed URL: user selected track or profile URL
   const embedTargetUrl = activeEmbedUrl || (soundCloudTracks[0]?.soundcloudLink || (hasSoundCloudUrl ? scUrl : null))
@@ -835,21 +834,6 @@ export default function SoundCloudPreviewModal({
                     >
                       <FaSpotify style={{ color: '#1DB954' }} />
                       <span>Spotify</span>
-                      <PiArrowSquareOutBold />
-                    </a>
-                  )}
-
-                  {instagramUrl && (
-                    <a
-                      href={instagramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ls-sc-handle-pill"
-                      style={{ color: '#E1306C', textDecoration: 'none' }}
-                      title="Abrir Instagram"
-                    >
-                      <FaInstagram style={{ color: '#E1306C' }} />
-                      <span>Instagram</span>
                       <PiArrowSquareOutBold />
                     </a>
                   )}

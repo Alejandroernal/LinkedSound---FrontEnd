@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { FaSoundcloud, FaSpotify, FaInstagram } from 'react-icons/fa6'
+import { FaSoundcloud, FaSpotify } from 'react-icons/fa6'
 import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold, PiWarningOctagonBold, PiCheckBold } from 'react-icons/pi'
 import type { AppPage, Profile, SoundCloudTrack } from '../types'
 import AudioSampleTrackUploader from '../components/AudioSampleTrackUploader'
@@ -35,7 +35,6 @@ const PRESET_LOCATIONS: LocationSuggestion[] = [
 
 export default function ValidationPage({ onNavigate, profile, onProfileChange, onRegisterComplete }: ValidationPageProps) {
   const [soundcloud, setSoundcloud] = useState(profile?.soundcloudUrl || profile?.soundcloud || '')
-  const [instagram, setInstagram] = useState(profile?.instagramUrl || profile?.instagram || '')
   const [spotify, setSpotify] = useState(profile?.spotifyUrl || profile?.spotify || '')
   const [location, setLocation] = useState(profile?.location || '')
   const [verifiedLocation, setVerifiedLocation] = useState(profile?.location || '')
@@ -362,10 +361,6 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
 
     onProfileChange?.('soundcloudUrl', sc)
     onProfileChange?.('soundcloud', sc)
-    if (instagram.trim()) {
-      onProfileChange?.('instagramUrl', instagram.trim())
-      onProfileChange?.('instagram', instagram.trim())
-    }
     if (spotify.trim()) {
       onProfileChange?.('spotifyUrl', spotify.trim())
       onProfileChange?.('spotify', spotify.trim())
@@ -397,10 +392,6 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     if (soundcloud.trim()) {
       onProfileChange?.('soundcloudUrl', soundcloud.trim())
       onProfileChange?.('soundcloud', soundcloud.trim())
-    }
-    if (instagram.trim()) {
-      onProfileChange?.('instagramUrl', instagram.trim())
-      onProfileChange?.('instagram', instagram.trim())
     }
     if (spotify.trim()) {
       onProfileChange?.('spotifyUrl', spotify.trim())
@@ -504,24 +495,6 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
             <small style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: '2px', display: 'block' }}>
               * Se mostrará automáticamente tu último tema de SoundCloud y opcionalmente este track destacado en tu perfil.
             </small>
-          </label>
-
-          <label>
-            <span>
-              <FaInstagram className="ls-field-icon" />
-              Instagram (Opcional)
-            </span>
-            <input
-              type="text"
-              placeholder="instagram.com/tu-usuario"
-              value={instagram}
-              onChange={(e) => {
-                const val = e.target.value
-                setInstagram(val)
-                onProfileChange?.('instagramUrl', val)
-                onProfileChange?.('instagram', val)
-              }}
-            />
           </label>
 
           <label>

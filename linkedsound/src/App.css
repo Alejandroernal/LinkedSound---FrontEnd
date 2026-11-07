@@ -2644,6 +2644,28 @@ button {
   font-size: 1.5rem;
 }
 
+.ls-avatar-editable {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.ls-avatar-editable:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 0 3px #c084fc, 0 10px 28px rgba(168, 85, 247, 0.45) !important;
+}
+
+.ls-avatar-hover-badge {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.ls-avatar-editable:hover .ls-avatar-hover-badge {
+  opacity: 1 !important;
+  pointer-events: auto;
+  background: rgba(15, 19, 37, 0.75) !important;
+}
+
 .ls-profile-upload-wrap {
   display: flex;
   flex-direction: column;
@@ -4885,10 +4907,6 @@ button {
 
 .ls-spotify-icon {
   color: #1DB954;
-}
-
-.ls-instagram-icon {
-  color: #E4405F;
 }
 
 .ls-soundcloud-icon {

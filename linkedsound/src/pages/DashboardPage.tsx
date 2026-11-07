@@ -195,7 +195,6 @@ export default function DashboardPage({
             soundcloudUrl: u.soundcloudUrl || '',
             soundcloudHandle: u.soundcloudHandle || '',
             spotifyUrl: u.spotifyUrl || '',
-            instagramUrl: u.instagramUrl || '',
             profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
             match: affinity.percentageFormatted,
             commonGenres: affinity.commonGenres,

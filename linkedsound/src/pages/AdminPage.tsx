@@ -66,7 +66,6 @@ export default function AdminPage({
           interestGenres: u.interestGenres || [],
           soundcloudUrl: u.soundcloudUrl || '',
           spotifyUrl: u.spotifyUrl || '',
-          instagramUrl: u.instagramUrl || '',
           profileImage: u.profileImage || '',
           email: u.email || '',
           password: '••••••••',

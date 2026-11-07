@@ -189,9 +189,7 @@ export type UserProfile = {
   // Enlaces y Redes Sociales
   soundcloudUrl?: string
   spotifyUrl?: string
-  instagramUrl?: string
   spotify?: string
-  instagram?: string
   soundcloud?: string
 
   // Campos específicos de CREADORES / PERFILES
@@ -301,7 +299,6 @@ export type EventItem = {
   // Enlaces o temas opcionales del evento
   soundcloudUrl?: string
   spotifyUrl?: string
-  instagramUrl?: string
   tracks?: SoundCloudTrack[]
   comments?: EventCommentItem[]
 

@@ -648,7 +648,6 @@ export default function CreateEventModal({
         isFinished: false,
         soundcloudUrl: '',
         spotifyUrl: '',
-        instagramUrl: '',
       }
       onCreateEvent(newEvent)
     }

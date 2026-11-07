@@ -231,6 +231,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    update: (id: string, payload: { blocked?: boolean; pinned?: boolean; muted?: boolean }) =>
+      request<{ success: boolean; conversation: any }>(`/conversations/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
     delete: (id: string) =>
       request<{ success: boolean; message: string }>(`/conversations/${id}`, {
         method: 'DELETE',

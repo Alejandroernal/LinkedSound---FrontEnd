@@ -555,6 +555,44 @@ export default function ChatThread({
         onChange={handleFileSelect}
       />
 
+      {conversation.blocked && (
+        <div
+          style={{
+            margin: '0 16px 12px 16px',
+            padding: '10px 16px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f87171', fontSize: '0.85rem' }}>
+            <PiProhibitBold style={{ fontSize: '1.1rem', flexShrink: 0 }} />
+            <span>Has bloqueado a este usuario. La mensajería está deshabilitada.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onToggleBlock?.()}
+            style={{
+              background: 'rgba(52, 211, 153, 0.15)',
+              border: '1px solid rgba(52, 211, 153, 0.3)',
+              color: '#34d399',
+              borderRadius: '8px',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Desbloquear
+          </button>
+        </div>
+      )}
+
       <form
         className="ls-chat-composer"
         onSubmit={(e) => {
