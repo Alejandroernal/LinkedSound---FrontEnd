@@ -13,6 +13,7 @@ import {
   PiImageBold,
   PiXBold,
   PiWarningBold,
+  PiArrowLeftBold,
 } from 'react-icons/pi'
 import type { Message, Conversation } from '../data/mockData'
 import ChatAudioPlayer from './ChatAudioPlayer'
@@ -81,6 +82,7 @@ function ChatImageAttachment({
 type ChatThreadProps = {
   conversation: Conversation
   messages: Message[]
+  onBack?: () => void
   onSendMessage?: (text: string, attachment?: Message['attachment']) => void
   onUnmatch?: () => void
   onClearChat?: () => void
@@ -93,6 +95,7 @@ type ChatThreadProps = {
 export default function ChatThread({
   conversation,
   messages,
+  onBack,
   onSendMessage,
   onUnmatch,
   onClearChat,
@@ -199,6 +202,17 @@ export default function ChatThread({
   return (
     <section className="ls-chat-panel">
       <header className="ls-chat-header">
+        {onBack && (
+          <button
+            type="button"
+            className="ls-chat-back-btn"
+            onClick={onBack}
+            title="Volver a los chats"
+            aria-label="Volver a la lista de chats"
+          >
+            <PiArrowLeftBold />
+          </button>
+        )}
         <div
           className="ls-chat-user"
           onClick={() => onInspectProfile?.()}

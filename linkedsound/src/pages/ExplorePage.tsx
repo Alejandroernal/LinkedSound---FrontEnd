@@ -27,6 +27,7 @@ import {
   PiXBold,
   PiPencilSimpleBold,
   PiUserCircleBold,
+  PiCaretDownBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
@@ -440,8 +441,8 @@ export default function ExplorePage({
 
               {/* Grupo unificado de funcionalidades (Derecha) */}
               <div className="ls-explore-functionalities-group">
-                {/* 1. Pestañas icónicas (Todos, Perfiles, Eventos) + Botón Limpiar adyacente */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                {/* 1. Selector en Desktop (Tabs iconicas) */}
+                <div className="ls-explore-desktop-tabs">
                   <div className="ls-explore-icon-tabs" title="Filtrar tipo de contenido">
                     <button
                       type="button"
@@ -468,8 +469,26 @@ export default function ExplorePage({
                       <PiTicketBold />
                     </button>
                   </div>
+                </div>
 
-                  {/* Botón Reset / Limpiar directamente al lado del filtro de Perfiles/Eventos */}
+                {/* 1b. Selector agrupado para Movil y Tablet */}
+                <div className="ls-explore-mobile-type-select-wrap">
+                  <select
+                    value={itemRoleFilter}
+                    onChange={(e) => setItemRoleFilter(e.target.value as 'Todos' | 'Perfil' | 'Evento')}
+                    className="ls-explore-mobile-type-select"
+                    title="Filtrar tipo de contenido"
+                  >
+                    <option value="Todos">Ver: Todos</option>
+                    <option value="Perfil">Ver: Perfiles</option>
+                    <option value="Evento">Ver: Eventos</option>
+                  </select>
+                  <PiCaretDownBold className="ls-mobile-select-caret" />
+                </div>
+
+                {/* Cluster de acciones y herramientas agrupadas */}
+                <div className="ls-explore-actions-cluster">
+                  {/* Boton Reset / Limpiar si hay filtros activos */}
                   {(searchQuery || activeGenre || itemRoleFilter !== 'Todos') && (
                     <button
                       type="button"
@@ -479,48 +498,48 @@ export default function ExplorePage({
                         setActiveGenre('')
                         setItemRoleFilter('Todos')
                       }}
-                      title="Limpiar filtros y búsqueda"
+                      title="Limpiar filtros y busqueda"
                     >
                       <PiArrowClockwiseBold />
                     </button>
                   )}
-                </div>
 
-                {/* 2. Botón Filtro por Género */}
-                <button
-                  type="button"
-                  className={`ls-icon-func-btn ${activeGenre || isGenreFilterOpen ? 'is-active' : ''}`}
-                  onClick={() => setIsGenreFilterOpen(!isGenreFilterOpen)}
-                  title={activeGenre ? `Filtrando por: ${activeGenre}` : 'Filtrar por género musical'}
-                >
-                  <PiFunnelBold />
-                  {activeGenre && <span className="ls-icon-active-dot" />}
-                </button>
-
-                {/* 3. Selector de Ordenamiento por Icono */}
-                <div className="ls-sort-icon-select-wrap">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'match' | 'name' | 'role')}
-                    className="ls-explore-sort-select-icononly"
-                    title="Ordenar publicaciones"
+                  {/* 2. Boton Filtro por Genero */}
+                  <button
+                    type="button"
+                    className={`ls-icon-func-btn ${activeGenre || isGenreFilterOpen ? 'is-active' : ''}`}
+                    onClick={() => setIsGenreFilterOpen(!isGenreFilterOpen)}
+                    title={activeGenre ? `Filtrando por: ${activeGenre}` : 'Filtrar por genero musical'}
                   >
-                    <option value="match">Mayor Match %</option>
-                    <option value="name">Nombre (A - Z)</option>
-                    <option value="role">Rol / Tipo</option>
-                  </select>
-                  <PiArrowsDownUpBold className="ls-sort-select-icon" />
-                </div>
+                    <PiFunnelBold />
+                    {activeGenre && <span className="ls-icon-active-dot" />}
+                  </button>
 
-                {/* 4. Botón Publicar Evento (Icono destacado) */}
-                <button
-                  type="button"
-                  className="ls-create-event-icon-btn"
-                  onClick={() => setShowCreateEventModal(true)}
-                  title="Publicar nuevo evento musical"
-                >
-                  <PiCalendarPlusBold />
-                </button>
+                  {/* 3. Selector de Ordenamiento por Icono */}
+                  <div className="ls-sort-icon-select-wrap">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'match' | 'name' | 'role')}
+                      className="ls-explore-sort-select-icononly"
+                      title="Ordenar publicaciones"
+                    >
+                      <option value="match">Mayor Match %</option>
+                      <option value="name">Nombre (A - Z)</option>
+                      <option value="role">Rol / Tipo</option>
+                    </select>
+                    <PiArrowsDownUpBold className="ls-sort-select-icon" />
+                  </div>
+
+                  {/* 4. Boton Publicar Evento (Icono destacado) */}
+                  <button
+                    type="button"
+                    className="ls-create-event-icon-btn"
+                    onClick={() => setShowCreateEventModal(true)}
+                    title="Publicar nuevo evento musical"
+                  >
+                    <PiCalendarPlusBold />
+                  </button>
+                </div>
               </div>
             </div>
 

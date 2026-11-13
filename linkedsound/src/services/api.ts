@@ -223,9 +223,59 @@ export const api = {
       }),
   },
   conversations: {
-    getAll: () => request<{ conversations: any[] }>('/conversations', { method: 'GET' }),
-    getMessages: (conversationId: string) =>
-      request<{ messages: any[] }>(`/conversations/${conversationId}/messages`, { method: 'GET' }),
+    getAll: async () => {
+      const res = await request<{ conversations: any[] }>('/conversations', { method: 'GET' })
+      if (res.success && Array.isArray(res.conversations)) {
+        res.conversations = res.conversations.map((c: any) => {
+          const name = c.name || c.participant?.name || c.participant?.nickname || 'Creador'
+          const role = c.role || c.participant?.role || 'Artista'
+          const avatar = c.avatar || c.participant?.avatar || name.slice(0, 2).toUpperCase()
+          const profileImage = c.profileImage || c.participant?.avatar || ''
+          const preview = c.preview || c.lastMessage || 'Comienza una nueva conversacion'
+          const time = c.time || (c.lastMessageTime ? new Date(c.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Reciente')
+          const unread = typeof c.unread === 'number' ? c.unread : (c.unreadCount || 0)
+          return {
+            ...c,
+            name,
+            role,
+            avatar,
+            profileImage,
+            preview,
+            time,
+            unread,
+            accent: c.accent || 'purple',
+            status: c.status || c.participant?.status || 'Online',
+          }
+        })
+      }
+      return res
+    },
+    getMessages: async (conversationId: string) => {
+      const res = await request<{ messages: any[] }>(`/conversations/${conversationId}/messages`, { method: 'GET' })
+      if (res.success && Array.isArray(res.messages)) {
+        res.messages = res.messages.map((m: any) => {
+          const sender = m.sender || (m.isMe ? 'me' : 'them')
+          const time = m.time || (m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Reciente')
+          let attachment = m.attachment
+          if (!attachment && m.attachmentUrl) {
+            attachment = {
+              url: m.attachmentUrl,
+              name: m.attachmentName || 'Archivo adjunto',
+              type: (m.attachmentType === 'audio' || String(m.attachmentUrl).match(/\.(mp3|wav|ogg|m4a|aac)/i)) ? 'audio' : 'image',
+              size: m.attachmentSize || 'Audio file',
+              format: m.attachmentType || 'MP3',
+            }
+          }
+          return {
+            ...m,
+            sender,
+            time,
+            attachment,
+          }
+        })
+      }
+      return res
+    },
     sendMessage: (conversationId: string, payload: { text?: string; [key: string]: any }) =>
       request(`/conversations/${conversationId}/messages`, {
         method: 'POST',

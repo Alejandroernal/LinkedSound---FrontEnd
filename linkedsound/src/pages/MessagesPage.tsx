@@ -14,6 +14,7 @@ import {
   PiChatCircleDotsBold,
   PiPaperPlaneRightFill,
   PiWarningCircleBold,
+  PiArrowLeftBold,
 } from 'react-icons/pi'
 
 type MessagesPageProps = {
@@ -419,9 +420,10 @@ export default function MessagesPage({
   }
 
   const unreadMessagesCount = conversationsList.reduce((acc, c) => acc + (c.unread || 0), 0)
+  const hasActiveChat = Boolean(activeConversation || selectedNewMatch)
 
   return (
-    <div className="ls-app-shell ls-messages-shell">
+    <div className={`ls-app-shell ls-messages-shell ${hasActiveChat ? 'has-active-chat' : 'no-active-chat'}`}>
       <TopBar
         activePage={activePage}
         onNavigate={onNavigate}
@@ -435,7 +437,7 @@ export default function MessagesPage({
         unreadMessagesCount={unreadMessagesCount}
       />
 
-      <div className="ls-messages-layout">
+      <div className={`ls-messages-layout ${hasActiveChat ? 'has-active-chat' : 'no-active-chat'}`}>
         <ConversationSidebar
           conversations={conversationsList}
           newMatches={newMatchesList}
@@ -452,8 +454,17 @@ export default function MessagesPage({
         />
 
         {selectedNewMatch ? (
-          <div className="ls-chat-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '16px', marginBottom: '20px' }}>
+          <div className="ls-chat-panel ls-selected-match-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '16px', marginBottom: '20px' }}>
+              <button
+                type="button"
+                className="ls-chat-back-btn"
+                onClick={() => setSelectedNewMatchId(null)}
+                title="Volver a los chats"
+                aria-label="Volver a la lista de chats"
+              >
+                <PiArrowLeftBold />
+              </button>
               <div className={`ls-avatar ${selectedNewMatch.accent}`} style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden' }}>
                 <img src={selectedNewMatch.profileImage} alt={selectedNewMatch.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
@@ -534,6 +545,7 @@ export default function MessagesPage({
           <ChatThread
             conversation={activeConversation}
             messages={messagesMap[activeConversation.id] ?? []}
+            onBack={() => setActiveId('')}
             onSendMessage={handleSendMessage}
             onUnmatch={() => setUnmatchingTarget(activeConversation)}
             onClearChat={handleClearChat}

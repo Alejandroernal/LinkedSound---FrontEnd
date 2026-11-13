@@ -168,10 +168,18 @@ function App() {
 
   // Sincronizar notificaciones en tiempo real desde la base de datos
   useEffect(() => {
-    if (!authSession.isLoggedIn || authSession.role === 'admin') return
+    if (!authSession.isLoggedIn || authSession.role === 'admin' || !getToken()) return
+
+    let isSubscribed = true
 
     const fetchNotifications = () => {
+      if (!getToken() || !isSubscribed) return
       api.notifications.getAll().then((res) => {
+        if (!isSubscribed) return
+        if (res.status === 401) {
+          // Token expirado o ausente
+          return
+        }
         if (res.success && Array.isArray(res.notifications)) {
           const fresh = res.notifications as NotificationItem[]
           setUserNotifs(fresh)
@@ -194,7 +202,10 @@ function App() {
 
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 8000)
-    return () => clearInterval(interval)
+    return () => {
+      isSubscribed = false
+      clearInterval(interval)
+    }
   }, [authSession.isLoggedIn, authSession.role])
 
   // Estado global para mensajes y conversaciones matcheadas
@@ -205,10 +216,17 @@ function App() {
 
   // Sincronizar conversaciones y calcular contador no leídos para la campana y la pestaña Messages en tiempo real
   useEffect(() => {
-    if (!authSession.isLoggedIn || authSession.role === 'admin') return
+    if (!authSession.isLoggedIn || authSession.role === 'admin' || !getToken()) return
+
+    let isSubscribed = true
 
     const fetchConversations = () => {
+      if (!getToken() || !isSubscribed) return
       api.conversations.getAll().then((res) => {
+        if (!isSubscribed) return
+        if (res.status === 401) {
+          return
+        }
         if (res.success && Array.isArray(res.conversations)) {
           setConversationsList(res.conversations)
         }
@@ -217,7 +235,10 @@ function App() {
 
     fetchConversations()
     const interval = setInterval(fetchConversations, 8000)
-    return () => clearInterval(interval)
+    return () => {
+      isSubscribed = false
+      clearInterval(interval)
+    }
   }, [authSession.isLoggedIn, authSession.role])
 
   const activeNotifications = isAdminLoggedIn ? adminNotifs : userNotifs
@@ -451,6 +472,18 @@ function App() {
           })
           setActiveChatId(conv.id)
         }
+
+        api.conversations.getAll().then((cRes) => {
+          if (cRes.success && Array.isArray(cRes.conversations)) {
+            setConversationsList(cRes.conversations)
+          }
+        }).catch(() => {})
+
+        api.notifications.getAll().then((nRes) => {
+          if (nRes.success && Array.isArray(nRes.notifications)) {
+            setUserNotifs(nRes.notifications)
+          }
+        }).catch(() => {})
 
         // 3. Abrir Modal de Celebracion de Match
         setMatchedCard(card)

@@ -37,8 +37,18 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+html,
+body,
+#root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 .ls-app-shell {
   max-width: 1440px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
   margin: 0 auto;
   padding: 12px 24px 10px;
   color: #f6f3ff;
@@ -203,8 +213,13 @@ button {
 }
 
 .ls-nav-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   cursor: pointer;
   transition: 0.2s ease;
+  line-height: 1;
 }
 
 .ls-nav-item.is-active {
@@ -1199,7 +1214,7 @@ button {
   z-index: 3;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: pan-y;
+  touch-action: none;
   will-change: transform;
 }
 
@@ -3126,8 +3141,21 @@ button {
 }
 
 .ls-nav-icon {
-  display: inline-block;
-  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 1.15rem;
+}
+
+.ls-nav-icon svg {
+  display: block;
+}
+
+.ls-nav-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 
 
@@ -3448,7 +3476,7 @@ button {
   }
 
   .ls-main-nav {
-    justify-content: flex-start;
+    justify-content: center;
   }
 }
 
@@ -4965,7 +4993,7 @@ button {
   }
 
   .ls-main-nav {
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   .ls-admin-banner {
@@ -5698,7 +5726,62 @@ button {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+}
+
+.ls-explore-desktop-tabs {
+  display: flex;
+  align-items: center;
+}
+
+.ls-explore-mobile-type-select-wrap {
+  display: none;
+  position: relative;
+  align-items: center;
+}
+
+.ls-explore-mobile-type-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #f1f5f9;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 30px 8px 12px;
+  border-radius: 12px;
+  outline: none;
+  cursor: pointer;
+  height: 40px;
+  transition: all 0.2s ease;
+}
+
+.ls-explore-mobile-type-select:focus,
+.ls-explore-mobile-type-select:hover {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.ls-explore-mobile-type-select option {
+  background: #0f1325;
+  color: #fff;
+}
+
+.ls-mobile-select-caret {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #c084fc;
+  font-size: 0.85rem;
+}
+
+.ls-explore-actions-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .ls-explore-title-with-icon {
@@ -5897,8 +5980,8 @@ button {
 
 .ls-explore-search-wrapper {
   position: relative;
-  flex: 1;
-  min-width: 200px;
+  flex: 1 1 220px;
+  min-width: 0;
   display: flex;
   align-items: center;
 }
@@ -8092,14 +8175,19 @@ button {
 }
 
 @media (max-width: 768px) {
-  /* Hide the large like/pass buttons on mobile */
+  /* Responsive like/pass buttons on mobile */
   .ls-swipe-actions {
-    display: none !important;
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    gap: 10px;
+    z-index: 5;
   }
 
-  /* Disable hover transform on touch screens */
-  .ls-swipe-card:hover {
-    transform: none !important;
+  .ls-swipe-actions button {
+    width: 46px;
+    height: 46px;
+    font-size: 1.15rem;
   }
 
   /* Show touch swipe helper instructions on mobile */
@@ -8121,6 +8209,13 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .ls-swipe-helper-side:active {
+    opacity: 0.7;
   }
 
   .ls-swipe-helper-side.left {
@@ -8147,12 +8242,6 @@ button {
     width: auto !important;
     max-width: calc(100vw - 24px) !important;
     max-height: calc(100dvh - 84px) !important;
-  }
-}
-
-@media (hover: none) {
-  .ls-swipe-card:hover {
-    transform: none !important;
   }
 }
 
@@ -9271,4 +9360,246 @@ button {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ==========================================================================
+   WhatsApp-Style Mobile & Fullscreen Chat Layout
+   ========================================================================== */
+
+.ls-chat-back-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.ls-chat-back-btn:hover {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #c084fc;
+}
+
+@media screen and (min-width: 901px) {
+  .ls-chat-back-btn {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 900px) {
+  .ls-messages-shell {
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .ls-messages-shell .ls-footer,
+  .ls-messages-shell footer {
+    display: none !important;
+  }
+
+  /* Fullscreen chat mode when active: hide topbar like mobile chat apps */
+  .ls-messages-shell.has-active-chat .ls-header {
+    display: none !important;
+  }
+
+  .ls-messages-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+
+  /* When no active chat is selected: show conversation list full screen */
+  .ls-messages-layout.no-active-chat .ls-messages-sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: #0f1325 !important;
+  }
+
+  .ls-messages-layout.no-active-chat .ls-chat-panel {
+    display: none !important;
+  }
+
+  /* When an active chat is selected: hide sidebar, show chat thread full screen */
+  .ls-messages-layout.has-active-chat .ls-messages-sidebar {
+    display: none !important;
+  }
+
+  .ls-messages-layout.has-active-chat .ls-chat-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: #0f1325 !important;
+  }
+
+  .ls-selected-match-panel {
+    padding: 16px 14px !important;
+  }
+
+  .ls-chat-back-btn {
+    display: inline-flex !important;
+  }
+
+  .ls-chat-header {
+    padding: 12px 14px !important;
+    gap: 12px !important;
+    background: #141628 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .ls-chat-user {
+    gap: 10px !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .ls-chat-user h3 {
+    font-size: 0.98rem !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .ls-chat-user small {
+    font-size: 0.74rem !important;
+  }
+
+  .ls-chat-thread {
+    padding: 14px 12px !important;
+    gap: 12px !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    background: #0b0c13 !important;
+  }
+
+  .ls-message-bubble {
+    max-width: 84% !important;
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+    border-radius: 16px !important;
+  }
+
+  .ls-chat-composer {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    background: #141628 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .ls-chat-composer input {
+    min-height: 42px !important;
+    font-size: 0.92rem !important;
+    padding: 10px 14px !important;
+  }
+
+  .ls-send-btn {
+    min-width: 78px !important;
+    height: 42px !important;
+    font-size: 0.88rem !important;
+    padding: 0 14px !important;
+  }
+}
+
+/* ==========================================================================
+   Explorer Mobile & Tablet Clean Grouping (No Horizontal Scroll)
+   ========================================================================== */
+
+@media screen and (max-width: 850px) {
+  .ls-explore-header-redesigned {
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+  }
+
+  .ls-explore-main-title {
+    font-size: 1.12rem !important;
+    line-height: 1.35;
+  }
+
+  .ls-explore-toolbar-clean {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .ls-explore-search-wrapper {
+    width: 100% !important;
+    flex: none !important;
+    min-width: 0 !important;
+  }
+
+  .ls-explore-desktop-tabs {
+    display: none !important;
+  }
+
+  .ls-explore-mobile-type-select-wrap {
+    display: flex !important;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .ls-explore-mobile-type-select {
+    width: 100%;
+  }
+
+  .ls-explore-functionalities-group {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+
+  .ls-explore-actions-cluster {
+    gap: 6px !important;
+  }
+
+  .ls-icon-func-btn,
+  .ls-explore-sort-select-icononly,
+  .ls-create-event-icon-btn,
+  .ls-explore-reset-btn-icon {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+  }
+}
+
+
 

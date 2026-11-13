@@ -6,8 +6,6 @@ import {
   PiSparkleBold,
   PiArrowsClockwiseBold,
   PiCompassBold,
-  PiArrowLeftBold,
-  PiArrowRightBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 import { isUserProfile, type UserProfile } from '../types'
@@ -43,6 +41,7 @@ export default function SwipeCardStack({
   const [isDragging, setIsDragging] = useState(false)
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null)
   const startPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const currentOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const cardRef = useRef<HTMLDivElement>(null)
   const dragDistanceRef = useRef<number>(0)
 
@@ -61,13 +60,16 @@ export default function SwipeCardStack({
   const handleSwipe = useCallback((direction: 'left' | 'right') => {
     if (exitDirection) return
     setExitDirection(direction)
+    setIsDragging(false)
     const targetX = direction === 'right' ? 1000 : -1000
     setOffset((prev) => ({ x: targetX, y: prev.y }))
+    currentOffsetRef.current = { x: targetX, y: 0 }
 
     setTimeout(() => {
       onDecision(direction === 'right')
       setExitDirection(null)
       setOffset({ x: 0, y: 0 })
+      currentOffsetRef.current = { x: 0, y: 0 }
     }, 280)
   }, [exitDirection, onDecision])
 
@@ -99,10 +101,15 @@ export default function SwipeCardStack({
 
     setIsDragging(true)
     startPos.current = { x: e.clientX, y: e.clientY }
+    currentOffsetRef.current = { x: 0, y: 0 }
     dragDistanceRef.current = 0
 
-    if (cardRef.current) {
-      cardRef.current.setPointerCapture(e.pointerId)
+    try {
+      if (cardRef.current) {
+        cardRef.current.setPointerCapture(e.pointerId)
+      }
+    } catch {
+      // Manejo seguro en navegadores que restringen pointer capture
     }
   }
 
@@ -111,6 +118,7 @@ export default function SwipeCardStack({
     const dx = e.clientX - startPos.current.x
     const dy = e.clientY - startPos.current.y
     dragDistanceRef.current = Math.hypot(dx, dy)
+    currentOffsetRef.current = { x: dx, y: dy }
     setOffset({ x: dx, y: dy })
   }
 
@@ -118,18 +126,38 @@ export default function SwipeCardStack({
     if (!isDragging) return
     setIsDragging(false)
 
-    if (cardRef.current && cardRef.current.hasPointerCapture(e.pointerId)) {
-      cardRef.current.releasePointerCapture(e.pointerId)
+    try {
+      if (cardRef.current && cardRef.current.hasPointerCapture(e.pointerId)) {
+        cardRef.current.releasePointerCapture(e.pointerId)
+      }
+    } catch {
+      // Manejo seguro de releasePointerCapture
     }
 
-    if (offset.x > SWIPE_THRESHOLD) {
+    const finalX = currentOffsetRef.current.x || (e.clientX ? e.clientX - startPos.current.x : offset.x)
+
+    if (finalX > SWIPE_THRESHOLD) {
       handleSwipe('right')
-    } else if (offset.x < -SWIPE_THRESHOLD) {
+    } else if (finalX < -SWIPE_THRESHOLD) {
       handleSwipe('left')
     } else {
       // Snap back to center
       setOffset({ x: 0, y: 0 })
+      currentOffsetRef.current = { x: 0, y: 0 }
     }
+  }
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false)
+    try {
+      if (cardRef.current && cardRef.current.hasPointerCapture(e.pointerId)) {
+        cardRef.current.releasePointerCapture(e.pointerId)
+      }
+    } catch {
+      // Manejo seguro
+    }
+    setOffset({ x: 0, y: 0 })
+    currentOffsetRef.current = { x: 0, y: 0 }
   }
 
   const handleCardClick = (card: ProfileCard) => {
@@ -222,6 +250,20 @@ export default function SwipeCardStack({
   const likeOpacity = exitDirection === 'right' ? 1 : offset.x > 10 ? Math.min(1, (offset.x - 10) / 70) : 0
   const passOpacity = exitDirection === 'left' ? 1 : offset.x < -10 ? Math.min(1, (-offset.x - 10) / 70) : 0
 
+  const cardBorderColor = likeOpacity > 0
+    ? `rgba(34, 197, 94, ${0.3 + likeOpacity * 0.7})`
+    : passOpacity > 0
+      ? `rgba(239, 68, 68, ${0.3 + passOpacity * 0.7})`
+      : 'rgba(255, 255, 255, 0.08)'
+
+  const cardBoxShadow = likeOpacity > 0
+    ? `0 0 0 2px rgba(34, 197, 94, ${likeOpacity * 0.9}), 0 0 32px rgba(34, 197, 94, ${likeOpacity * 0.65}), 0 24px 48px rgba(10, 8, 16, 0.55)`
+    : passOpacity > 0
+      ? `0 0 0 2px rgba(239, 68, 68, ${passOpacity * 0.9}), 0 0 32px rgba(239, 68, 68, ${passOpacity * 0.65}), 0 24px 48px rgba(10, 8, 16, 0.55)`
+      : isDragging
+        ? '0 32px 64px rgba(10, 8, 16, 0.7)'
+        : '0 24px 48px rgba(10, 8, 16, 0.55)'
+
   return (
     <div className="ls-swipe-stack-container">
       {/* Third background card (deepest, static visualization) */}
@@ -264,16 +306,18 @@ export default function SwipeCardStack({
         className={`ls-swipe-card ls-swipe-card-active ${isDragging ? 'ls-is-dragging' : ''} ${exitDirection ? 'ls-is-exiting' : ''}`}
         style={{
           transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotationDeg}deg)`,
+          borderColor: cardBorderColor,
+          boxShadow: cardBoxShadow,
           transition: isDragging || (!exitDirection && offset.x === 0 && offset.y === 0)
-            ? 'none'
-            : 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.25), opacity 0.32s ease',
+            ? 'border-color 0.15s ease, box-shadow 0.15s ease'
+            : 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.25), opacity 0.32s ease, border-color 0.25s ease, box-shadow 0.25s ease',
           cursor: isDragging ? 'grabbing' : 'grab',
-          touchAction: 'pan-y',
+          touchAction: 'none',
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onClick={() => handleCardClick(currentCard)}
         title={`Arrastra la tarjeta o usa los botones. Clic para ver trabajos de ${greenBoxTitle}`}
       >
@@ -363,17 +407,9 @@ export default function SwipeCardStack({
             </div>
           </div>
 
-          {/* Helper visual para interacción táctil en dispositivos móviles */}
-          <div className="ls-mobile-swipe-helper">
-            <span className="ls-swipe-helper-side left">
-              <PiArrowLeftBold /> Deslizar para pasar
-            </span>
-            <span className="ls-swipe-helper-side right">
-              Deslizar para conectar <PiArrowRightBold />
-            </span>
-          </div>
+
         </div>
       </div>
-    </div>
+    </div >
   )
 }
