@@ -22,6 +22,7 @@ import {
   PiPlusBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
+import { api } from '../services/api'
 
 type CreateEventModalProps = {
   isOpen: boolean
@@ -108,7 +109,20 @@ export default function CreateEventModal({
   const [description, setDescription] = useState('')
   const [ticketUrl, setTicketUrl] = useState('')
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Live', 'Techno'])
+  const [dynamicGenres, setDynamicGenres] = useState<string[]>(genreOptions)
   const [images, setImages] = useState<string[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+    api.genres.getAll().then((res) => {
+      if (isMounted && res.success && Array.isArray(res.genres) && res.genres.length > 0) {
+        setDynamicGenres(res.genres)
+      }
+    }).catch(() => {})
+    return () => {
+      isMounted = false
+    }
+  }, [])
   const [imageUrlInput, setImageUrlInput] = useState('')
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
@@ -619,6 +633,8 @@ export default function CreateEventModal({
         eventTime: eventTime || '22:00',
         venue: venue.trim().slice(0, 40) || undefined,
         ticketUrl: finalTicketUrl || undefined,
+        itemRole: 'Evento',
+        isProfile: false,
       }
       onUpdateEvent(updatedEvent)
     } else {
@@ -1208,7 +1224,7 @@ export default function CreateEventModal({
           <div className="ls-form-group">
             <label className="ls-form-label">Géneros Destacados (máx 4)</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-              {genreOptions.map((g) => {
+              {dynamicGenres.map((g) => {
                 const isSelected = selectedGenres.includes(g)
                 return (
                   <button

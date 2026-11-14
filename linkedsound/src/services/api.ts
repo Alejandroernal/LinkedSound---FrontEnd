@@ -93,6 +93,9 @@ export const api = {
     getUsers: (params?: { all?: boolean }) =>
       request<{ users: any[] }>(params?.all ? '/auth/users?all=true' : '/auth/users', { method: 'GET' }),
   },
+  genres: {
+    getAll: () => request<{ genres: string[] }>('/perfiles/genres', { method: 'GET' }),
+  },
   upload: {
     image: async (file: File): Promise<ApiResponse<{ url: string }>> => {
       const token = getToken()

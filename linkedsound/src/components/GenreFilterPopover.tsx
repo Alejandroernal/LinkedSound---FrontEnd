@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   PiFunnelBold,
   PiTagBold,
@@ -7,6 +7,7 @@ import {
   PiMagnifyingGlassBold,
   PiXBold,
 } from 'react-icons/pi'
+import { api } from '../services/api'
 
 type GenreFilterPopoverProps = {
   isOpen: boolean
@@ -15,40 +16,37 @@ type GenreFilterPopoverProps = {
   onSelectGenre: (genre: string) => void
 }
 
-const ALL_GENRES = [
-  'Tech House',
-  'Techno',
-  'Synthwave',
-  'Cyberpunk',
-  'Ambient',
-  'HardTrap',
-  'Vocal',
-  'Live',
-  'Minimal',
-  'Darkwave',
-  'Alt Pop',
-  'Electronic',
-  'Lo-Fi',
-  'ModularSynth',
-  'Drone',
-  'Industrial',
-  'EBM',
-  'Acoustic',
-  'Experimental',
-]
-
 export default function GenreFilterPopover({
   isOpen,
   onClose,
   currentGenre,
   onSelectGenre,
 }: GenreFilterPopoverProps) {
+  const [genres, setGenres] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    let isMounted = true
+    const loadGenres = async () => {
+      try {
+        const res = await api.genres.getAll()
+        if (isMounted && res.success && Array.isArray(res.genres)) {
+          setGenres(res.genres)
+        }
+      } catch (err) {
+        console.error('Error al cargar generos de la base de datos:', err)
+      }
+    }
+    loadGenres()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   if (!isOpen) return null
 
   const query = searchQuery.trim().toLowerCase()
-  const filteredGenres = ALL_GENRES.filter((g) => g.toLowerCase().includes(query))
+  const filteredGenres = genres.filter((g) => g.toLowerCase().includes(query))
 
   return (
     <div className="ls-genre-inline-panel">

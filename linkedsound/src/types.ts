@@ -166,6 +166,7 @@ export type LocationItem = {
 export type UserProfile = {
   // Identificación y Registro
   id?: string
+  title?: string
   nickname: string
   firstName: string
   lastName: string

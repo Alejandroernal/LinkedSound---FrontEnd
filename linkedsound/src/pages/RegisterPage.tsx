@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { AppPage, Profile } from '../types'
+import { api } from '../services/api'
 import {
   PiWarningOctagonBold,
   PiEyeBold,
@@ -229,11 +230,24 @@ type RegisterPageProps = {
 
 export default function RegisterPage({ onNavigate, profile, onProfileChange }: RegisterPageProps) {
   const [genreSearch, setGenreSearch] = useState('')
+  const [availableGenres, setAvailableGenres] = useState<string[]>(AVAILABLE_GENRES)
   const [rawImage, setRawImage] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    let isMounted = true
+    api.genres.getAll().then((res) => {
+      if (isMounted && res.success && Array.isArray(res.genres) && res.genres.length > 0) {
+        setAvailableGenres(res.genres)
+      }
+    }).catch(() => {})
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const selectedGenres = profile?.interestGenres ?? []
 
@@ -535,12 +549,12 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
                 />
               </div>
               <div className="ls-genre-selector genre-selector" style={{ borderColor: invalidFields.genres ? '#ef4444' : undefined }}>
-                {AVAILABLE_GENRES.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).length === 0 ? (
+                {availableGenres.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).length === 0 ? (
                   <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', padding: '12px 0', textAlign: 'center', gridColumn: '1 / -1' }}>
                     No se encontraron géneros musicales que coincidan con "{genreSearch}".
                   </div>
                 ) : (
-                  AVAILABLE_GENRES.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).map(genre => {
+                  availableGenres.filter(g => g.toLowerCase().includes(genreSearch.toLowerCase())).map(genre => {
                     const isSelected = selectedGenres.includes(genre)
                     return (
                       <button key={genre} type="button"
