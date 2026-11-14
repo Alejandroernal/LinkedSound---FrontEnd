@@ -119,6 +119,7 @@ export default function AdminPage({
   const debouncedUserSearchTerm = useDebounce(userSearchTerm, 300)
   const [userStatusFilter, setUserStatusFilter] = useState<'All' | 'Active' | 'Suspended' | 'Banned'>('All')
   const [userStatusError, setUserStatusError] = useState('')
+  const [validationModalMessage, setValidationModalMessage] = useState<string | null>(null)
 
   const [explorerSearchTerm, setExplorerSearchTerm] = useState('')
   const debouncedExplorerSearchTerm = useDebounce(explorerSearchTerm, 300)
@@ -311,6 +312,7 @@ export default function AdminPage({
   const handleSaveUserStatus = (updated: UserProfile) => {
     if ((updated.status === 'Suspended' || updated.status === 'Banned') && !updated.statusJustification?.trim()) {
       setUserStatusError('La justificación de la suspensión o sanción es obligatoria.')
+      setValidationModalMessage('La justificación de la suspensión o sanción es obligatoria. Por favor ingresa el motivo antes de proceder.')
       return
     }
     setUserStatusError('')
@@ -1997,6 +1999,53 @@ export default function AdminPage({
           <p className="ls-toast-message">
             "{notificationToast.message}"
           </p>
+        </div>
+      )}
+
+      {/* Modal de Validación Estándar de la Plataforma */}
+      {validationModalMessage && (
+        <div className="ls-modal-overlay" onClick={() => setValidationModalMessage(null)}>
+          <div
+            className="ls-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '440px', textAlign: 'center', padding: '26px 22px' }}
+          >
+            <button
+              type="button"
+              className="ls-modal-close"
+              onClick={() => setValidationModalMessage(null)}
+              aria-label="Cerrar modal de validación"
+            >
+              <PiXBold />
+            </button>
+            <div
+              style={{
+                display: 'inline-flex',
+                padding: '12px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                color: '#f87171',
+                marginBottom: '16px',
+              }}
+            >
+              <PiWarningOctagonBold style={{ fontSize: '2rem' }} />
+            </div>
+            <h3 style={{ margin: '0 0 10px', color: '#ffffff', fontSize: '1.2rem', fontWeight: 700 }}>
+              Validación Requerida
+            </h3>
+            <p style={{ margin: '0 0 22px', color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+              {validationModalMessage}
+            </p>
+            <button
+              type="button"
+              className="ls-primary-button"
+              onClick={() => setValidationModalMessage(null)}
+              style={{ width: '100%', height: '42px', borderRadius: '12px', fontWeight: 600 }}
+            >
+              Entendido
+            </button>
+          </div>
         </div>
       )}
 

@@ -152,13 +152,13 @@ export default function TopBar({
             {showNotifications && (
               <div className="ls-notif-dropdown">
                 <div className="ls-notif-header">
-                  <div className="ls-notif-header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 'max-content' }}>
+                  <div className="ls-notif-header-left">
                     <span className="ls-notif-title">Notificaciones</span>
                     {unreadCount > 0 && (
                       <span className="ls-notif-count-chip">{unreadCount} nuevas</span>
                     )}
                   </div>
-                  <div className="ls-notif-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                  <div className="ls-notif-header-actions">
                     {unreadCount > 0 && (
                       <button
                         type="button"

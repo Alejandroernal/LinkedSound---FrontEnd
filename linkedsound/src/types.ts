@@ -173,6 +173,7 @@ export type UserProfile = {
   email?: string
   password?: string
   profileImage?: string
+  images?: string[]
 
   // Perfil Profesional y Rol de Cuenta
   role?: 'Productor' | 'Artista' | 'Productor y Artista' | string

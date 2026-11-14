@@ -3,7 +3,6 @@ import {
   PiCheckBold,
   PiXBold,
   PiFlagBold,
-  PiSparkleBold,
   PiArrowsClockwiseBold,
   PiCompassBold,
 } from 'react-icons/pi'
@@ -31,10 +30,10 @@ export default function SwipeCardStack({
   onDecision,
   onPreviewProfile,
   onReport,
-  onResetFilters,
+  onResetFilters: _onResetFilters,
   autoResetCountdown = 0,
   isResettingDeck = false,
-  hasExhaustedCards = false,
+  hasExhaustedCards: _hasExhaustedCards = false,
   isLoading = false,
 }: SwipeCardStackProps) {
   const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -177,60 +176,30 @@ export default function SwipeCardStack({
   }
 
   if (!currentCard) {
-    if (hasExhaustedCards) {
-      const mins = Math.floor(autoResetCountdown / 60)
-      const secs = autoResetCountdown % 60
-      const timerStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`
-
-      return (
-        <div className="ls-swipe-card ls-empty-card">
-          <PiSparkleBold className="ls-empty-icon" />
-          <h3>No hay más perfiles cerca</h3>
-          <p>
-            Ampliá tu radio o ajustá tus filtros para descubrir nuevos talentos en la red.
-            El radar se reiniciará automáticamente.
-          </p>
-
-          <div className="ls-empty-auto-box">
-            <div className="ls-empty-auto-spinner-wrap">
-              <PiArrowsClockwiseBold className={`ls-empty-spin-icon ${isResettingDeck ? 'is-spinning' : ''}`} />
-            </div>
-            <div className="ls-empty-auto-info">
-              <span className="ls-empty-auto-title">
-                {isResettingDeck ? 'Reiniciando perfiles...' : 'Reinicio automático en curso'}
-              </span>
-              <span className="ls-empty-auto-timer">
-                {isResettingDeck ? 'Cargando nuevos perfiles al radar' : `Recarga automática en ${timerStr}`}
-              </span>
-            </div>
-          </div>
-        </div>
-      )
-    }
+    const mins = Math.floor(autoResetCountdown / 60)
+    const secs = autoResetCountdown % 60
+    const timerStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`
 
     return (
       <div className="ls-swipe-card ls-empty-card">
         <PiCompassBold className="ls-empty-icon" />
-        <h3>No hay perfiles con estos filtros</h3>
+        <h3>No hay más perfiles cerca</h3>
         <p>
-          No encontramos artistas o productores con los criterios seleccionados. Prueba ajustando la ubicacion, la distancia o los generos.
+          Ampliá tu radio o ajustá tus filtros para descubrir nuevos talentos en la red.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '320px', marginTop: '16px' }}>
-          <button
-            type="button"
-            className="ls-primary-button"
-            onClick={onResetFilters}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '10px 18px',
-              borderRadius: '12px',
-            }}
-          >
-            <PiCompassBold /> Restablecer Filtros
-          </button>
+
+        <div className="ls-empty-auto-box">
+          <div className="ls-empty-auto-spinner-wrap">
+            <PiArrowsClockwiseBold className={`ls-empty-spin-icon ${isResettingDeck ? 'is-spinning' : ''}`} />
+          </div>
+          <div className="ls-empty-auto-info">
+            <span className="ls-empty-auto-title">
+              {isResettingDeck ? 'Reiniciando perfiles...' : 'Reinicio automático en curso'}
+            </span>
+            <span className="ls-empty-auto-timer">
+              {isResettingDeck ? 'Cargando nuevos perfiles al radar' : `Recarga automática en ${timerStr}`}
+            </span>
+          </div>
         </div>
       </div>
     )
@@ -406,10 +375,8 @@ export default function SwipeCardStack({
               ))}
             </div>
           </div>
-
-
         </div>
       </div>
-    </div >
+    </div>
   )
 }

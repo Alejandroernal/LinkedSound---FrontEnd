@@ -987,23 +987,6 @@ export default function SoundCloudPreviewModal({
                     <PiEyeBold style={{ fontSize: '1.1rem', color: '#c084fc', flexShrink: 0 }} />
                     <span>Modo Vista Externa: Asi visualizan tu perfil los demas usuarios en Discovery y Explorer</span>
                   </div>
-                  <button
-                    type="button"
-                    className="ls-primary-button"
-                    onClick={handleCloseModal}
-                    style={{
-                      width: '100%',
-                      height: '42px',
-                      borderRadius: '12px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <PiXBold /> Cerrar Vista Previa
-                  </button>
                 </div>
               ) : (
                 <>

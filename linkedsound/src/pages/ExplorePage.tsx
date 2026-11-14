@@ -221,6 +221,13 @@ export default function ExplorePage({
           ownerNickname: res.event.ownerNickname || res.event.owner?.nickname || profile?.nickname || '',
           profileImage: res.event.profileImage || newEvent.profileImage,
           images: res.event.images || eventImages,
+          role: newEvent.role || 'Evento Live',
+          eventDate: eventItem.eventDate || '',
+          interestGenres: newEvent.interestGenres || [],
+          location: newEvent.location || '',
+          nickname: newEvent.nickname || '',
+          itemRole: 'Evento',
+          isProfile: false,
         }
         setCardsList((prev) => [created, ...prev])
       } else {
@@ -231,6 +238,13 @@ export default function ExplorePage({
             ownerId: profile?.id,
             ownerNickname: profile?.nickname || '',
             images: eventImages,
+            role: newEvent.role || 'Evento Live',
+            eventDate: eventItem.eventDate || '',
+            interestGenres: newEvent.interestGenres || [],
+            location: newEvent.location || '',
+            nickname: newEvent.nickname || '',
+            itemRole: 'Evento',
+            isProfile: false,
           },
           ...prev,
         ])
@@ -250,6 +264,13 @@ export default function ExplorePage({
           ownerId: profile?.id,
           ownerNickname: profile?.nickname || '',
           images: eventImages,
+          role: newEvent.role || 'Evento Live',
+          eventDate: eventItem.eventDate || '',
+          interestGenres: newEvent.interestGenres || [],
+          location: newEvent.location || '',
+          nickname: newEvent.nickname || '',
+          itemRole: 'Evento',
+          isProfile: false,
         },
         ...prev,
       ])
@@ -358,10 +379,12 @@ export default function ExplorePage({
       const inDesc = cardBio.toLowerCase().includes(query)
       const inBadge = (card.badge ?? '').toLowerCase().includes(query)
       const inTags = cardTags.some((t) => t.toLowerCase().includes(query))
-      const inVenue = 'venue' in card ? Boolean((card as any).venue?.toLowerCase().includes(query)) : false
+      const cardVenue = ((card as any).venue ?? '').toLowerCase()
+      const inVenue = cardVenue.includes(query) || (query.includes('club') && (Boolean((card as any).venue) || cardItemRole === 'Evento'))
       const inCity = 'city' in card ? Boolean((card as any).city?.toLowerCase().includes(query)) : false
+      const inAddress = 'streetAddress' in card ? Boolean((card as any).streetAddress?.toLowerCase().includes(query)) : false
 
-      return inName || inRole || inLocation || inDesc || inBadge || inTags || inVenue || inCity
+      return inName || inRole || inLocation || inDesc || inBadge || inTags || inVenue || inCity || inAddress
     })
 
     if (sortBy === 'name') {
@@ -441,54 +464,54 @@ export default function ExplorePage({
 
               {/* Grupo unificado de funcionalidades (Derecha) */}
               <div className="ls-explore-functionalities-group">
-                {/* 1. Selector en Desktop (Tabs iconicas) */}
-                <div className="ls-explore-desktop-tabs">
-                  <div className="ls-explore-icon-tabs" title="Filtrar tipo de contenido">
-                    <button
-                      type="button"
-                      className={`ls-icon-tab-btn ${itemRoleFilter === 'Todos' ? 'is-active' : ''}`}
-                      onClick={() => setItemRoleFilter('Todos')}
-                      title="Todos los contenidos"
-                    >
-                      <PiSquaresFourBold />
-                    </button>
-                    <button
-                      type="button"
-                      className={`ls-icon-tab-btn ${itemRoleFilter === 'Perfil' ? 'is-active' : ''}`}
-                      onClick={() => setItemRoleFilter('Perfil')}
-                      title="Solo Perfiles"
-                    >
-                      <PiUsersBold />
-                    </button>
-                    <button
-                      type="button"
-                      className={`ls-icon-tab-btn ${itemRoleFilter === 'Evento' ? 'is-active' : ''}`}
-                      onClick={() => setItemRoleFilter('Evento')}
-                      title="Solo Eventos"
-                    >
-                      <PiTicketBold />
-                    </button>
+                {/* 1. Selector de Tipo + Botón de Limpiar inmediatamente contiguo */}
+                <div className="ls-explore-type-and-reset-group">
+                  {/* Selector en Desktop (Tabs icónicas) */}
+                  <div className="ls-explore-desktop-tabs">
+                    <div className="ls-explore-icon-tabs" title="Filtrar tipo de contenido">
+                      <button
+                        type="button"
+                        className={`ls-icon-tab-btn ${itemRoleFilter === 'Todos' ? 'is-active' : ''}`}
+                        onClick={() => setItemRoleFilter('Todos')}
+                        title="Todos los contenidos"
+                      >
+                        <PiSquaresFourBold />
+                      </button>
+                      <button
+                        type="button"
+                        className={`ls-icon-tab-btn ${itemRoleFilter === 'Perfil' ? 'is-active' : ''}`}
+                        onClick={() => setItemRoleFilter('Perfil')}
+                        title="Solo Perfiles"
+                      >
+                        <PiUsersBold />
+                      </button>
+                      <button
+                        type="button"
+                        className={`ls-icon-tab-btn ${itemRoleFilter === 'Evento' ? 'is-active' : ''}`}
+                        onClick={() => setItemRoleFilter('Evento')}
+                        title="Solo Eventos"
+                      >
+                        <PiTicketBold />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* 1b. Selector agrupado para Movil y Tablet */}
-                <div className="ls-explore-mobile-type-select-wrap">
-                  <select
-                    value={itemRoleFilter}
-                    onChange={(e) => setItemRoleFilter(e.target.value as 'Todos' | 'Perfil' | 'Evento')}
-                    className="ls-explore-mobile-type-select"
-                    title="Filtrar tipo de contenido"
-                  >
-                    <option value="Todos">Ver: Todos</option>
-                    <option value="Perfil">Ver: Perfiles</option>
-                    <option value="Evento">Ver: Eventos</option>
-                  </select>
-                  <PiCaretDownBold className="ls-mobile-select-caret" />
-                </div>
+                  {/* Selector agrupado para Móvil y Tablet */}
+                  <div className="ls-explore-mobile-type-select-wrap">
+                    <select
+                      value={itemRoleFilter}
+                      onChange={(e) => setItemRoleFilter(e.target.value as 'Todos' | 'Perfil' | 'Evento')}
+                      className="ls-explore-mobile-type-select"
+                      title="Filtrar tipo de contenido"
+                    >
+                      <option value="Todos">Ver: Todos</option>
+                      <option value="Perfil">Ver: Perfiles</option>
+                      <option value="Evento">Ver: Eventos</option>
+                    </select>
+                    <PiCaretDownBold className="ls-mobile-select-caret" />
+                  </div>
 
-                {/* Cluster de acciones y herramientas agrupadas */}
-                <div className="ls-explore-actions-cluster">
-                  {/* Boton Reset / Limpiar si hay filtros activos */}
+                  {/* Botón Reset / Limpiar inmediatamente al lado del filtro de Perfiles/Eventos */}
                   {(searchQuery || activeGenre || itemRoleFilter !== 'Todos') && (
                     <button
                       type="button"
@@ -498,18 +521,21 @@ export default function ExplorePage({
                         setActiveGenre('')
                         setItemRoleFilter('Todos')
                       }}
-                      title="Limpiar filtros y busqueda"
+                      title="Limpiar filtros y búsqueda"
                     >
                       <PiArrowClockwiseBold />
                     </button>
                   )}
+                </div>
 
-                  {/* 2. Boton Filtro por Genero */}
+                {/* Cluster de acciones y herramientas agrupadas */}
+                <div className="ls-explore-actions-cluster">
+                  {/* 2. Botón Filtro por Género */}
                   <button
                     type="button"
                     className={`ls-icon-func-btn ${activeGenre || isGenreFilterOpen ? 'is-active' : ''}`}
                     onClick={() => setIsGenreFilterOpen(!isGenreFilterOpen)}
-                    title={activeGenre ? `Filtrando por: ${activeGenre}` : 'Filtrar por genero musical'}
+                    title={activeGenre ? `Filtrando por: ${activeGenre}` : 'Filtrar por género musical'}
                   >
                     <PiFunnelBold />
                     {activeGenre && <span className="ls-icon-active-dot" />}
