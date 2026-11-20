@@ -1,5 +1,18 @@
-const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-const API_BASE_URL = rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/+$/, '')}/api`
+const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL
+  const isBrowser = typeof window !== 'undefined'
+  const isRemoteHost = isBrowser && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+
+  // Si se ejecuta en un dominio remoto (Vercel) y no hay URL o apunta a localhost, usar el backend de Render
+  if (isRemoteHost && (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+    return 'https://linkedsound-backend.onrender.com/api'
+  }
+
+  const rawBase = envUrl || 'http://localhost:5000/api'
+  return rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/+$/, '')}/api`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 export const TOKEN_STORAGE_KEY = 'linkedsound_auth_token'
 
