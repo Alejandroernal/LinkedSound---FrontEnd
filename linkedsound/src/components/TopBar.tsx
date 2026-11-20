@@ -11,6 +11,8 @@ import {
   PiCheckCircleBold,
   PiTrashBold,
   PiHandshakeBold,
+  PiCheckBold,
+  PiChatCircleTextBold,
 } from 'react-icons/pi'
 import type { AppPage, Profile, NotificationItem } from '../types'
 import { navItems } from '../types'
@@ -26,6 +28,8 @@ type TopBarProps = {
   onClearNotifications?: () => void
   onSignOut?: () => void
   unreadMessagesCount?: number
+  onAcceptMatch?: (notification: NotificationItem) => void
+  onOpenMatchChat?: (notification: NotificationItem) => void
 }
 
 const navIcons: Record<string, React.ReactNode> = {
@@ -47,6 +51,8 @@ export default function TopBar({
   onClearNotifications,
   onSignOut,
   unreadMessagesCount,
+  onAcceptMatch,
+  onOpenMatchChat,
 }: TopBarProps) {
   const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Administrador' : 'Mi Perfil'))
   const userRole = isAdminSession || profile?.accountRole === 'Administrador'
@@ -193,10 +199,18 @@ export default function TopBar({
                         key={item.id}
                         className={`ls-notif-item ${!item.read ? 'unread' : ''}`}
                         onClick={() => {
-                          onMarkNotificationAsRead?.(item.id)
-                          if (item.linkPage) {
-                            onNavigate?.(item.linkPage)
+                          if (item.type === 'match_request') {
                             setShowNotifications(false)
+                            onAcceptMatch?.(item)
+                          } else if (item.type === 'match') {
+                            setShowNotifications(false)
+                            onOpenMatchChat?.(item)
+                          } else {
+                            onMarkNotificationAsRead?.(item.id)
+                            if (item.linkPage) {
+                              onNavigate?.(item.linkPage)
+                              setShowNotifications(false)
+                            }
                           }
                         }}
                       >
@@ -206,27 +220,98 @@ export default function TopBar({
                               {item.type === 'match_request' && (
                                 <PiHandshakeBold style={{ color: '#00e5ff', marginRight: '6px', verticalAlign: 'middle', fontSize: '1rem' }} />
                               )}
+                              {item.type === 'match' && (
+                                <PiHandshakeBold style={{ color: '#22c55e', marginRight: '6px', verticalAlign: 'middle', fontSize: '1rem' }} />
+                              )}
                               {item.title}
                             </span>
                             <span className="ls-notif-item-time">{item.timestamp}</span>
                           </div>
                           <p className="ls-notif-item-msg">{item.message}</p>
                           {item.type === 'match_request' && (
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                marginTop: '4px',
-                                fontSize: '0.68rem',
-                                color: '#00e5ff',
-                                background: 'rgba(0, 229, 255, 0.1)',
-                                border: '1px solid rgba(0, 229, 255, 0.25)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontWeight: 600,
-                              }}
-                            >
-                              Explorar en Discovery
-                            </span>
+                            <div className="ls-notif-actions-row" style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                className="ls-primary-button"
+                                style={{
+                                  padding: '5px 12px',
+                                  fontSize: '0.76rem',
+                                  minHeight: 'unset',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'linear-gradient(135deg, #00e5ff, #00b0ff)',
+                                  color: '#0a0d1a',
+                                  fontWeight: 700,
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setShowNotifications(false)
+                                  onAcceptMatch?.(item)
+                                }}
+                              >
+                                <PiCheckBold /> Aceptar Match
+                              </button>
+                              <button
+                                type="button"
+                                className="ls-secondary-button"
+                                style={{
+                                  padding: '5px 10px',
+                                  fontSize: '0.74rem',
+                                  minHeight: 'unset',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'rgba(255, 255, 255, 0.06)',
+                                  color: 'rgba(255, 255, 255, 0.8)',
+                                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onMarkNotificationAsRead?.(item.id)
+                                  if (item.linkPage) {
+                                    onNavigate?.(item.linkPage)
+                                    setShowNotifications(false)
+                                  }
+                                }}
+                              >
+                                Explorar
+                              </button>
+                            </div>
+                          )}
+                          {item.type === 'match' && (
+                            <div className="ls-notif-actions-row" style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                className="ls-primary-button"
+                                style={{
+                                  padding: '5px 12px',
+                                  fontSize: '0.76rem',
+                                  minHeight: 'unset',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'linear-gradient(135deg, #9a63ff, #7e46d8)',
+                                  color: '#fff',
+                                  fontWeight: 700,
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setShowNotifications(false)
+                                  onOpenMatchChat?.(item)
+                                }}
+                              >
+                                <PiChatCircleTextBold /> Abrir Chat
+                              </button>
+                            </div>
                           )}
                         </div>
                         {!item.read && <span className="ls-notif-unread-dot" />}

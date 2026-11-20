@@ -8209,10 +8209,17 @@ button {
     font-size: 1.2rem;
   }
 
-  /* Desactivar hover en tarjetas para evitar efectos pegajosos en dispositivos táctiles */
-  .ls-swipe-card:hover {
+  /* Desactivar hover en tarjetas de fondo para evitar efectos pegajosos en dispositivos táctiles */
+  .ls-swipe-card:not(.ls-swipe-card-active):hover {
     transform: none !important;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  /* Asegurar que la tarjeta activa reciba libremente las transformaciones de arrastre en resoluciones móviles y tablets */
+  .ls-swipe-card-active {
+    touch-action: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
   }
 
   /* Match modal mobile spacing protection: margen superior e inferior generoso para que no se pegue */

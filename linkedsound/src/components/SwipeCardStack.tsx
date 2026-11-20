@@ -22,7 +22,7 @@ interface SwipeCardStackProps {
   isLoading?: boolean
 }
 
-const SWIPE_THRESHOLD = 90 // pixels drag needed to trigger swipe decision
+const SWIPE_THRESHOLD = 65 // pixels drag needed to trigger swipe decision
 
 export default function SwipeCardStack({
   cards,
@@ -43,6 +43,7 @@ export default function SwipeCardStack({
   const currentOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const cardRef = useRef<HTMLDivElement>(null)
   const dragDistanceRef = useRef<number>(0)
+  const startTimeRef = useRef<number>(0)
 
   const currentCard = cards.length > 0 && currentIndex < cards.length
     ? cards[currentIndex % cards.length]
@@ -60,8 +61,9 @@ export default function SwipeCardStack({
     if (exitDirection) return
     setExitDirection(direction)
     setIsDragging(false)
-    const targetX = direction === 'right' ? 1000 : -1000
-    setOffset((prev) => ({ x: targetX, y: prev.y }))
+    const flyDistance = typeof window !== 'undefined' ? Math.max(window.innerWidth + 200, 1000) : 1000
+    const targetX = direction === 'right' ? flyDistance : -flyDistance
+    setOffset({ x: targetX, y: 0 })
     currentOffsetRef.current = { x: targetX, y: 0 }
 
     setTimeout(() => {
@@ -102,6 +104,7 @@ export default function SwipeCardStack({
     startPos.current = { x: e.clientX, y: e.clientY }
     currentOffsetRef.current = { x: 0, y: 0 }
     dragDistanceRef.current = 0
+    startTimeRef.current = Date.now()
 
     try {
       if (cardRef.current) {
@@ -133,11 +136,14 @@ export default function SwipeCardStack({
       // Manejo seguro de releasePointerCapture
     }
 
-    const finalX = currentOffsetRef.current.x || (e.clientX ? e.clientX - startPos.current.x : offset.x)
+    const finalX = currentOffsetRef.current.x
+    const elapsed = Math.max(Date.now() - startTimeRef.current, 1)
+    const velocityX = Math.abs(finalX) / elapsed
+    const isFlick = elapsed < 350 && Math.abs(finalX) > 35 && velocityX > 0.35
 
-    if (finalX > SWIPE_THRESHOLD) {
+    if (finalX > SWIPE_THRESHOLD || (isFlick && finalX > 0)) {
       handleSwipe('right')
-    } else if (finalX < -SWIPE_THRESHOLD) {
+    } else if (finalX < -SWIPE_THRESHOLD || (isFlick && finalX < 0)) {
       handleSwipe('left')
     } else {
       // Snap back to center
@@ -157,6 +163,50 @@ export default function SwipeCardStack({
     }
     setOffset({ x: 0, y: 0 })
     currentOffsetRef.current = { x: 0, y: 0 }
+  }
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (exitDirection) return
+    if ((e.target as HTMLElement).closest('button')) return
+    if (e.touches.length !== 1) return
+
+    const t = e.touches[0]
+    setIsDragging(true)
+    startPos.current = { x: t.clientX, y: t.clientY }
+    currentOffsetRef.current = { x: 0, y: 0 }
+    dragDistanceRef.current = 0
+    startTimeRef.current = Date.now()
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDragging || exitDirection) return
+    if (e.touches.length !== 1) return
+
+    const t = e.touches[0]
+    const dx = t.clientX - startPos.current.x
+    const dy = t.clientY - startPos.current.y
+    dragDistanceRef.current = Math.hypot(dx, dy)
+    currentOffsetRef.current = { x: dx, y: dy }
+    setOffset({ x: dx, y: dy })
+  }
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return
+    setIsDragging(false)
+
+    const finalX = currentOffsetRef.current.x
+    const elapsed = Math.max(Date.now() - startTimeRef.current, 1)
+    const velocityX = Math.abs(finalX) / elapsed
+    const isFlick = elapsed < 350 && Math.abs(finalX) > 35 && velocityX > 0.35
+
+    if (finalX > SWIPE_THRESHOLD || (isFlick && finalX > 0)) {
+      handleSwipe('right')
+    } else if (finalX < -SWIPE_THRESHOLD || (isFlick && finalX < 0)) {
+      handleSwipe('left')
+    } else {
+      setOffset({ x: 0, y: 0 })
+      currentOffsetRef.current = { x: 0, y: 0 }
+    }
   }
 
   const handleCardClick = (card: ProfileCard) => {
@@ -277,9 +327,11 @@ export default function SwipeCardStack({
           transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotationDeg}deg)`,
           borderColor: cardBorderColor,
           boxShadow: cardBoxShadow,
-          transition: isDragging || (!exitDirection && offset.x === 0 && offset.y === 0)
-            ? 'border-color 0.15s ease, box-shadow 0.15s ease'
-            : 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.25), opacity 0.32s ease, border-color 0.25s ease, box-shadow 0.25s ease',
+          transition: isDragging
+            ? 'none'
+            : exitDirection
+              ? 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease'
+              : 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.25), opacity 0.32s ease, border-color 0.25s ease, box-shadow 0.25s ease',
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
         }}
@@ -287,6 +339,10 @@ export default function SwipeCardStack({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         onClick={() => handleCardClick(currentCard)}
         title={`Arrastra la tarjeta o usa los botones. Clic para ver trabajos de ${greenBoxTitle}`}
       >

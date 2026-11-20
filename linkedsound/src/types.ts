@@ -324,6 +324,7 @@ export type NotificationItem = {
   read: boolean
   type: 'match' | 'message' | 'system' | 'report' | 'like' | 'match_request'
   linkPage?: AppPage
+  senderId?: string | null
 }
 
 export type Message = {

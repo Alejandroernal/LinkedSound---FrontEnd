@@ -495,6 +495,116 @@ function App() {
     }
   }
 
+  // Aceptar solicitud de match recibida en las notificaciones
+  const handleAcceptMatchRequest = async (item: NotificationItem) => {
+    try {
+      handleMarkNotificationAsRead(item.id)
+
+      let targetUserId = item.senderId
+      if (!targetUserId) {
+        const usersRes = await api.auth.getUsers().catch(() => ({ success: false, users: [] }))
+        if (usersRes.success && Array.isArray(usersRes.users)) {
+          const matchedUser = usersRes.users.find((u: any) =>
+            (u.nickname && item.message.includes(u.nickname)) ||
+            (u.firstName && item.message.includes(u.firstName))
+          )
+          if (matchedUser) targetUserId = matchedUser.id
+        }
+      }
+
+      if (!targetUserId) {
+        handleNavigate('Discovery')
+        return
+      }
+
+      const res = await api.interactions.like(targetUserId)
+
+      if (res.success && res.isMatch) {
+        const partner = res.partner || {}
+        const partnerCard: ProfileCard = {
+          id: partner.id || targetUserId,
+          nickname: partner.nickname || partner.name || 'Artista',
+          firstName: partner.name || partner.nickname,
+          lastName: '',
+          role: partner.role || 'Artista',
+          location: partner.location || 'LinkedSound Network',
+          profileImage: partner.avatar || '/placeholder-avatar.png',
+          match: `${partner.match || 90}%`,
+          tags: partner.tags || [],
+          description: '',
+          tracks: partner.tracks || [],
+        }
+
+        if (res.conversation) {
+          const conv = res.conversation
+          setConversationsList((prev) => {
+            const exists = prev.some((c) => c.id === conv.id)
+            if (exists) return prev
+            return [conv, ...prev]
+          })
+          setActiveChatId(conv.id)
+        }
+
+        api.conversations.getAll().then((cRes) => {
+          if (cRes.success && Array.isArray(cRes.conversations)) {
+            setConversationsList(cRes.conversations)
+          }
+        }).catch(() => {})
+
+        api.notifications.getAll().then((nRes) => {
+          if (nRes.success && Array.isArray(nRes.notifications)) {
+            setUserNotifs(nRes.notifications)
+          }
+        }).catch(() => {})
+
+        // Disparar Modal de Celebracion de Match y habilitar conversacion
+        setMatchedCard(partnerCard)
+      } else {
+        handleNavigate('Discovery')
+      }
+    } catch (err) {
+      console.error('Error al aceptar solicitud de match:', err)
+      handleNavigate('Discovery')
+    }
+  }
+
+  // Abrir chat directamente desde una notificacion de match confirmado
+  const handleOpenMatchChat = async (item: NotificationItem) => {
+    try {
+      handleMarkNotificationAsRead(item.id)
+
+      let targetUserId = item.senderId
+      if (!targetUserId) {
+        const usersRes = await api.auth.getUsers().catch(() => ({ success: false, users: [] }))
+        if (usersRes.success && Array.isArray(usersRes.users)) {
+          const matchedUser = usersRes.users.find((u: any) =>
+            (u.nickname && item.message.includes(u.nickname)) ||
+            (u.firstName && item.message.includes(u.firstName))
+          )
+          if (matchedUser) targetUserId = matchedUser.id
+        }
+      }
+
+      const convRes = await api.conversations.getAll().catch(() => ({ success: false, conversations: [] }))
+      if (convRes.success && Array.isArray(convRes.conversations)) {
+        setConversationsList(convRes.conversations)
+        const targetConv = convRes.conversations.find((c: any) =>
+          c.partnerId === targetUserId ||
+          (targetUserId && (c.user1Id === targetUserId || c.user2Id === targetUserId)) ||
+          item.message.includes(c.name)
+        )
+        if (targetConv) {
+          setActiveChatId(targetConv.id)
+        }
+      }
+
+      handleNavigate('Messages')
+    } catch (err) {
+      console.error('Error al abrir chat de match:', err)
+      handleNavigate('Messages')
+    }
+  }
+
   const unreadMessagesCount = conversationsList.reduce((acc, c) => acc + (c.unread || 0), 0)
 
   // Props comunes para la TopBar a través de páginas
@@ -505,6 +615,8 @@ function App() {
     onClearNotifications: handleClearNotifications,
     onSignOut: handleSignOut,
     unreadMessagesCount,
+    onAcceptMatch: handleAcceptMatchRequest,
+    onOpenMatchChat: handleOpenMatchChat,
   }
 
   return (

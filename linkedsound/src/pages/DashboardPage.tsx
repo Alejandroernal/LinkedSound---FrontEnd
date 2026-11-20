@@ -140,8 +140,8 @@ export default function DashboardPage({
           if (u.role === 'Administrador' || u.role === 'Admin') return false
           // Excluir perfiles con los que ya existe un Match mutuo activo
           if (matchedUserIds.has(u.id)) return false
-          // Excluir perfiles con interaccion previa (like o descarte)
-          if (interactedUserIds.has(u.id)) return false
+          // Excluir perfiles con interaccion previa (like o descarte), salvo que nos hayan dado like recientemente
+          if (interactedUserIds.has(u.id) && !incomingLikesSet.has(u.id)) return false
           return true
         })
 
@@ -161,7 +161,7 @@ export default function DashboardPage({
             if (currentNick && u.nickname === currentNick) return false
             if (u.role === 'Administrador' || u.role === 'Admin') return false
             if (matchedUserIds.has(u.id)) return false
-            if (updatedInteractedIds.has(u.id)) return false
+            if (updatedInteractedIds.has(u.id) && !incomingLikesSet.has(u.id)) return false
             return true
           })
         }
