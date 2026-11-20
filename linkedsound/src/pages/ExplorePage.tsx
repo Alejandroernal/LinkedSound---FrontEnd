@@ -380,7 +380,8 @@ export default function ExplorePage({
       const inBadge = (card.badge ?? '').toLowerCase().includes(query)
       const inTags = cardTags.some((t) => t.toLowerCase().includes(query))
       const cardVenue = ((card as any).venue ?? '').toLowerCase()
-      const inVenue = cardVenue.includes(query) || (query.includes('club') && (Boolean((card as any).venue) || cardItemRole === 'Evento'))
+      const cardClub = ((card as any).club ?? (card as any).place ?? (card as any).locationName ?? (card as any).location ?? '').toLowerCase()
+      const inVenue = cardVenue.includes(query) || cardClub.includes(query) || (query.includes('club') && (Boolean((card as any).venue) || Boolean((card as any).club) || cardItemRole === 'Evento'))
       const inCity = 'city' in card ? Boolean((card as any).city?.toLowerCase().includes(query)) : false
       const inAddress = 'streetAddress' in card ? Boolean((card as any).streetAddress?.toLowerCase().includes(query)) : false
 

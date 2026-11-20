@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_BASE_URL = rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/+$/, '')}/api`
 
 export const TOKEN_STORAGE_KEY = 'linkedsound_auth_token'
 
@@ -328,6 +329,11 @@ export const api = {
     markAsRead: (id: string) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
     markAllAsRead: () => request('/notifications/read-all', { method: 'PATCH' }),
     clearAll: () => request('/notifications', { method: 'DELETE' }),
+    registerFCMToken: (token: string) =>
+      request('/notifications/fcm-token', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      }),
   },
 }
 
