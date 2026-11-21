@@ -4,12 +4,12 @@ import { api } from './api'
 
 // Configuración de cliente web de Firebase Cloud Messaging
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyA8_PlaceholderApiKeyForFCM3987',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'linkedsound-fcm.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'linkedsound-fcm',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'linkedsound-fcm.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '103953800507',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:103953800507:web:9c84b39178ad80f2',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDv6ppfyyr8vPS8ruZje9LOpgOrZq7vr5s',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'linkedsound-a3c4a.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'linkedsound-a3c4a',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'linkedsound-a3c4a.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '226420579214',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:226420579214:web:6f98792509e746f2c922df',
 }
 
 let app: FirebaseApp | null = null
