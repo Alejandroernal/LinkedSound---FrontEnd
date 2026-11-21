@@ -76,7 +76,7 @@ export async function initializeFCM(onNotification?: FCMNotificationHandler): Pr
     if (!fcmInstance) return null
 
     // 4. Obtener token FCM real
-    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuYkr3qBUYIHBQFLXY5CEv1_VM'
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BAZ81CMMtSWxWYFmb9KaOEQ005jkTJEBPRLpe09SsprzOtUslGQGnDgEgInfKhj2op9-9jnf1keE1TqGM6MjvP8'
 
     let fcmToken: string | null = null
     try {
