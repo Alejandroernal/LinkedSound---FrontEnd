@@ -420,16 +420,17 @@ export default function ExplorePage({
 
       <main className="ls-page-content">
         <section className="ls-panel ls-page-panel">
-          <div className="ls-panel-header compact ls-explore-header-redesigned">
+          <div className="ls-panel-header ls-explore-header-redesigned">
             {/* Fila Superior: Título con Icono + Badge Verde */}
             <div className="ls-explore-title-row">
               <div className="ls-explore-title-with-icon">
                 <div className="ls-explore-title-badge-icon">
                   <PiCompassBold />
                 </div>
-                <div>
+                <div className="ls-explore-title-text-group">
                   <h3 className="ls-explore-main-title">
-                    El punto de encuentro para la música: explora perfiles, encuentra tu match y vive shows
+                    <span className="ls-title-desktop">El punto de encuentro para la música: explora perfiles, encuentra tu match y vive shows</span>
+                    <span className="ls-title-mobile">Explora la comunidad musical</span>
                   </h3>
                   <span className="ls-explore-subtitle ls-explore-subtitle-row">
                     <span className="ls-live-status-dot" />
