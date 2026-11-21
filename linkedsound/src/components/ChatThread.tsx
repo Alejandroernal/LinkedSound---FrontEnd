@@ -17,6 +17,7 @@ import {
 } from 'react-icons/pi'
 import type { Message, Conversation } from '../data/mockData'
 import ChatAudioPlayer from './ChatAudioPlayer'
+import { formatUserLocalTime } from '../utils/formatTime'
 
 const ALLOWED_AUDIO_EXT = ['.wav', '.mp3', '.flac', '.ogg']
 const ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png']
@@ -477,7 +478,7 @@ export default function ChatThread({
                 </div>
               )}
               {message.text && <div>{message.text}</div>}
-              <span className="ls-message-time">{message.time}</span>
+              <span className="ls-message-time">{formatUserLocalTime(message.createdAt, message.time)}</span>
             </div>
           </div>
         ))}

@@ -12,6 +12,7 @@ import {
   PiXBold,
 } from 'react-icons/pi'
 import type { Conversation, Message, NewMatchItem } from '../data/mockData'
+import { formatUserLocalTime } from '../utils/formatTime'
 
 type ConversationSidebarProps = {
   conversations: Conversation[]
@@ -203,7 +204,10 @@ export default function ConversationSidebar({
           filteredConversations.map((conversation) => {
             const convMessages = messagesMap ? messagesMap[conversation.id] : undefined
             const lastMsg = convMessages && convMessages.length > 0 ? convMessages[convMessages.length - 1] : null
-            const displayTime = lastMsg ? lastMsg.time : conversation.time
+            const displayTime = formatUserLocalTime(
+              lastMsg?.createdAt || conversation.lastMessageCreatedAt || conversation.updatedAt,
+              lastMsg ? lastMsg.time : conversation.time
+            )
             const lastMessageDisplay = conversation.blocked
               ? '[Usuario bloqueado]'
               : lastMsg

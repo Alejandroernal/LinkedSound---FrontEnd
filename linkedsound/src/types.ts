@@ -332,6 +332,7 @@ export type Message = {
   sender: 'me' | 'them'
   text: string
   time: string
+  createdAt?: string | Date
   attachment?: {
     url: string
     name: string
@@ -351,6 +352,8 @@ export type Conversation = {
   preview: string
   time: string
   unread: number
+  lastMessageCreatedAt?: string | Date
+  updatedAt?: string | Date
   pinned?: boolean
   muted?: boolean
   blocked?: boolean

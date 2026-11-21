@@ -9,6 +9,7 @@ import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import type { Message, Conversation, ProfileCard, NewMatchItem } from '../data/mockData'
 import type { AppPage, Profile, NotificationItem } from '../types'
 import { api } from '../services/api'
+import { formatUserLocalTime } from '../utils/formatTime'
 import {
   PiSparkleFill,
   PiChatCircleDotsBold,
@@ -78,11 +79,15 @@ export default function MessagesPage({
     // Cargar conversaciones reales de la base de datos sin forzar la apertura automatica de ningun chat
     api.conversations.getAll().then((res) => {
       if (res.success && Array.isArray(res.conversations)) {
-        setConversationsList(res.conversations)
+        const mappedConvs = res.conversations.map((c: any) => ({
+          ...c,
+          time: formatUserLocalTime(c.lastMessageCreatedAt || c.updatedAt, c.time),
+        }))
+        setConversationsList(mappedConvs)
 
         // Si ya habia un chat seleccionado previamente por el usuario, cargar sus mensajes y marcarlo leido
         if (activeId) {
-          const updatedConvs = res.conversations.map((c) =>
+          const updatedConvs = mappedConvs.map((c: any) =>
             c.id === activeId ? { ...c, unread: 0 } : c
           )
           setConversationsList(updatedConvs)
@@ -91,7 +96,10 @@ export default function MessagesPage({
             if (mRes.success && Array.isArray(mRes.messages)) {
               setMessagesMap((prev) => ({
                 ...prev,
-                [activeId]: mRes.messages,
+                [activeId]: mRes.messages.map((m: any) => ({
+                  ...m,
+                  time: formatUserLocalTime(m.createdAt, m.time),
+                })),
               }))
             }
           }).catch(() => {})
@@ -159,7 +167,10 @@ export default function MessagesPage({
       if (res.success && Array.isArray(res.messages)) {
         setMessagesMap((prev) => ({
           ...prev,
-          [id]: res.messages,
+          [id]: res.messages.map((m: any) => ({
+            ...m,
+            time: formatUserLocalTime(m.createdAt, m.time),
+          })),
         }))
       }
     }).catch(() => {})
@@ -175,7 +186,7 @@ export default function MessagesPage({
     if (!firstMessageText.trim()) return
 
     const now = new Date()
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const timeStr = formatUserLocalTime(now)
 
     const existingConv = conversationsList.find(
       (c) => c.name.toLowerCase() === match.name.toLowerCase() || c.id === match.id
@@ -191,6 +202,7 @@ export default function MessagesPage({
       status: 'Online',
       preview: firstMessageText.trim(),
       time: timeStr,
+      lastMessageCreatedAt: now.toISOString(),
       unread: 0,
       profileImage: match.profileImage,
       location: match.location,
@@ -201,6 +213,7 @@ export default function MessagesPage({
       sender: 'me',
       text: firstMessageText.trim(),
       time: timeStr,
+      createdAt: now.toISOString(),
     }
 
     if (!existingConv) {
@@ -302,12 +315,13 @@ export default function MessagesPage({
   const handleSendMessage = (text: string, attachment?: Message['attachment']) => {
     if (!activeId) return
     const now = new Date()
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const timeStr = formatUserLocalTime(now)
     const newMessage: Message = {
       id: String(Date.now()),
       sender: 'me',
       text,
       time: timeStr,
+      createdAt: now.toISOString(),
       attachment,
     }
 
@@ -321,7 +335,7 @@ export default function MessagesPage({
     setConversationsList((prev) =>
       prev.map((c) =>
         c.id === activeId
-          ? { ...c, preview: previewText, time: timeStr, unread: 0 }
+          ? { ...c, preview: previewText, time: timeStr, lastMessageCreatedAt: now.toISOString(), unread: 0 }
           : c
       )
     )
@@ -333,25 +347,33 @@ export default function MessagesPage({
       attachmentType: attachment?.type,
       attachmentSize: attachment?.size,
     }).then((res) => {
-      if (res.success && res.formattedMessage?.attachment?.url) {
-        setMessagesMap((prev) => {
-          const currentList = prev[activeId] || []
-          return {
-            ...prev,
-            [activeId]: currentList.map((m) =>
-              m.id === newMessage.id
-                ? {
-                    ...m,
-                    id: res.formattedMessage.id || m.id,
-                    attachment: {
-                      ...m.attachment!,
-                      url: res.formattedMessage.attachment.url,
-                    },
-                  }
-                : m
-            ),
-          }
-        })
+      if (res.success) {
+        const savedMsg = res.formattedMessage || res.data
+        if (savedMsg) {
+          const finalTime = formatUserLocalTime(savedMsg.createdAt, timeStr)
+          setMessagesMap((prev) => {
+            const currentList = prev[activeId] || []
+            return {
+              ...prev,
+              [activeId]: currentList.map((m) =>
+                m.id === newMessage.id
+                  ? {
+                      ...m,
+                      id: savedMsg.id || m.id,
+                      createdAt: savedMsg.createdAt || m.createdAt,
+                      time: finalTime,
+                      attachment: savedMsg.attachment
+                        ? {
+                            ...m.attachment!,
+                            url: savedMsg.attachment.url || m.attachment?.url,
+                          }
+                        : m.attachment,
+                    }
+                  : m
+              ),
+            }
+          })
+        }
       }
     }).catch(() => {})
   }
