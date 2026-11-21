@@ -12,6 +12,7 @@ import AdminPage from './pages/AdminPage'
 import MatchModal from './components/MatchModal'
 import type { AppPage, Profile, NotificationItem } from './types'
 import { api, getToken, setToken, clearToken } from './services/api'
+import { initializeFCM } from './services/fcm'
 import { PiHandshakeBold, PiXBold } from 'react-icons/pi'
 import type {
   ProfileCard,
@@ -207,6 +208,39 @@ function App() {
       clearInterval(interval)
     }
   }, [authSession.isLoggedIn, authSession.role])
+
+  // Inicializar Firebase Cloud Messaging (FCM) y suscripcion push
+  useEffect(() => {
+    if (!authSession.isLoggedIn || authSession.role === 'admin' || !getToken()) return
+
+    initializeFCM((payload) => {
+      if (!payload) return
+      const title = payload.title || payload.data?.title || 'Notificacion de LinkedSound'
+      const body = payload.body || payload.data?.body || ''
+      const notifType = (payload.data?.type as any) || 'match_request'
+      const notifId = payload.data?.notificationId || `fcm-${Date.now()}`
+
+      const incomingItem: NotificationItem = {
+        id: notifId,
+        title,
+        message: body,
+        read: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: notifType,
+        linkPage: (payload.data?.linkPage as AppPage) || 'Discovery',
+        senderId: payload.data?.senderId || null,
+      }
+
+      setUserNotifs((prev) => [incomingItem, ...prev.filter((n) => n.id !== notifId)])
+
+      if (notifType === 'match_request' || notifType === 'match') {
+        setToastMatchRequest(incomingItem)
+        setTimeout(() => {
+          setToastMatchRequest((curr) => (curr?.id === incomingItem.id ? null : curr))
+        }, 7000)
+      }
+    })
+  }, [authSession.isLoggedIn, authSession.role, profile.id])
 
   // Estado global para mensajes y conversaciones matcheadas
   const [conversationsList, setConversationsList] = useState<Conversation[]>([])

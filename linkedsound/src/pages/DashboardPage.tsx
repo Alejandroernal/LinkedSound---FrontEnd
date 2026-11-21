@@ -110,11 +110,50 @@ export default function DashboardPage({
   const [isLoadingCards, setIsLoadingCards] = useState(true)
   const isResettingRef = useRef(false)
 
-  const loadDiscoveryCards = useCallback(async (isInitialOrNav = false) => {
+  const [filters, setFilters] = useState<RadarFilterState>(() => {
+    const profileCoords = getCoordinatesForLocation(profile?.location)
+    return {
+      locationQuery: '',
+      centerLat: profileCoords?.lat,
+      centerLng: profileCoords?.lon,
+      selectedCategories: [],
+      selectedGenres: [],
+      radius: 500,
+    }
+  })
+  const [showFilters, setShowFilters] = useState(false)
+
+  const loadDiscoveryCards = useCallback(async (isInitialOrNav = false, activeFilters?: RadarFilterState) => {
     setIsLoadingCards(true)
     try {
+      const currentFilters = activeFilters || filters
+      let usersPromise: Promise<{ success: boolean; users?: any[] }>
+
+      // Si el radar tiene radio definido y coordenadas, consultar con PostGIS en el backend (/api/busqueda)
+      if (
+        currentFilters &&
+        currentFilters.radius < 500 &&
+        currentFilters.centerLat != null &&
+        currentFilters.centerLng != null
+      ) {
+        usersPromise = api.busqueda.buscar({
+          lat: currentFilters.centerLat,
+          lon: currentFilters.centerLng,
+          radio: currentFilters.radius,
+          rol: currentFilters.selectedCategories?.[0],
+          genero: currentFilters.selectedGenres?.[0],
+        }).then((res) => {
+          if (res.success && Array.isArray(res.creadores)) {
+            return { success: true, users: res.creadores }
+          }
+          return api.auth.getUsers()
+        }).catch(() => api.auth.getUsers())
+      } else {
+        usersPromise = api.auth.getUsers()
+      }
+
       const [res, interRes, matchesRes] = await Promise.all([
-        api.auth.getUsers(),
+        usersPromise,
         api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [], incomingLikes: [] })),
         api.interactions.getMatches().catch(() => ({ success: false, matches: [] })),
       ])
@@ -216,7 +255,7 @@ export default function DashboardPage({
     } finally {
       setIsLoadingCards(false)
     }
-  }, [profile?.id, profile?.email, profile?.nickname])
+  }, [profile?.id, profile?.email, profile?.nickname, filters])
 
   useEffect(() => {
     loadDiscoveryCards(true)
@@ -244,18 +283,14 @@ export default function DashboardPage({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
   const [previewProfile, setPreviewProfile] = useState<ProfileCard | null>(null)
-  const [filters, setFilters] = useState<RadarFilterState>(() => {
-    const profileCoords = getCoordinatesForLocation(profile?.location)
-    return {
-      locationQuery: '',
-      centerLat: profileCoords?.lat,
-      centerLng: profileCoords?.lon,
-      selectedCategories: [],
-      selectedGenres: [],
-      radius: 500,
-    }
-  })
-  const [showFilters, setShowFilters] = useState(false)
+
+  // Recarga con PostGIS en el backend al modificar radio o coordenadas del Radar
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadDiscoveryCards(false, filters)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [filters.centerLat, filters.centerLng, filters.radius, filters.selectedCategories, filters.selectedGenres])
 
   const filteredRecommendations = useMemo(() => {
     let centerLat = filters.centerLat

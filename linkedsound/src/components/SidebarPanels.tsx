@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import GoogleMapsRadiusPicker from './GoogleMapsRadiusPicker'
 import {
   PiMapPinBold,
   PiMusicNotesFill,
@@ -118,6 +119,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
   const [showCategoryPopover, setShowCategoryPopover] = useState(false)
   const [showGenrePopover, setShowGenrePopover] = useState(false)
   const [genreSearch, setGenreSearch] = useState('')
+  const [mapEngine, setMapEngine] = useState<'google' | 'maplibre'>('google')
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
@@ -574,22 +576,83 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
         </div>
 
 
-        {/* Embedded Interactive Map for Radar (Compact: 105px height) */}
-        <div style={{ marginTop: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#c084fc', marginBottom: '3px' }}>
-            <PiMapPinBold />
-            <span>Haz clic en el mapa para fijar el centro del radar</span>
+        {/* Selector de Motor de Mapas: Google Maps Platform / MapLibre GL */}
+        <div style={{ marginTop: '10px' }}>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setMapEngine('google')}
+              style={{
+                flex: 1,
+                padding: '5px 8px',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                borderRadius: '6px',
+                border: mapEngine === 'google' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
+                background: mapEngine === 'google' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.03)',
+                color: mapEngine === 'google' ? '#c084fc' : 'rgba(255,255,255,0.6)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Google Maps Platform
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapEngine('maplibre')}
+              style={{
+                flex: 1,
+                padding: '5px 8px',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                borderRadius: '6px',
+                border: mapEngine === 'maplibre' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
+                background: mapEngine === 'maplibre' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.03)',
+                color: mapEngine === 'maplibre' ? '#c084fc' : 'rgba(255,255,255,0.6)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              MapLibre GL
+            </button>
           </div>
-          <div
-            ref={mapContainerRef}
-            style={{
-              width: '100%',
-              height: '105px',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-            }}
-          />
+
+          {mapEngine === 'google' ? (
+            <div style={{ marginBottom: '10px' }}>
+              <GoogleMapsRadiusPicker
+                centerLat={currentFilters.centerLat}
+                centerLng={currentFilters.centerLng}
+                radiusKm={currentFilters.radius}
+                onLocationChange={(lat, lng, address) => {
+                  updateMapPosition(lat, lng)
+                  onChangeFilters?.({
+                    ...currentFilters,
+                    centerLat: lat,
+                    centerLng: lng,
+                    locationQuery: address || currentFilters.locationQuery,
+                  })
+                }}
+                onRadiusChange={(r) => handleRadiusChange(r)}
+              />
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#c084fc', marginBottom: '3px' }}>
+                <PiMapPinBold />
+                <span>Haz clic en el mapa para fijar el centro del radar</span>
+              </div>
+              <div
+                ref={mapContainerRef}
+                style={{
+                  width: '100%',
+                  height: '105px',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 

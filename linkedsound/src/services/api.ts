@@ -348,5 +348,33 @@ export const api = {
         body: JSON.stringify({ token }),
       }),
   },
+  busqueda: {
+    buscar: (params: {
+      q?: string
+      genero?: string
+      rol?: string
+      lat?: number
+      lon?: number
+      radio?: number
+      limit?: number
+      offset?: number
+    }) => {
+      const queryParams = new URLSearchParams()
+      if (params.q) queryParams.set('q', params.q)
+      if (params.genero) queryParams.set('genero', params.genero)
+      if (params.rol) queryParams.set('rol', params.rol)
+      if (params.lat != null) queryParams.set('lat', String(params.lat))
+      if (params.lon != null) queryParams.set('lon', String(params.lon))
+      if (params.radio != null) queryParams.set('radio', String(params.radio))
+      if (params.limit != null) queryParams.set('limit', String(params.limit))
+      if (params.offset != null) queryParams.set('offset', String(params.offset))
+
+      return request<{
+        success: boolean
+        total: number
+        creadores: any[]
+      }>(`/busqueda?${queryParams.toString()}`, { method: 'GET' })
+    },
+  },
 }
 
