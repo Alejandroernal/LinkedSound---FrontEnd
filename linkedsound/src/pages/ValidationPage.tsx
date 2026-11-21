@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { CARTO_DARK_MAP_STYLE } from '../config/mapConfig'
 import { FaSoundcloud, FaSpotify } from 'react-icons/fa6'
 import { PiMapPinBold, PiEyeSlashBold, PiNavigationArrowBold, PiWarningOctagonBold, PiCheckBold } from 'react-icons/pi'
 import type { AppPage, Profile, SoundCloudTrack } from '../types'
@@ -273,7 +274,7 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     try {
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        style: CARTO_DARK_MAP_STYLE,
         center: [centerLon, centerLat],
         zoom: 10,
         renderWorldCopies: false,

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { CARTO_DARK_MAP_STYLE } from '../config/mapConfig'
 import {
   PiXBold,
   PiCalendarPlusBold,
@@ -474,7 +475,7 @@ export default function CreateEventModal({
     try {
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        style: CARTO_DARK_MAP_STYLE,
         center: [13.405, 52.52],
         zoom: 10,
         renderWorldCopies: false,

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { CARTO_DARK_MAP_STYLE } from '../config/mapConfig'
 import GoogleMapsRadiusPicker from './GoogleMapsRadiusPicker'
 import {
   PiMapPinBold,
@@ -119,7 +120,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
   const [showCategoryPopover, setShowCategoryPopover] = useState(false)
   const [showGenrePopover, setShowGenrePopover] = useState(false)
   const [genreSearch, setGenreSearch] = useState('')
-  const [mapEngine, setMapEngine] = useState<'google' | 'maplibre'>('google')
+  const [mapEngine, setMapEngine] = useState<'google' | 'maplibre'>('maplibre')
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
@@ -181,7 +182,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
     try {
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        style: CARTO_DARK_MAP_STYLE,
         center: initialCenter,
         zoom: 11,
         renderWorldCopies: false,
