@@ -2,14 +2,14 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getMessaging, getToken, onMessage, isSupported, type Messaging } from 'firebase/messaging'
 import { api } from './api'
 
-// Configuración de cliente web de Firebase Cloud Messaging
+// Configuración de cliente web de Firebase Cloud Messaging desde variables de entorno
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDv6ppfyyr8vPS8ruZje9LOpgOrZq7vr5s',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'linkedsound-a3c4a.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'linkedsound-a3c4a',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'linkedsound-a3c4a.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '226420579214',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:226420579214:web:6f98792509e746f2c922df',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 }
 
 let app: FirebaseApp | null = null
@@ -20,6 +20,9 @@ let messaging: Messaging | null = null
  */
 function getFirebaseMessaging(): Messaging | null {
   if (typeof window === 'undefined') return null
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    return null
+  }
 
   if (!app) {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
@@ -75,14 +78,14 @@ export async function initializeFCM(onNotification?: FCMNotificationHandler): Pr
     const fcmInstance = getFirebaseMessaging()
     if (!fcmInstance) return null
 
-    // 4. Obtener token FCM real
-    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BAZ81CMMtSWxWYFmb9KaOEQ005jkTJEBPRLpe09SsprzOtUslGQGnDgEgInfKhj2op9-9jnf1keE1TqGM6MjvP8'
+    // 4. Obtener token FCM real desde VAPID key de entorno
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || undefined
 
     let fcmToken: string | null = null
     try {
       fcmToken = await getToken(fcmInstance, {
         serviceWorkerRegistration: registration,
-        vapidKey,
+        ...(vapidKey ? { vapidKey } : {}),
       })
     } catch (tokenErr) {
       console.warn('No se pudo obtener el token con VAPID key pública, intentando registro estándar:', tokenErr)
