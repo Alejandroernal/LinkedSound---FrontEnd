@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { api } from '../services/api'
 import {
   PiXBold,
   PiKeyBold,
@@ -84,13 +85,14 @@ export default function ForgotPasswordModal({
     return re.test(val)
   }
 
-  const handleRequestCode = (e: React.FormEvent) => {
+  const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email.trim()) {
+    const targetEmail = email.trim()
+    if (!targetEmail) {
       setError('Por favor, ingresa tu correo electrónico.')
       return
     }
-    if (!validateEmail(email.trim())) {
+    if (!validateEmail(targetEmail)) {
       setError('Por favor, ingresa un correo electrónico válido.')
       return
     }
@@ -98,15 +100,22 @@ export default function ForgotPasswordModal({
     setError('')
     setIsLoading(true)
 
-    // Simulación de envío de código de verificación
-    setTimeout(() => {
+    try {
+      const res = await api.auth.forgotPassword(targetEmail)
+      if (res.success) {
+        setStep('VERIFY_CODE')
+        setResendCountdown(30)
+      } else {
+        setError(res.message || 'No existe ninguna cuenta registrada con este correo electrónico.')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error de conexión con el servidor al procesar la solicitud.')
+    } finally {
       setIsLoading(false)
-      setStep('VERIFY_CODE')
-      setResendCountdown(30)
-    }, 800)
+    }
   }
 
-  const handleVerifyCode = (e: React.FormEvent) => {
+  const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault()
     const cleanCode = code.trim()
     if (!cleanCode) {
@@ -121,14 +130,21 @@ export default function ForgotPasswordModal({
     setError('')
     setIsLoading(true)
 
-    // Simulación de verificación exitosa
-    setTimeout(() => {
+    try {
+      const res = await api.auth.verifyResetCode(email.trim(), cleanCode)
+      if (res.success) {
+        setStep('RESET_PASSWORD')
+      } else {
+        setError(res.message || 'El código de verificación es incorrecto o ha expirado.')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al verificar el código.')
+    } finally {
       setIsLoading(false)
-      setStep('RESET_PASSWORD')
-    }, 800)
+    }
   }
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newPassword) {
       setError('Por favor, ingresa la nueva contraseña.')
@@ -158,18 +174,37 @@ export default function ForgotPasswordModal({
     setError('')
     setIsLoading(true)
 
-    // Simulación de cambio de contraseña exitoso
-    setTimeout(() => {
+    try {
+      const res = await api.auth.resetPassword({
+        email: email.trim(),
+        code: code.trim(),
+        newPassword,
+      })
+      if (res.success) {
+        setStep('SUCCESS')
+        if (onSuccess) onSuccess()
+      } else {
+        setError(res.message || 'Error al actualizar la contraseña.')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al restablecer la contraseña.')
+    } finally {
       setIsLoading(false)
-      setStep('SUCCESS')
-    }, 900)
+    }
   }
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     if (resendCountdown > 0) return
     setError('')
     setResendCountdown(30)
-    // Mensaje de simulación
+    try {
+      const res = await api.auth.forgotPassword(email.trim())
+      if (!res.success) {
+        setError(res.message || 'Error al reenviar el código de verificación.')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al reenviar el código de verificación.')
+    }
   }
 
   return (

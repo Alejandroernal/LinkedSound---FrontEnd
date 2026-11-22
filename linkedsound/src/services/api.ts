@@ -106,6 +106,21 @@ export const api = {
     getGenres: () => request<{ genres: string[] }>('/auth/genres', { method: 'GET' }),
     getUsers: (params?: { all?: boolean }) =>
       request<{ users: any[] }>(params?.all ? '/auth/users?all=true' : '/auth/users', { method: 'GET' }),
+    forgotPassword: (email: string) =>
+      request<{ success: boolean; message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    verifyResetCode: (email: string, code: string) =>
+      request<{ success: boolean; message: string }>('/auth/verify-reset-code', {
+        method: 'POST',
+        body: JSON.stringify({ email, code }),
+      }),
+    resetPassword: (payload: { email: string; code: string; newPassword: string }) =>
+      request<{ success: boolean; message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   },
   genres: {
     getAll: () => request<{ genres: string[] }>('/perfiles/genres', { method: 'GET' }),
