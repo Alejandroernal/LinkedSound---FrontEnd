@@ -12,7 +12,8 @@ import AdminPage from './pages/AdminPage'
 import MatchModal from './components/MatchModal'
 import type { AppPage, Profile, NotificationItem } from './types'
 import { api, getToken, setToken, clearToken } from './services/api'
-import { initializeFCM } from './services/fcm'
+import { initializeFCM, resetFCMState } from './services/fcm'
+import { getProfileAvatarUrl } from './utils/avatar'
 import { PiHandshakeBold, PiXBold } from 'react-icons/pi'
 import type {
   ProfileCard,
@@ -359,11 +360,15 @@ function App() {
     })
   }
 
-  const handleRegisterComplete = async (): Promise<{ success: boolean; message?: string }> => {
-    const finalProfile: Profile = {
+  const handleRegisterComplete = async (overrides?: Partial<Profile>): Promise<{ success: boolean; message?: string }> => {
+    const mergedDraft: Profile = {
       ...registrationDraft,
-      role: registrationDraft.role || 'Artista',
-      category: registrationDraft.role || registrationDraft.category || 'Artista',
+      ...(overrides || {}),
+    }
+    const finalProfile: Profile = {
+      ...mergedDraft,
+      role: mergedDraft.role || 'Artista',
+      category: mergedDraft.role || mergedDraft.category || 'Artista',
     }
 
     try {
@@ -431,6 +436,7 @@ function App() {
   }
 
   const handleSignOut = () => {
+    resetFCMState()
     setAuthSession({ isLoggedIn: false, role: null })
     localStorage.removeItem(STORAGE_KEY)
     clearToken()
@@ -455,7 +461,11 @@ function App() {
         if (field === 'role') {
           updated.category = value
         }
-        if (registeredUser && registeredUser.email && prev.email === registeredUser.email) {
+        if (
+          registeredUser &&
+          ((registeredUser.id && prev.id === registeredUser.id) ||
+            (registeredUser.email && prev.email === registeredUser.email))
+        ) {
           setRegisteredUser(updated)
           localStorage.setItem(REGISTERED_USER_KEY, JSON.stringify(updated))
         }
@@ -562,7 +572,7 @@ function App() {
           lastName: '',
           role: partner.role || 'Artista',
           location: partner.location || 'LinkedSound Network',
-          profileImage: partner.avatar || '/placeholder-avatar.png',
+          profileImage: getProfileAvatarUrl(partner.avatar),
           match: `${partner.match || 90}%`,
           tags: partner.tags || [],
           description: '',

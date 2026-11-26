@@ -13,6 +13,7 @@ import {
 } from 'react-icons/pi'
 import type { Conversation, Message, NewMatchItem } from '../data/mockData'
 import { formatUserLocalTime } from '../utils/formatTime'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 type ConversationSidebarProps = {
   conversations: Conversation[]
@@ -176,8 +177,9 @@ export default function ConversationSidebar({
               >
                 <div className={`ls-avatar ${match.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
                   <img
-                    src={match.profileImage}
+                    src={getProfileAvatarUrl(match.profileImage)}
                     alt={match.name}
+                    onError={handleAvatarError}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                   />
                 </div>
@@ -233,17 +235,14 @@ export default function ConversationSidebar({
                   cursor: 'pointer',
                 }}
               >
-                {conversation.profileImage ? (
-                  <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
-                    <img
-                      src={conversation.profileImage}
-                      alt={conversation.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                    />
-                  </div>
-                ) : (
-                  <div className={`ls-avatar ${conversation.accent} small`}>{conversation.avatar}</div>
-                )}
+                <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
+                  <img
+                    src={getProfileAvatarUrl(conversation.profileImage)}
+                    alt={conversation.name}
+                    onError={handleAvatarError}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  />
+                </div>
                 <div className="ls-conversation-copy">
                   <div className="ls-conversation-head">
                     <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>

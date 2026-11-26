@@ -125,6 +125,17 @@ export const api = {
   genres: {
     getAll: () => request<{ genres: string[] }>('/perfiles/genres', { method: 'GET' }),
   },
+  users: {
+    updateStatus: (id: string, payload: { status: string; justification?: string }) =>
+      request<{ success: boolean; user?: any; message?: string }>(`/perfiles/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
+    delete: (id: string) =>
+      request<{ success: boolean; message?: string }>(`/perfiles/${id}`, {
+        method: 'DELETE',
+      }),
+  },
   upload: {
     image: async (file: File): Promise<ApiResponse<{ url: string }>> => {
       const token = getToken()
@@ -213,6 +224,11 @@ export const api = {
       request<{ success: boolean; message?: string }>(`/events/${id}`, {
         method: 'DELETE',
         ...(payload ? { body: JSON.stringify(payload) } : {}),
+      }),
+    updateStatus: (id: string, status: string) =>
+      request<{ success: boolean; event?: any; message?: string }>(`/events/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
       }),
     addComment: (id: string, payload: { content: string; userId?: string; userRole?: string }) =>
       request<{ success: boolean; comment: any; message?: string }>(`/events/${id}/comments`, {

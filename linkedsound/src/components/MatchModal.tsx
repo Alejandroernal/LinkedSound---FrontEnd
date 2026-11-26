@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { PiXBold, PiChatTeardropTextBold, PiBriefcaseBold } from 'react-icons/pi'
 import { ImLink } from 'react-icons/im'
 import type { ProfileCard } from '../data/mockData'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 type MatchModalProps = {
   isOpen: boolean
@@ -33,9 +34,8 @@ export default function MatchModal({
   const cardName = matchedCard.nickname || ('firstName' in matchedCard ? matchedCard.firstName : '') || 'Artista'
   const isProfile = matchedCard.isProfile !== false
   const cardRole = matchedCard.role || (isProfile ? 'Creador Musical' : 'Evento Musical')
-  const defaultUserImg = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
-  const myImage = userProfileImage || defaultUserImg
-  const targetImage = matchedCard.profileImage || defaultUserImg
+  const myImage = getProfileAvatarUrl(userProfileImage)
+  const targetImage = getProfileAvatarUrl(matchedCard.profileImage)
 
   return (
     <div className="ls-modal-overlay" onClick={onClose}>
@@ -65,7 +65,7 @@ export default function MatchModal({
         {/* Visual Dual Avatar Match Display */}
         <div className="ls-match-avatars-row">
           <div className="ls-match-avatar-box">
-            <img src={myImage} alt="Tu Perfil" />
+            <img src={myImage} alt="Tu Perfil" onError={handleAvatarError} />
             <span className="ls-match-avatar-label">Tú</span>
           </div>
 
@@ -74,7 +74,7 @@ export default function MatchModal({
           </div>
 
           <div className="ls-match-avatar-box">
-            <img src={targetImage} alt={cardName} />
+            <img src={targetImage} alt={cardName} onError={handleAvatarError} />
             <span className="ls-match-avatar-label">{cardName}</span>
           </div>
         </div>

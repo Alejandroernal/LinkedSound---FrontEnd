@@ -1204,7 +1204,7 @@ button {
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(19, 20, 31, 0.95);
+  background: #13141f;
   box-shadow: 0 24px 48px rgba(10, 8, 16, 0.55);
   transform: none;
 }
@@ -1230,8 +1230,12 @@ button {
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(19, 20, 31, 0.95);
+  background: #13141f;
   box-shadow: 0 16px 36px rgba(10, 8, 16, 0.45);
+}
+
+.ls-swipe-card-bg .ls-swipe-body {
+  visibility: hidden;
 }
 
 .ls-swipe-card-next {
@@ -1316,16 +1320,34 @@ button {
   background: linear-gradient(180deg, transparent, rgba(7, 9, 15, 0.85));
 }
 
+.ls-swipe-overlay > div {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
 .ls-swipe-overlay h2 {
   margin: 0;
   font-size: clamp(1.8rem, 2.5vw, 2.4rem);
   letter-spacing: -0.05em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ls-swipe-overlay p,
 .ls-swipe-overlay span {
   margin: 0;
   color: rgba(255, 255, 255, 0.75);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.ls-swipe-overlay > span {
+  max-width: 45%;
+  flex-shrink: 0;
 }
 
 .ls-swipe-body {
@@ -3300,6 +3322,10 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   line-height: 1;
+  max-width: calc(50% - 14px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ls-card-body {
@@ -3331,8 +3357,7 @@ button {
 }
 
 .ls-card-fullname-pill {
-  display: inline-flex;
-  align-items: center;
+  display: block;
   width: fit-content;
   max-width: 100%;
   padding: 3px 10px;
@@ -3348,6 +3373,33 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.ls-event-owner-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: #00e5ff;
+  font-size: 0.74rem;
+}
+
+.ls-card-head .ls-event-owner-chip-text {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #00e5ff;
+  font-size: 0.74rem;
+  text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .ls-match-tag {
@@ -3406,20 +3458,23 @@ button {
 
 .ls-mini-tags {
   display: flex;
-  flex-wrap: nowrap;
-  overflow: hidden;
+  flex-wrap: wrap;
+  overflow: visible;
   gap: 6px;
 }
 
 .ls-mini-tags span {
+  display: inline-block;
   background: rgba(168, 85, 247, 0.1);
   border: 1px solid rgba(168, 85, 247, 0.22);
   border-radius: 999px;
   padding: 3px 9px;
   font-size: 0.66rem;
   color: #c4b0ff;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .ls-empty-state {
@@ -3935,6 +3990,10 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  max-width: calc(50% - 14px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
@@ -4376,11 +4435,16 @@ button {
 }
 
 .ls-notice-tags span {
+  display: inline-block;
   background: rgba(255, 255, 255, 0.06);
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.8);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Avatar / Profile photo picker ─────────────────────────── */
@@ -6429,34 +6493,40 @@ button {
 
 .ls-card-footer-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: auto;
+  padding-top: 12px;
 }
 
 .ls-card-mini-tags-wrap {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   overflow: hidden;
   gap: 6px;
-  flex: 1;
+  width: 100%;
   min-width: 0;
   margin-top: 0;
 }
 
 .ls-card-mini-tags-wrap span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .ls-card-tags-spacer {
-  flex: 1;
+  display: none;
 }
 
 .ls-card-action-group {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 6px;
   flex-shrink: 0;
 }
@@ -6575,12 +6645,13 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   margin-bottom: 8px;
 }
 
 .ls-swipe-head-left {
-  flex: 1;
+  flex: 1 1 160px;
   min-width: 0;
 }
 
@@ -6600,6 +6671,27 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+}
+
+.ls-swipe-head-right .ls-report-text-btn,
+.ls-swipe-head-right .ls-swipe-score {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ls-profile-interest-block .ls-mini-tags {
+  display: flex;
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ls-required-asterisk {
+  color: #ff4d6d;
+  margin-left: 3px;
+  font-weight: 700;
 }
 
 .ls-empty-card {

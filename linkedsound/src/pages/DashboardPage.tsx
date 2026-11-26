@@ -9,6 +9,7 @@ import type { ProfileCard } from '../data/mockData'
 import type { AppPage, Profile, NotificationItem } from '../types'
 import { api } from '../services/api'
 import { computeUserAffinity } from '../utils/affinity'
+import { getProfileAvatarUrl } from '../utils/avatar'
 import {
   PiUsersBold,
   PiArrowsClockwiseBold,
@@ -111,7 +112,10 @@ export default function DashboardPage({
   const isResettingRef = useRef(false)
 
   const [filters, setFilters] = useState<RadarFilterState>(() => {
-    const profileCoords = getCoordinatesForLocation(profile?.location)
+    const profileCoords =
+      typeof profile?.latitude === 'number' && typeof profile?.longitude === 'number'
+        ? { lat: profile.latitude, lon: profile.longitude }
+        : getCoordinatesForLocation(profile?.location)
     return {
       locationQuery: '',
       centerLat: profileCoords?.lat,
@@ -234,7 +238,7 @@ export default function DashboardPage({
             soundcloudUrl: u.soundcloudUrl || '',
             soundcloudHandle: u.soundcloudHandle || '',
             spotifyUrl: u.spotifyUrl || '',
-            profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+            profileImage: getProfileAvatarUrl(u.profileImage),
             match: affinity.percentageFormatted,
             commonGenres: affinity.commonGenres,
             affinityReason: affinity.summary,
@@ -305,13 +309,16 @@ export default function DashboardPage({
     }
 
     if (centerLat === undefined || centerLng === undefined) {
-      const coords = getCoordinatesForLocation(profile?.location)
+      const coords =
+        typeof profile?.latitude === 'number' && typeof profile?.longitude === 'number'
+          ? { lat: profile.latitude, lon: profile.longitude }
+          : getCoordinatesForLocation(profile?.location)
       if (coords) {
         centerLat = coords.lat
         centerLng = coords.lon
       } else {
-        centerLat = 52.52
-        centerLng = 13.405
+        centerLat = -34.6037
+        centerLng = -58.3816
       }
     }
 
@@ -409,7 +416,10 @@ export default function DashboardPage({
   }
 
   const handleResetFilters = () => {
-    const profileCoords = getCoordinatesForLocation(profile?.location)
+    const profileCoords =
+      typeof profile?.latitude === 'number' && typeof profile?.longitude === 'number'
+        ? { lat: profile.latitude, lon: profile.longitude }
+        : getCoordinatesForLocation(profile?.location)
     setFilters({
       locationQuery: '',
       centerLat: profileCoords?.lat,

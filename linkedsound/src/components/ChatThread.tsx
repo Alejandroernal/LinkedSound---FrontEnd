@@ -18,6 +18,7 @@ import {
 import type { Message, Conversation } from '../data/mockData'
 import ChatAudioPlayer from './ChatAudioPlayer'
 import { formatUserLocalTime } from '../utils/formatTime'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 const ALLOWED_AUDIO_EXT = ['.wav', '.mp3', '.flac', '.ogg']
 const ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png']
@@ -220,17 +221,14 @@ export default function ChatThread({
           style={{ cursor: 'pointer' }}
           title={`Ver perfil de ${conversation.name}`}
         >
-          {conversation.profileImage ? (
-            <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
-              <img
-                src={conversation.profileImage}
-                alt={conversation.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-              />
-            </div>
-          ) : (
-            <div className={`ls-avatar ${conversation.accent}`}>{conversation.avatar}</div>
-          )}
+          <div className={`ls-avatar ${conversation.accent} small`} style={{ overflow: 'hidden', padding: 0 }}>
+            <img
+              src={getProfileAvatarUrl(conversation.profileImage)}
+              alt={conversation.name}
+              onError={handleAvatarError}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+            />
+          </div>
           <div>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               {conversation.name}
@@ -428,29 +426,19 @@ export default function ChatThread({
             className={`ls-message-row ${message.sender === 'me' ? 'is-me' : 'is-them'}`}
           >
             {message.sender !== 'me' && (
-              conversation.profileImage ? (
-                <div
-                  className={`ls-avatar ${conversation.accent} small`}
-                  style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }}
-                  onClick={() => onInspectProfile?.()}
-                  title={`Ver perfil de ${conversation.name}`}
-                >
-                  <img
-                    src={conversation.profileImage}
-                    alt={conversation.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                  />
-                </div>
-              ) : (
-                <div
-                  className={`ls-avatar ${conversation.accent} small`}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => onInspectProfile?.()}
-                  title={`Ver perfil de ${conversation.name}`}
-                >
-                  {conversation.avatar}
-                </div>
-              )
+              <div
+                className={`ls-avatar ${conversation.accent} small`}
+                style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }}
+                onClick={() => onInspectProfile?.()}
+                title={`Ver perfil de ${conversation.name}`}
+              >
+                <img
+                  src={getProfileAvatarUrl(conversation.profileImage)}
+                  alt={conversation.name}
+                  onError={handleAvatarError}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                />
+              </div>
             )}
 
             <div

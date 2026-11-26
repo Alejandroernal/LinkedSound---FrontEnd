@@ -10,6 +10,7 @@ import type { Message, Conversation, ProfileCard, NewMatchItem } from '../data/m
 import type { AppPage, Profile, NotificationItem } from '../types'
 import { api } from '../services/api'
 import { formatUserLocalTime } from '../utils/formatTime'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 import {
   PiSparkleFill,
   PiChatCircleDotsBold,
@@ -119,7 +120,7 @@ export default function MessagesPage({
           role: m.role || 'Artista',
           location: m.location || 'No especificada',
           match: m.affinityPercent || '95%',
-          profileImage: m.profileImage || '',
+          profileImage: getProfileAvatarUrl(m.profileImage),
           accent: 'purple' as const,
           date: m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'Hoy',
         }))
@@ -142,7 +143,7 @@ export default function MessagesPage({
           tags: u.interestGenres || [],
           soundcloudUrl: u.soundcloudUrl || '',
           spotifyUrl: u.spotifyUrl || '',
-          profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+          profileImage: getProfileAvatarUrl(u.profileImage),
           match: '94%',
           isProfile: true,
           itemRole: 'Perfil',
@@ -260,7 +261,7 @@ export default function MessagesPage({
         nickname: activeConversation.name,
         role: activeConversation.role || 'Artista',
         location: activeConversation.location || 'No especificada',
-        profileImage: activeConversation.profileImage || activeConversation.avatar || '',
+        profileImage: getProfileAvatarUrl(activeConversation.profileImage),
         isProfile: true,
         itemRole: 'Perfil',
         description: '',
@@ -488,7 +489,12 @@ export default function MessagesPage({
                 <PiArrowLeftBold />
               </button>
               <div className={`ls-avatar ${selectedNewMatch.accent}`} style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden' }}>
-                <img src={selectedNewMatch.profileImage} alt={selectedNewMatch.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img
+                  src={getProfileAvatarUrl(selectedNewMatch.profileImage)}
+                  alt={selectedNewMatch.name}
+                  onError={handleAvatarError}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

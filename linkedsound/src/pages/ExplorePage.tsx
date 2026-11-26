@@ -32,6 +32,7 @@ import {
 import type { ProfileCard } from '../data/mockData'
 import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
 import { computeUserAffinity } from '../utils/affinity'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 type ExplorePageProps = {
   activePage?: AppPage
@@ -93,7 +94,7 @@ export default function ExplorePage({
               soundcloudUrl: u.soundcloudUrl || '',
               soundcloudHandle: u.soundcloudHandle || '',
               spotifyUrl: u.spotifyUrl || '',
-              profileImage: u.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80',
+              profileImage: getProfileAvatarUrl(u.profileImage),
               match: affinity.percentageFormatted,
               commonGenres: affinity.commonGenres,
               affinityReason: affinity.summary,
@@ -221,11 +222,18 @@ export default function ExplorePage({
           ownerNickname: res.event.ownerNickname || res.event.owner?.nickname || profile?.nickname || '',
           profileImage: res.event.profileImage || newEvent.profileImage,
           images: res.event.images || eventImages,
-          role: newEvent.role || 'Evento Live',
-          eventDate: eventItem.eventDate || '',
-          interestGenres: newEvent.interestGenres || [],
-          location: newEvent.location || '',
-          nickname: newEvent.nickname || '',
+          role: res.event.role || newEvent.role || 'Evento Live',
+          eventDate: res.event.eventDate || eventItem.eventDate || '',
+          eventTime: res.event.eventTime || eventItem.eventTime || '22:00',
+          interestGenres: res.event.interestGenres || newEvent.interestGenres || [],
+          location: res.event.location || newEvent.location || '',
+          country: res.event.country ?? newEvent.country,
+          province: res.event.province ?? newEvent.province,
+          city: res.event.city ?? newEvent.city,
+          streetAddress: res.event.streetAddress ?? newEvent.streetAddress,
+          latitude: res.event.latitude ?? newEvent.latitude,
+          longitude: res.event.longitude ?? newEvent.longitude,
+          nickname: res.event.nickname || newEvent.nickname || '',
           itemRole: 'Evento',
           isProfile: false,
         }
@@ -314,6 +322,17 @@ export default function ExplorePage({
               ? ({
                   ...c,
                   ...updatedEvent,
+                  role: res.event.role || updatedEvent.role,
+                  eventDate: res.event.eventDate || eventItem.eventDate,
+                  eventTime: res.event.eventTime || eventItem.eventTime,
+                  location: res.event.location || updatedEvent.location,
+                  country: res.event.country ?? updatedEvent.country,
+                  province: res.event.province ?? updatedEvent.province,
+                  city: res.event.city ?? updatedEvent.city,
+                  streetAddress: res.event.streetAddress ?? updatedEvent.streetAddress,
+                  latitude: res.event.latitude ?? updatedEvent.latitude,
+                  longitude: res.event.longitude ?? updatedEvent.longitude,
+                  interestGenres: res.event.interestGenres || updatedEvent.interestGenres,
                   profileImage: res.event.profileImage || updatedEvent.profileImage,
                   images: res.event.images || eventImages,
                   updatedAt: res.event.updatedAt,
@@ -645,8 +664,12 @@ export default function ExplorePage({
                     }
                   >
                     <div className="ls-card-visual">
-                      <img src={card.profileImage} alt={cardDisplayTitle} />
-                      <span className="ls-card-badge">
+                      <img
+                        src={isProfile ? getProfileAvatarUrl(card.profileImage) : card.profileImage}
+                        alt={cardDisplayTitle}
+                        onError={isProfile ? handleAvatarError : undefined}
+                      />
+                      <span className="ls-card-badge" title={isProfile ? (card.role ?? 'Perfil').toUpperCase() : 'EVENTO'}>
                         {isProfile ? (card.role ?? 'Perfil').toUpperCase() : 'EVENTO'}
                       </span>
                       {isProfile ? (
@@ -666,31 +689,24 @@ export default function ExplorePage({
                     <div className="ls-card-body">
                       <div className="ls-card-head">
                         <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                          <h3 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                          <h3
+                            title={cardDisplayTitle}
+                            style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}
+                          >
                             {cardDisplayTitle}
                           </h3>
                           {isProfile && fullName && card.nickname && fullName.toLowerCase() !== card.nickname.toLowerCase() && (
-                            <span className="ls-card-fullname-pill">
+                            <span className="ls-card-fullname-pill" title={fullName}>
                               {fullName}
                             </span>
                           )}
                           {!isProfile && (
                             <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                fontSize: '0.74rem',
-                                color: '#00e5ff',
-                                marginTop: '4px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
+                              className="ls-event-owner-chip"
                               title={`Creado por: ${card.owner || card.ownerNickname || 'Organizador'}`}
                             >
                               <PiUserCircleBold style={{ fontSize: '0.92rem', flexShrink: 0, color: '#00e5ff' }} />
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span className="ls-event-owner-chip-text">
                                 Creado por: <strong>{card.owner || card.ownerNickname || 'Organizador'}</strong>
                               </span>
                             </div>
@@ -734,7 +750,7 @@ export default function ExplorePage({
                             {(card.interestGenres ?? card.tags ?? [])
                               .slice(0, 3)
                               .map((tag) => (
-                                <span key={tag}>{tag}</span>
+                                <span key={tag} title={tag}>{tag}</span>
                               ))}
                           </div>
                         ) : (

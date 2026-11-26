@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Default profile avatar">
+  <defs>
+    <linearGradient id="lsBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#191636" />
+      <stop offset="55%" stop-color="#221947" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="lsRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#00e5ff" />
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" fill="url(#lsBg)" />
+  <circle cx="120" cy="120" r="108" fill="none" stroke="url(#lsRing)" stroke-opacity="0.28" stroke-width="3" />
+  <circle cx="120" cy="92" r="36" fill="url(#lsRing)" fill-opacity="0.88" />
+  <path d="M52 206 C56 164 84 144 120 144 C156 144 184 164 188 206 Z" fill="url(#lsRing)" fill-opacity="0.72" />
+</svg>

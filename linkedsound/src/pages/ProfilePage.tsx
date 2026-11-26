@@ -21,6 +21,7 @@ import type { AppPage, Profile, NotificationItem, SoundCloudTrack, ProfileCard }
 import { api } from '../services/api'
 import AudioSampleTrackUploader from '../components/AudioSampleTrackUploader'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 type ProfilePageProps = {
   activePage?: AppPage
@@ -41,19 +42,22 @@ type LocationSuggestion = {
   lat: number
   lon: number
   full: string
+  country?: string
+  province?: string
+  city?: string
 }
 
 const PRESET_LOCATIONS: LocationSuggestion[] = [
-  { label: 'Berlin, Germany', lat: 52.520, lon: 13.405, full: 'Berlin, Germany' },
-  { label: 'London, United Kingdom', lat: 51.507, lon: -0.127, full: 'London, England, United Kingdom' },
-  { label: 'New York, USA', lat: 40.712, lon: -74.006, full: 'New York, NY, United States' },
-  { label: 'Los Angeles, USA', lat: 34.052, lon: -118.243, full: 'Los Angeles, CA, United States' },
-  { label: 'Paris, France', lat: 48.856, lon: 2.352, full: 'Paris, Île-de-France, France' },
-  { label: 'Madrid, Spain', lat: 40.416, lon: -3.703, full: 'Madrid, Community of Madrid, Spain' },
-  { label: 'Buenos Aires, Argentina', lat: -34.603, lon: -58.381, full: 'Buenos Aires, Argentina' },
-  { label: 'Tokyo, Japan', lat: 35.676, lon: 139.650, full: 'Tokyo, Japan' },
-  { label: 'Amsterdam, Netherlands', lat: 52.367, lon: 4.904, full: 'Amsterdam, Netherlands' },
-  { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico' },
+  { label: 'Berlin, Germany', lat: 52.520, lon: 13.405, full: 'Berlin, Germany', country: 'Germany', province: 'Berlin', city: 'Berlin' },
+  { label: 'London, United Kingdom', lat: 51.507, lon: -0.127, full: 'London, England, United Kingdom', country: 'United Kingdom', province: 'England', city: 'London' },
+  { label: 'New York, USA', lat: 40.712, lon: -74.006, full: 'New York, NY, United States', country: 'United States', province: 'New York', city: 'New York' },
+  { label: 'Los Angeles, USA', lat: 34.052, lon: -118.243, full: 'Los Angeles, CA, United States', country: 'United States', province: 'California', city: 'Los Angeles' },
+  { label: 'Paris, France', lat: 48.856, lon: 2.352, full: 'Paris, Île-de-France, France', country: 'France', province: 'Île-de-France', city: 'Paris' },
+  { label: 'Madrid, Spain', lat: 40.416, lon: -3.703, full: 'Madrid, Community of Madrid, Spain', country: 'Spain', province: 'Madrid', city: 'Madrid' },
+  { label: 'Buenos Aires, Argentina', lat: -34.603, lon: -58.381, full: 'Buenos Aires, Argentina', country: 'Argentina', province: 'Buenos Aires', city: 'Buenos Aires' },
+  { label: 'Tokyo, Japan', lat: 35.676, lon: 139.650, full: 'Tokyo, Japan', country: 'Japan', province: 'Tokyo', city: 'Tokyo' },
+  { label: 'Amsterdam, Netherlands', lat: 52.367, lon: 4.904, full: 'Amsterdam, Netherlands', country: 'Netherlands', province: 'North Holland', city: 'Amsterdam' },
+  { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico', country: 'Mexico', province: 'CDMX', city: 'Mexico City' },
 ]
 
 const genreOptions = [
@@ -123,7 +127,7 @@ export default function ProfilePage({
     tags: profile.interestGenres || profile.tags || [],
     soundcloudUrl: profile.soundcloudUrl || profile.soundcloud || '',
     spotifyUrl: profile.spotifyUrl || profile.spotify || '',
-    profileImage: profile.profileImage || '',
+    profileImage: getProfileAvatarUrl(profile.profileImage),
     tracks: profile.tracks || [],
     match: '100% (Tu perfil)',
     isProfile: true,
@@ -171,10 +175,12 @@ export default function ProfilePage({
   const handleSaveEdit = async () => {
     const errors: Record<string, boolean> = {}
 
+    const trimmedEmail = profile.email?.trim().toLowerCase() || ''
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!profile.firstName?.trim()) errors.firstName = true
     if (!profile.lastName?.trim()) errors.lastName = true
     if (!profile.nickname?.trim()) errors.nickname = true
-    if (!profile.email?.trim()) errors.email = true
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) errors.email = true
 
     // La contraseña solo es requerida si el usuario ingresa una nueva para modificarla
     if (profile.password && profile.password.trim().length > 0 && profile.password.trim().length < 6) {
@@ -204,18 +210,30 @@ export default function ProfilePage({
       errors.soundcloudUrl = true
     }
 
+    const normalizedTracks = (profile.tracks || []).map((t) => {
+      const rawTrackSc = (t.soundcloudLink || '').trim()
+      if (rawTrackSc && !isValidPlatformUrl('soundcloud', rawTrackSc)) {
+        errors.trackDestacado = true
+      }
+      return {
+        ...t,
+        ...(rawTrackSc ? { soundcloudLink: normalizeUrl(rawTrackSc) } : {}),
+      }
+    })
+
     if (Object.keys(errors).length > 0) {
       setInvalidFields(errors)
       const fieldLabels: Record<string, string> = {
         firstName: 'Nombre (First Name)',
         lastName: 'Apellido (Last Name)',
         nickname: 'NickName / Nombre Artistico',
-        email: 'Correo electronico',
+        email: 'Correo electronico valido',
         password: 'Contrasena (minimo 6 caracteres)',
         location: 'Ubicacion',
         description: 'Descripcion (maximo 150 caracteres)',
         spotifyUrl: 'Enlace de Spotify (debe contener spotify.com)',
         soundcloudUrl: 'Enlace de SoundCloud (debe contener soundcloud.com)',
+        trackDestacado: 'Enlace de SoundCloud del track (debe contener soundcloud.com)',
       }
       const missing = Object.keys(errors).map((k) => fieldLabels[k] || k).join(', ')
       setSaveErrorMessage(`Por favor completa o corrige los siguientes campos antes de guardar: ${missing}.`)
@@ -230,13 +248,20 @@ export default function ProfilePage({
         firstName: profile.firstName?.trim(),
         lastName: profile.lastName?.trim(),
         nickname: profile.nickname?.trim(),
+        email: trimmedEmail,
         ...(profile.password?.trim() ? { password: profile.password.trim() } : {}),
         role: profile.role || profile.category || 'Artista',
         accountRole: profile.accountRole || 'Usuario',
         location: locTrim,
+        country: profile.country || undefined,
+        province: profile.province || undefined,
+        city: profile.city || undefined,
+        streetAddress: profile.streetAddress || undefined,
+        latitude: typeof profile.latitude === 'number' ? profile.latitude : undefined,
+        longitude: typeof profile.longitude === 'number' ? profile.longitude : undefined,
         description: descTrimmed,
         interestGenres: profile.interestGenres || [],
-        tracks: profile.tracks || [],
+        tracks: normalizedTracks,
         soundcloudUrl: normSoundcloud,
         spotifyUrl: normSpotify,
         profileImage: profile.profileImage ?? null,
@@ -252,6 +277,7 @@ export default function ProfilePage({
         if (u.firstName) onProfileChange('firstName', u.firstName)
         if (u.lastName) onProfileChange('lastName', u.lastName)
         if (u.nickname) onProfileChange('nickname', u.nickname)
+        if (u.email) onProfileChange('email', u.email)
         if (u.role) {
           onProfileChange('role', u.role)
           onProfileChange('category', u.role)
@@ -260,17 +286,26 @@ export default function ProfilePage({
           onProfileChange('accountRole', u.accountRole)
         }
         if (u.location) onProfileChange('location', u.location)
+        if (u.country !== undefined) onProfileChange('country', u.country || '')
+        if (u.province !== undefined) onProfileChange('province', u.province || '')
+        if (u.city !== undefined) onProfileChange('city', u.city || '')
+        if (u.streetAddress !== undefined) onProfileChange('streetAddress', u.streetAddress || '')
+        if (typeof u.latitude === 'number') onProfileChange('latitude', u.latitude)
+        if (typeof u.longitude === 'number') onProfileChange('longitude', u.longitude)
         if (u.description !== undefined) onProfileChange('description', u.description || '')
         if (u.profileImage !== undefined) onProfileChange('profileImage', u.profileImage || '')
         if (Array.isArray(u.interestGenres)) onProfileChange('interestGenres', u.interestGenres)
         if (Array.isArray(u.tracks)) {
           onProfileChange('tracks', u.tracks)
         }
+        onProfileChange('password', '')
         onProfileChange('spotifyUrl', u.spotifyUrl ?? normSpotify)
         onProfileChange('spotify', u.spotifyUrl ?? normSpotify)
         onProfileChange('soundcloudUrl', u.soundcloudUrl ?? normSoundcloud)
         onProfileChange('soundcloud', u.soundcloudUrl ?? normSoundcloud)
       } else {
+        onProfileChange('email', trimmedEmail)
+        onProfileChange('password', '')
         onProfileChange('spotifyUrl', normSpotify)
         onProfileChange('spotify', normSpotify)
         onProfileChange('soundcloudUrl', normSoundcloud)
@@ -335,6 +370,13 @@ export default function ProfilePage({
         </small>
       )
     }
+    if (fieldName === 'email') {
+      return (
+        <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+          Ingresa un correo electrónico válido (ejemplo: usuario@dominio.com).
+        </small>
+      )
+    }
     if (fieldName === 'password') {
       return (
         <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
@@ -372,6 +414,8 @@ export default function ProfilePage({
       profile.role !== initialProfileSnapshot.role ||
       profile.accountRole !== initialProfileSnapshot.accountRole ||
       profile.location !== initialProfileSnapshot.location ||
+      profile.latitude !== initialProfileSnapshot.latitude ||
+      profile.longitude !== initialProfileSnapshot.longitude ||
       profile.description !== initialProfileSnapshot.description ||
       profile.spotifyUrl !== initialProfileSnapshot.spotifyUrl ||
       profile.soundcloudUrl !== initialProfileSnapshot.soundcloudUrl ||
@@ -440,21 +484,28 @@ export default function ProfilePage({
 
   const reverseGeocode = async (lat: number, lon: number) => {
     setIsLocating(true)
+    onProfileChange('latitude', lat)
+    onProfileChange('longitude', lon)
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`
       )
       const data = await response.json()
+      const addr = data.address || {}
       const city =
-        data.address?.city ||
-        data.address?.town ||
-        data.address?.village ||
-        data.address?.municipality ||
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
         ''
-      const country = data.address?.country || ''
+      const province = addr.state || addr.province || addr.region || ''
+      const country = addr.country || ''
       const label = [city, country].filter(Boolean).join(', ')
       const finalLoc = label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`
       onProfileChange('location', finalLoc)
+      onProfileChange('city', city)
+      onProfileChange('province', province)
+      onProfileChange('country', country)
       setVerifiedLocation(finalLoc)
       setIsLocationVerified(true)
       if (invalidFields.location) {
@@ -497,18 +548,23 @@ export default function ProfilePage({
       const data = await response.json()
       if (Array.isArray(data) && data.length > 0) {
         const results: LocationSuggestion[] = data.map((item: any) => {
+          const addr = item.address || {}
           const city =
-            item.address?.city ||
-            item.address?.town ||
-            item.address?.village ||
-            item.address?.municipality ||
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.municipality ||
             item.display_name.split(',')[0]
-          const country = item.address?.country || ''
+          const province = addr.state || addr.province || addr.region || ''
+          const country = addr.country || ''
           return {
             label: [city, country].filter(Boolean).join(', '),
             lat: parseFloat(item.lat),
             lon: parseFloat(item.lon),
             full: item.display_name,
+            country,
+            province,
+            city,
           }
         })
         setSuggestions(results)
@@ -536,6 +592,11 @@ export default function ProfilePage({
 
   const handleSelectLocation = (loc: LocationSuggestion) => {
     onProfileChange('location', loc.label)
+    onProfileChange('latitude', loc.lat)
+    onProfileChange('longitude', loc.lon)
+    if (loc.country !== undefined) onProfileChange('country', loc.country)
+    if (loc.province !== undefined) onProfileChange('province', loc.province)
+    if (loc.city !== undefined) onProfileChange('city', loc.city)
     setVerifiedLocation(loc.label)
     setIsLocationVerified(true)
     setShowSuggestions(false)
@@ -632,13 +693,28 @@ export default function ProfilePage({
     let timer: ReturnType<typeof setTimeout> | null = null
 
     try {
+      const hasCoords =
+        typeof profile.longitude === 'number' &&
+        typeof profile.latitude === 'number' &&
+        Number.isFinite(profile.longitude) &&
+        Number.isFinite(profile.latitude)
+      const initialCenter: [number, number] = hasCoords
+        ? [profile.longitude as number, profile.latitude as number]
+        : [-58.3816, -34.6037]
+
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
         style: CARTO_DARK_MAP_STYLE,
-        center: [13.405, 52.52],
-        zoom: 10,
+        center: initialCenter,
+        zoom: hasCoords ? 12 : 10,
         renderWorldCopies: false,
       })
+
+      if (hasCoords) {
+        markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
+          .setLngLat(initialCenter)
+          .addTo(map)
+      }
 
       map.addControl(new maplibregl.FullscreenControl())
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
@@ -737,18 +813,12 @@ export default function ProfilePage({
                       transition: 'all 0.25s ease',
                     }}
                   >
-                    {profile.profileImage ? (
-                      <img
-                        src={profile.profileImage}
-                        alt={profile.nickname}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
-                      />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #a855f7, #6366f1)', gap: '4px' }}>
-                        <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{profile.nickname.slice(0, 2).toUpperCase()}</span>
-                        <PiCameraBold style={{ fontSize: '1.1rem', color: 'rgba(255, 255, 255, 0.9)' }} />
-                      </div>
-                    )}
+                    <img
+                      src={getProfileAvatarUrl(profile.profileImage)}
+                      alt={profile.nickname}
+                      onError={handleAvatarError}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+                    />
 
                     {/* Overlay sutil solo al pasar el cursor por el contorno circular */}
                     <div
@@ -801,13 +871,13 @@ export default function ProfilePage({
                   )}
                 </div>
               ) : (
-                profile.profileImage ? (
-                  <img src={profile.profileImage} alt={profile.nickname} className="ls-avatar huge" style={{ objectFit: 'cover', borderRadius: '50%' }} />
-                ) : (
-                  <div className="ls-avatar huge">
-                    {profile.nickname.slice(0, 2).toUpperCase()}
-                  </div>
-                )
+                <img
+                  src={getProfileAvatarUrl(profile.profileImage)}
+                  alt={profile.nickname}
+                  onError={handleAvatarError}
+                  className="ls-avatar huge"
+                  style={{ objectFit: 'cover', borderRadius: '50%' }}
+                />
               )}
               <div>
                 <span className="ls-studio-tag">{profile.role || profile.category || 'Productor y Artista'}</span>
@@ -856,7 +926,7 @@ export default function ProfilePage({
           <div className="ls-profile-form-grid">
             {/* 1. First Name | Last Name */}
             <div className="ls-profile-field">
-              <label>First Name</label>
+              <label>First Name <span className="ls-required-asterisk">*</span></label>
               {isEditing ? (
                 <>
                   <input
@@ -872,7 +942,7 @@ export default function ProfilePage({
             </div>
 
             <div className="ls-profile-field">
-              <label>Last Name</label>
+              <label>Last Name <span className="ls-required-asterisk">*</span></label>
               {isEditing ? (
                 <>
                   <input
@@ -889,7 +959,7 @@ export default function ProfilePage({
 
             {/* 2. NickName | Rol */}
             <div className="ls-profile-field">
-              <label>NickName / Artistic Name</label>
+              <label>NickName / Artistic Name <span className="ls-required-asterisk">*</span></label>
               {isEditing ? (
                 <>
                   <input
@@ -905,7 +975,7 @@ export default function ProfilePage({
             </div>
 
             <div className="ls-profile-field">
-              <label>Rol (Especialidad Musical)</label>
+              <label>Rol (Especialidad Musical) <span className="ls-required-asterisk">*</span></label>
               {isEditing ? (
                 <select
                   value={profile.role || profile.category || 'Productor y Artista'}
@@ -985,7 +1055,7 @@ export default function ProfilePage({
 
             {/* 4. Location / Ubicación */}
             <div className="ls-profile-field wide-field ls-location-group">
-              <label>Location / Ubicación</label>
+              <label>Location / Ubicación <span className="ls-required-asterisk">*</span></label>
               {isEditing ? (
                 <div>
                   <div className="ls-location-input-wrapper" style={{ position: 'relative' }}>
@@ -1264,7 +1334,7 @@ export default function ProfilePage({
 
             {/* 6. Email | Password */}
             <div className="ls-profile-field">
-              <label>Email</label>
+              <label>Email <span className="ls-required-asterisk">*</span></label>
               {isEditing ? (
                 <>
                   <input
@@ -1304,13 +1374,17 @@ export default function ProfilePage({
                 <FaSpotify style={{ color: '#1DB954' }} /> Spotify
               </label>
               {isEditing ? (
-                <input
-                  value={profile.spotifyUrl ?? profile.spotify ?? ''}
-                  onChange={(event) => {
-                    handleChange('spotifyUrl', event.target.value)
-                    handleChange('spotify', event.target.value)
-                  }}
-                />
+                <>
+                  <input
+                    value={profile.spotifyUrl ?? profile.spotify ?? ''}
+                    onChange={(event) => {
+                      handleChange('spotifyUrl', event.target.value)
+                      handleChange('spotify', event.target.value)
+                    }}
+                    style={getInputStyle('spotifyUrl')}
+                  />
+                  {renderFieldError('spotifyUrl')}
+                </>
               ) : getSpotifyUrl() && getSpotifyUrl() !== 'No vinculado' ? (
                 <a
                   href={getSpotifyUrl()}
@@ -1332,13 +1406,17 @@ export default function ProfilePage({
                 <FaSoundcloud style={{ color: '#FF5500' }} /> SoundCloud URL
               </label>
               {isEditing ? (
-                <input
-                  value={profile.soundcloudUrl ?? profile.soundcloud ?? ''}
-                  onChange={(event) => {
-                    handleChange('soundcloudUrl', event.target.value)
-                    handleChange('soundcloud', event.target.value)
-                  }}
-                />
+                <>
+                  <input
+                    value={profile.soundcloudUrl ?? profile.soundcloud ?? ''}
+                    onChange={(event) => {
+                      handleChange('soundcloudUrl', event.target.value)
+                      handleChange('soundcloud', event.target.value)
+                    }}
+                    style={getInputStyle('soundcloudUrl')}
+                  />
+                  {renderFieldError('soundcloudUrl')}
+                </>
               ) : getSoundcloudUrl() && getSoundcloudUrl() !== 'No vinculado' ? (
                 <a
                   href={getSoundcloudUrl()}

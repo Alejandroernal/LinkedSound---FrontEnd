@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { CARTO_DARK_MAP_STYLE } from '../config/mapConfig'
-import GoogleMapsRadiusPicker from './GoogleMapsRadiusPicker'
 import {
   PiMapPinBold,
   PiMusicNotesFill,
@@ -105,6 +104,39 @@ const availableGenres = [
   'EBM',
 ]
 
+const RADAR_CIRCLE_SOURCE_ID = 'ls-radar-radius-source'
+const RADAR_CIRCLE_FILL_ID = 'ls-radar-radius-fill'
+const RADAR_CIRCLE_LINE_ID = 'ls-radar-radius-line'
+
+function buildRadiusCircleGeoJSON(lng: number, lat: number, radiusKm: number) {
+  const points = 64
+  const coords: [number, number][] = []
+  const earthRadiusKm = 6371
+  const latRad = (lat * Math.PI) / 180
+  const dLat = (radiusKm / earthRadiusKm) * (180 / Math.PI)
+  const cosLat = Math.max(Math.cos(latRad), 0.01)
+  const dLng = dLat / cosLat
+
+  for (let i = 0; i <= points; i++) {
+    const theta = (i / points) * Math.PI * 2
+    coords.push([lng + dLng * Math.cos(theta), lat + dLat * Math.sin(theta)])
+  }
+
+  return {
+    type: 'FeatureCollection' as const,
+    features: [
+      {
+        type: 'Feature' as const,
+        properties: {},
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [coords],
+        },
+      },
+    ],
+  }
+}
+
 export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFiltersProps) {
   const currentFilters: RadarFilterState = filters ?? {
     locationQuery: '',
@@ -120,12 +152,13 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
   const [showCategoryPopover, setShowCategoryPopover] = useState(false)
   const [showGenrePopover, setShowGenrePopover] = useState(false)
   const [genreSearch, setGenreSearch] = useState('')
-  const [mapEngine, setMapEngine] = useState<'google' | 'maplibre'>('maplibre')
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
+  const latestFiltersRef = useRef<RadarFilterState>(currentFilters)
+  latestFiltersRef.current = currentFilters
   const popoverCategoryRef = useRef<HTMLDivElement | null>(null)
   const popoverGenreRef = useRef<HTMLDivElement | null>(null)
 
@@ -167,11 +200,51 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
     }
   }, [showCategoryPopover, showGenrePopover])
 
-  // Inicializar mapa de localización en el Radar (redireccionando a la ubicación actual sin aplicar filtro a las tarjetas)
+  const syncRadarCircleOnMap = (map: maplibregl.Map, lng?: number, lat?: number, radiusKm?: number) => {
+    if (!map.isStyleLoaded()) return
+    const emptyGeoJSON = { type: 'FeatureCollection' as const, features: [] }
+    const hasCircle =
+      typeof lng === 'number' &&
+      typeof lat === 'number' &&
+      typeof radiusKm === 'number' &&
+      radiusKm < 500
+    const data = hasCircle ? buildRadiusCircleGeoJSON(lng, lat, radiusKm) : emptyGeoJSON
+
+    const existing = map.getSource(RADAR_CIRCLE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined
+    if (existing) {
+      existing.setData(data)
+    } else {
+      map.addSource(RADAR_CIRCLE_SOURCE_ID, {
+        type: 'geojson',
+        data,
+      })
+      map.addLayer({
+        id: RADAR_CIRCLE_FILL_ID,
+        type: 'fill',
+        source: RADAR_CIRCLE_SOURCE_ID,
+        paint: {
+          'fill-color': '#a855f7',
+          'fill-opacity': 0.16,
+        },
+      })
+      map.addLayer({
+        id: RADAR_CIRCLE_LINE_ID,
+        type: 'line',
+        source: RADAR_CIRCLE_SOURCE_ID,
+        paint: {
+          'line-color': '#c084fc',
+          'line-width': 2,
+          'line-opacity': 0.75,
+        },
+      })
+    }
+  }
+
+  // Inicializar mapa integrado de localización en el Radar
   useEffect(() => {
     if (!mapContainerRef.current) return
 
-    let initialCenter: [number, number] = [13.405, 52.52] // Default Berlin
+    let initialCenter: [number, number] = [-58.3816, -34.6037]
     if (currentFilters.centerLng !== undefined && currentFilters.centerLat !== undefined) {
       initialCenter = [currentFilters.centerLng, currentFilters.centerLat]
     }
@@ -184,7 +257,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
         container: mapContainerRef.current,
         style: CARTO_DARK_MAP_STYLE,
         center: initialCenter,
-        zoom: 11,
+        zoom: 10,
         renderWorldCopies: false,
       })
 
@@ -195,19 +268,34 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
       markerRef.current = marker
       mapRef.current = map
 
-      // Redirección automática a la ubicación actual del usuario
-      if ('geolocation' in navigator) {
+      map.on('load', () => {
+        const latest = latestFiltersRef.current
+        syncRadarCircleOnMap(
+          map,
+          latest.centerLng ?? initialCenter[0],
+          latest.centerLat ?? initialCenter[1],
+          latest.radius
+        )
+      })
+
+      // Redirección automática a la ubicación actual si aún no hay centro definido
+      if (
+        latestFiltersRef.current.centerLat === undefined &&
+        latestFiltersRef.current.centerLng === undefined &&
+        'geolocation' in navigator
+      ) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const { latitude, longitude } = position.coords
             if (mapRef.current) {
-              mapRef.current.flyTo({ center: [longitude, latitude], zoom: 12 })
+              mapRef.current.flyTo({ center: [longitude, latitude], zoom: 11 })
               if (markerRef.current) {
                 markerRef.current.setLngLat([longitude, latitude])
               }
+              syncRadarCircleOnMap(mapRef.current, longitude, latitude, latestFiltersRef.current.radius)
             }
             onChangeFilters?.({
-              ...currentFilters,
+              ...latestFiltersRef.current,
               centerLat: latitude,
               centerLng: longitude,
             })
@@ -225,7 +313,8 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
         if (markerRef.current) {
           markerRef.current.setLngLat([lng, lat])
         }
-        map.flyTo({ center: [lng, lat], zoom: 12 })
+        map.flyTo({ center: [lng, lat], zoom: 11 })
+        syncRadarCircleOnMap(map, lng, lat, latestFiltersRef.current.radius)
         reverseGeocode(lat, lng)
       })
     } catch (err) {
@@ -250,11 +339,22 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
     }
   }, [])
 
-  // Redireccionar el mapa cuando el usuario aplique algún filtro de ubicación
+  // Redireccionar el mapa y actualizar círculo de radio cuando cambian centro o radio
   useEffect(() => {
-    if (mapRef.current && currentFilters.centerLat !== undefined && currentFilters.centerLng !== undefined) {
+    if (!mapRef.current) return
+    if (currentFilters.centerLat !== undefined && currentFilters.centerLng !== undefined) {
       const coords: [number, number] = [currentFilters.centerLng, currentFilters.centerLat]
-      mapRef.current.flyTo({ center: coords, zoom: 12 })
+      const targetZoom =
+        currentFilters.radius >= 500
+          ? 10
+          : currentFilters.radius >= 200
+            ? 6
+            : currentFilters.radius >= 80
+              ? 8
+              : currentFilters.radius >= 25
+                ? 9
+                : 11
+      mapRef.current.flyTo({ center: coords, zoom: targetZoom })
       if (markerRef.current) {
         markerRef.current.setLngLat(coords)
       } else {
@@ -262,8 +362,9 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
           .setLngLat(coords)
           .addTo(mapRef.current)
       }
+      syncRadarCircleOnMap(mapRef.current, currentFilters.centerLng, currentFilters.centerLat, currentFilters.radius)
     }
-  }, [currentFilters.centerLat, currentFilters.centerLng])
+  }, [currentFilters.centerLat, currentFilters.centerLng, currentFilters.radius])
 
   // Geocodificación inversa tras clic en el mapa
   const reverseGeocode = async (lat: number, lon: number) => {
@@ -306,7 +407,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
       }
 
       onChangeFilters?.({
-        ...currentFilters,
+        ...latestFiltersRef.current,
         locationQuery: label,
         centerLat: lat,
         centerLng: lon,
@@ -314,7 +415,7 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
     } catch {
       const fallbackLabel = getNearestPlaceName(lat, lon)
       onChangeFilters?.({
-        ...currentFilters,
+        ...latestFiltersRef.current,
         locationQuery: fallbackLabel,
         centerLat: lat,
         centerLng: lon,
@@ -577,83 +678,22 @@ export function RadarFilters({ filters, onChangeFilters, onReset }: RadarFilters
         </div>
 
 
-        {/* Selector de Motor de Mapas: Google Maps Platform / MapLibre GL */}
+        {/* Mapa interactivo integrado del Radar */}
         <div style={{ marginTop: '10px' }}>
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
-            <button
-              type="button"
-              onClick={() => setMapEngine('google')}
-              style={{
-                flex: 1,
-                padding: '5px 8px',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                borderRadius: '6px',
-                border: mapEngine === 'google' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
-                background: mapEngine === 'google' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.03)',
-                color: mapEngine === 'google' ? '#c084fc' : 'rgba(255,255,255,0.6)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              Google Maps Platform
-            </button>
-            <button
-              type="button"
-              onClick={() => setMapEngine('maplibre')}
-              style={{
-                flex: 1,
-                padding: '5px 8px',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                borderRadius: '6px',
-                border: mapEngine === 'maplibre' ? '1px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
-                background: mapEngine === 'maplibre' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255,255,255,0.03)',
-                color: mapEngine === 'maplibre' ? '#c084fc' : 'rgba(255,255,255,0.6)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              MapLibre GL
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#c084fc', marginBottom: '4px' }}>
+            <PiMapPinBold />
+            <span>Haz clic en el mapa para fijar el centro del radar</span>
           </div>
-
-          {mapEngine === 'google' ? (
-            <div style={{ marginBottom: '10px' }}>
-              <GoogleMapsRadiusPicker
-                centerLat={currentFilters.centerLat}
-                centerLng={currentFilters.centerLng}
-                radiusKm={currentFilters.radius}
-                onLocationChange={(lat, lng, address) => {
-                  updateMapPosition(lat, lng)
-                  onChangeFilters?.({
-                    ...currentFilters,
-                    centerLat: lat,
-                    centerLng: lng,
-                    locationQuery: address || currentFilters.locationQuery,
-                  })
-                }}
-                onRadiusChange={(r) => handleRadiusChange(r)}
-              />
-            </div>
-          ) : (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#c084fc', marginBottom: '3px' }}>
-                <PiMapPinBold />
-                <span>Haz clic en el mapa para fijar el centro del radar</span>
-              </div>
-              <div
-                ref={mapContainerRef}
-                style={{
-                  width: '100%',
-                  height: '105px',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  border: '1px solid rgba(168, 85, 247, 0.3)',
-                }}
-              />
-            </div>
-          )}
+          <div
+            ref={mapContainerRef}
+            style={{
+              width: '100%',
+              height: '145px',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+            }}
+          />
         </div>
       </div>
 

@@ -93,7 +93,7 @@ export default function AdminPage({
           owner: ev.owner || 'Organizador',
           location: ev.location || 'No especificada',
           genres: ev.interestGenres || [],
-          status: ev.status === 'Active' ? 'Active' : 'Under Review',
+          status: ev.status === 'Active' ? 'Active' : ev.status === 'Hidden' ? 'Hidden' : 'Under Review',
           createdDate: ev.eventDate || '2026-11-01',
           views: 120,
           description: ev.description || '',
@@ -309,48 +309,80 @@ export default function AdminPage({
   }
 
   // ── Handlers Usuarios ──
-  const handleSaveUserStatus = (updated: UserProfile) => {
+  const handleSaveUserStatus = async (updated: UserProfile) => {
     if ((updated.status === 'Suspended' || updated.status === 'Banned') && !updated.statusJustification?.trim()) {
       setUserStatusError('La justificación de la suspensión o sanción es obligatoria.')
       setValidationModalMessage('La justificación de la suspensión o sanción es obligatoria. Por favor ingresa el motivo antes de proceder.')
       return
     }
+    if (!updated.id) return
     setUserStatusError('')
 
-    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
-
-    const statusLabel = updated.status === 'Active' ? 'Activo' : updated.status === 'Suspended' ? 'Suspendido' : 'Baneado'
+    const targetStatus = updated.status || 'Active'
     const motive = updated.statusJustification?.trim() || 'Modificación de estado administrativa.'
 
-    // Registrar en Log de Auditoría
-    logAdminAction(`Cambió estado de cuenta del usuario "${updated.nickname}" a ${statusLabel}. Motivo: "${motive}"`, 'Perfil')
+    try {
+      const res = await api.users.updateStatus(updated.id, {
+        status: targetStatus,
+        justification: motive,
+      })
 
-    // Si el estado es Suspendido o Baneado, notificar al usuario con la justificación
-    if (updated.status === 'Suspended' || updated.status === 'Banned') {
+      if (!res.success) {
+        setValidationModalMessage(res.message || 'No se pudo actualizar el estado del usuario en el servidor.')
+        return
+      }
+
+      setUsers(prev => prev.map(u => u.id === updated.id ? { ...updated, status: (res.user?.status as any) || targetStatus } : u))
+
+      const statusLabel = targetStatus === 'Active' ? 'Activo' : targetStatus === 'Suspended' ? 'Suspendido' : 'Baneado'
+
+      // Refrescar log de auditoría desde el backend
+      api.activity.getAll().then((actRes) => {
+        if (actRes.success && Array.isArray(actRes.activities)) {
+          setActivities(actRes.activities)
+        }
+      }).catch(() => {})
+
+      // Si el estado es Suspendido o Baneado, notificar visualmente al administrador
+      if (targetStatus === 'Suspended' || targetStatus === 'Banned') {
+        setNotificationToast({
+          message: `Tu cuenta ha cambiado a estado "${statusLabel}". Motivo registrado: "${motive}"`,
+          targetUser: updated.nickname,
+        })
+        setTimeout(() => {
+          setNotificationToast(null)
+        }, 6000)
+      }
+
+      setEditingUser(null)
+      setUserStatusError('')
+    } catch (err: any) {
+      setValidationModalMessage(err?.message || 'Error de conexión al actualizar el estado del usuario.')
+    }
+  }
+
+  const handleTriggerPasswordReset = async (user: UserProfile) => {
+    if (!user.email) {
+      setValidationModalMessage('El usuario no tiene un correo electrónico registrado.')
+      return
+    }
+    try {
+      const res = await api.auth.forgotPassword(user.email)
+      if (!res.success) {
+        setValidationModalMessage(res.message || 'No se pudo enviar el correo de restablecimiento.')
+        return
+      }
+      logAdminAction(`Disparó código de restablecimiento de contraseña por email para el usuario "${user.nickname}" (${user.email})`, 'Perfil')
       setNotificationToast({
-        message: `Tu cuenta ha cambiado a estado "${statusLabel}". Motivo registrado: "${motive}"`,
-        targetUser: updated.nickname,
+        message: `Se ha enviado un correo electrónico a ${user.email} con el código seguro para restablecer su contraseña.`,
+        targetUser: user.nickname,
       })
       setTimeout(() => {
         setNotificationToast(null)
       }, 6000)
+    } catch (err: any) {
+      setValidationModalMessage(err?.message || 'Error al solicitar el restablecimiento de contraseña.')
     }
-
-    setEditingUser(null)
-    setUserStatusError('')
-  }
-
-  const handleTriggerPasswordReset = (user: UserProfile) => {
-    // Registrar en Log de Auditoría
-    logAdminAction(`Disparó enlace de restablecimiento de contraseña por email para el usuario "${user.nickname}" (${user.email})`, 'Perfil')
-
-    setNotificationToast({
-      message: `Se ha enviado un correo electrónico a ${user.email} con el enlace seguro para restablecer su contraseña.`,
-      targetUser: user.nickname,
-    })
-    setTimeout(() => {
-      setNotificationToast(null)
-    }, 6000)
   }
 
   const handleOpenUserReportsModal = (user: UserProfile) => {
@@ -397,28 +429,47 @@ export default function AdminPage({
     }, 6000)
   }
 
-  const handleToggleExplorerStatus = (id: string) => {
-    let targetItem: ExplorerItem | undefined
-    setExplorerItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const nextStatus = item.status === 'Active' ? 'Hidden' : 'Active'
-        targetItem = { ...item, status: nextStatus }
-        return targetItem
-      }
-      return item
-    }))
+  const handleToggleExplorerStatus = async (id: string) => {
+    const currentItem = explorerItems.find(item => item.id === id)
+    if (!currentItem) return
 
-    if (targetItem) {
-      const statusLabel = targetItem.status === 'Active' ? 'Activo' : 'Oculto'
-      logAdminAction(`Cambió visibilidad del evento "${targetItem.title}" a estado ${statusLabel}`, 'Explorer')
+    const nextStatus: ExplorerItem['status'] = currentItem.status === 'Active' ? 'Hidden' : 'Active'
+    try {
+      const res = await api.events.updateStatus(id, nextStatus)
+      if (!res.success) {
+        setValidationModalMessage(res.message || 'No se pudo actualizar la visibilidad del evento en el servidor.')
+        return
+      }
+
+      setExplorerItems(prev => prev.map(item => (item.id === id ? { ...item, status: nextStatus } : item)))
+      api.activity.getAll().then((actRes) => {
+        if (actRes.success && Array.isArray(actRes.activities)) {
+          setActivities(actRes.activities)
+        }
+      }).catch(() => {})
+    } catch (err: any) {
+      setValidationModalMessage(err?.message || 'Error de conexión al actualizar la visibilidad del evento.')
     }
   }
 
-  const handleSaveExplorerItem = (updated: ExplorerItem) => {
-    setExplorerItems(prev => prev.map(item => item.id === updated.id ? updated : item))
-    const statusLabel = updated.status === 'Active' ? 'Activo' : updated.status === 'Under Review' ? 'En revisión' : 'Oculto'
-    logAdminAction(`Actualizó estado del evento "${updated.title}" a ${statusLabel}`, 'Explorer')
-    setEditingExplorerItem(null)
+  const handleSaveExplorerItem = async (updated: ExplorerItem) => {
+    try {
+      const res = await api.events.updateStatus(updated.id, updated.status)
+      if (!res.success) {
+        setValidationModalMessage(res.message || 'No se pudo actualizar el estado del evento en el servidor.')
+        return
+      }
+
+      setExplorerItems(prev => prev.map(item => item.id === updated.id ? updated : item))
+      api.activity.getAll().then((actRes) => {
+        if (actRes.success && Array.isArray(actRes.activities)) {
+          setActivities(actRes.activities)
+        }
+      }).catch(() => {})
+      setEditingExplorerItem(null)
+    } catch (err: any) {
+      setValidationModalMessage(err?.message || 'Error de conexión al actualizar el estado del evento.')
+    }
   }
 
   const handleSignOut = () => {
@@ -957,9 +1008,20 @@ export default function AdminPage({
                     {paginatedExplorerItems.map(item => (
                       <tr key={item.id}>
                         <td className="ls-admin-table-bold-cell">
-                          <div>
-                            <div>{item.title}</div>
-                            <small className="ls-admin-table-subtext">{item.genres.join(', ')}</small>
+                          <div style={{ maxWidth: '240px', minWidth: 0 }}>
+                            <div
+                              title={item.title}
+                              style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            >
+                              {item.title}
+                            </div>
+                            <small
+                              className="ls-admin-table-subtext"
+                              title={item.genres.join(', ')}
+                              style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            >
+                              {item.genres.join(', ')}
+                            </small>
                           </div>
                         </td>
                         <td className="ls-admin-table-owner-cell">{item.owner}</td>
@@ -1215,7 +1277,7 @@ export default function AdminPage({
               {/* Justificación obligatoria en caso de Suspensión o Ban */}
               {(editingUser.status === 'Suspended' || editingUser.status === 'Banned') && (
                 <label className="ls-admin-form-label span-2 bold-label">
-                  Justificación de la Sanción (Obligatorio - Se notificará al usuario):
+                  Justificación de la Sanción <span className="ls-required-asterisk">*</span> (Obligatorio - Se notificará al usuario):
                   <textarea
                     placeholder="Indica el motivo detallado de la suspensión o ban..."
                     value={editingUser.statusJustification ?? ''}
@@ -1733,7 +1795,7 @@ export default function AdminPage({
               </div>
 
               <label className="ls-admin-form-label bold-label">
-                Comentario de resolución del Administrador:
+                Comentario de resolución del Administrador <span className="ls-required-asterisk">*</span>:
                 <textarea
                   placeholder="Ej: Se ha revisado el caso y sancionado al usuario acorde a los términos de la plataforma."
                   value={resolveComment}
@@ -1823,7 +1885,7 @@ export default function AdminPage({
               </div>
 
               <label className="ls-admin-form-label bold-label">
-                Comentario de desestimación (Obligatorio):
+                Comentario de desestimación <span className="ls-required-asterisk">*</span> (Obligatorio):
                 <textarea
                   placeholder="Ej: Tras la revisión, se determinó que la publicación no infringe los términos y condiciones de la comunidad."
                   value={dismissComment}
@@ -1908,7 +1970,7 @@ export default function AdminPage({
 
             <form noValidate onSubmit={handleConfirmDeleteExplorerItem} className="ls-admin-modal-flex-form resolve-form-gap">
               <label className="ls-admin-form-label bold-label">
-                Motivo de la Baja:
+                Motivo de la Baja <span className="ls-required-asterisk">*</span>:
                 <select
                   value={eventDeleteReason}
                   onChange={e => setEventDeleteReason(e.target.value)}
@@ -1923,7 +1985,7 @@ export default function AdminPage({
               </label>
 
               <label className="ls-admin-form-label bold-label">
-                Detalles Adicionales de la Baja (Obligatorio para trazabilidad):
+                Detalles Adicionales de la Baja <span className="ls-required-asterisk">*</span> (Obligatorio para trazabilidad):
                 <textarea
                   placeholder="Detalla la razón específica de la baja del evento para mantener el registro administrativo..."
                   value={eventDeleteDetails}

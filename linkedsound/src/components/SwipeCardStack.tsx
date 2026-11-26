@@ -8,6 +8,7 @@ import {
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 import { isUserProfile, type UserProfile } from '../types'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 interface SwipeCardStackProps {
   cards: ProfileCard[]
@@ -289,7 +290,7 @@ export default function SwipeCardStack({
       {thirdCard && (
         <div className="ls-swipe-card-bg ls-swipe-card-third">
           <div className="ls-swipe-image-wrap">
-            <img src={thirdCard.profileImage} alt="" draggable={false} />
+            <img src={getProfileAvatarUrl(thirdCard.profileImage)} alt="" onError={handleAvatarError} draggable={false} />
           </div>
         </div>
       )}
@@ -298,7 +299,7 @@ export default function SwipeCardStack({
       {nextCard && (
         <div className="ls-swipe-card-bg ls-swipe-card-next">
           <div className="ls-swipe-image-wrap">
-            <img src={nextCard.profileImage} alt="" draggable={false} />
+            <img src={getProfileAvatarUrl(nextCard.profileImage)} alt="" onError={handleAvatarError} draggable={false} />
             <span className="ls-card-badge">{nextCard.match}</span>
             <div className="ls-swipe-overlay">
               <div>
@@ -362,7 +363,7 @@ export default function SwipeCardStack({
         </div>
 
         <div className="ls-swipe-image-wrap">
-          <img src={currentCard.profileImage} alt={greenBoxTitle} draggable={false} />
+          <img src={getProfileAvatarUrl(currentCard.profileImage)} alt={greenBoxTitle} onError={handleAvatarError} draggable={false} />
           <span className="ls-card-badge">{currentCard.match}</span>
           <div className="ls-swipe-overlay">
             <div>
@@ -427,7 +428,7 @@ export default function SwipeCardStack({
             <span className="ls-interest-label">Intereses de género</span>
             <div className="ls-mini-tags">
               {(currentCard.interestGenres ?? currentCard.tags ?? []).map((genre) => (
-                <span key={genre}>{genre}</span>
+                <span key={genre} title={genre}>{genre}</span>
               ))}
             </div>
           </div>

@@ -238,7 +238,7 @@ export default function ForgotPasswordModal({
 
             <div className="ls-form-group">
               <label htmlFor="forgot-email" className="ls-form-label">
-                Correo Electrónico
+                Correo Electrónico <span className="ls-required-asterisk">*</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -321,7 +321,7 @@ export default function ForgotPasswordModal({
 
             <div className="ls-form-group">
               <label htmlFor="verification-code" className="ls-form-label">
-                Código de Verificación (6 dígitos)
+                Código de Verificación (6 dígitos) <span className="ls-required-asterisk">*</span>
               </label>
               <input
                 type="text"
@@ -421,7 +421,7 @@ export default function ForgotPasswordModal({
 
             <div className="ls-form-group">
               <label htmlFor="new-password" className="ls-form-label">
-                Nueva Contraseña
+                Nueva Contraseña <span className="ls-required-asterisk">*</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -483,7 +483,7 @@ export default function ForgotPasswordModal({
 
             <div className="ls-form-group">
               <label htmlFor="confirm-password" className="ls-form-label">
-                Confirmar Contraseña
+                Confirmar Contraseña <span className="ls-required-asterisk">*</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <input

@@ -1,15 +1,18 @@
 import type { StyleSpecification } from 'maplibre-gl'
 
-export const CARTO_DARK_MAP_STYLE: StyleSpecification = {
+const cartoApiKey = (import.meta.env.VITE_CARTO_API_KEY || '').trim()
+const cartoKeyQuery = cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : ''
+
+export const CARTO_DARK_RASTER_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     'carto-dark': {
       type: 'raster',
       tiles: [
-        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        `https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png${cartoKeyQuery}`,
+        `https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png${cartoKeyQuery}`,
+        `https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png${cartoKeyQuery}`,
+        `https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png${cartoKeyQuery}`,
       ],
       tileSize: 256,
       attribution:
@@ -26,3 +29,9 @@ export const CARTO_DARK_MAP_STYLE: StyleSpecification = {
     },
   ],
 }
+
+// Usa tiles oscuros de CARTO cuando VITE_CARTO_API_KEY esta definida;
+// si falta la clave, usa OpenFreeMap Dark como estilo de respaldo visible.
+export const CARTO_DARK_MAP_STYLE: string | StyleSpecification = cartoApiKey
+  ? CARTO_DARK_RASTER_STYLE
+  : 'https://tiles.openfreemap.org/styles/dark'

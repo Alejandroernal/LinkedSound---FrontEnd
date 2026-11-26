@@ -31,6 +31,7 @@ import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
 import { formatEventDate, isUserProfile, isLocalAudioTrack, isSoundCloudTrack, type EventCommentItem } from '../types'
 import { api } from '../services/api'
 import LocalDemosPlayer from './LocalDemosPlayer'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 type SoundCloudPreviewModalProps = {
   isOpen: boolean
@@ -153,7 +154,9 @@ export default function SoundCloudPreviewModal({
   useEffect(() => {
     const rawTracks: SoundCloudTrack[] = card?.tracks ?? []
     const scTracks = rawTracks.filter((t) => isSoundCloudTrack(t))
-    const firstScTrack = scTracks.find((t) => t.soundcloudLink && t.soundcloudLink.toLowerCase().includes('soundcloud.com'))
+    const firstScTrack =
+      scTracks.find((t) => t.soundcloudLink && t.soundcloudLink.toLowerCase().includes('soundcloud.com')) ||
+      rawTracks.find((t) => t.soundcloudLink && t.soundcloudLink.toLowerCase().includes('soundcloud.com'))
     const mainScUrl = firstScTrack?.soundcloudLink || (card?.soundcloudUrl && card.soundcloudUrl.toLowerCase().includes('soundcloud.com') ? card.soundcloudUrl : null)
 
     if (mainScUrl) {
@@ -302,16 +305,20 @@ export default function SoundCloudPreviewModal({
   // 1. Tracks locales: ÚNICAMENTE archivos de audio (.WAV, .MP3, .FLAC, .OGG) subidos de manera local
   const localTracks = rawTracks.filter((t) => isLocalAudioTrack(t))
 
-  // 2. Tracks de SoundCloud: ÚNICAMENTE temas y enlaces de SoundCloud
+  // 2. Tracks de SoundCloud: pistas con enlace directo a SoundCloud
   const soundCloudTracks = rawTracks.filter((t) => isSoundCloudTrack(t))
+  const linkedSoundCloudTracks =
+    soundCloudTracks.length > 0
+      ? soundCloudTracks
+      : rawTracks.filter((t) => (t.soundcloudLink || '').toLowerCase().includes('soundcloud.com'))
 
   const scUrl = card.soundcloudUrl
   const hasSoundCloudUrl = Boolean(scUrl && scUrl.toLowerCase().includes('soundcloud.com'))
   const handleUrl = hasSoundCloudUrl ? scUrl : `https://soundcloud.com/search?q=${encodeURIComponent(profileName)}`
 
-  // Pistas visibles en la sección inferior de SoundCloud (NUNCA mezclar con localTracks)
-  const visibleSoundCloudTracks = soundCloudTracks.length > 0
-    ? soundCloudTracks
+  // Pistas visibles en la sección inferior de SoundCloud
+  const visibleSoundCloudTracks = linkedSoundCloudTracks.length > 0
+    ? linkedSoundCloudTracks
     : (hasSoundCloudUrl ? [
       {
         id: 'sc_profile_catalog',
@@ -326,7 +333,7 @@ export default function SoundCloudPreviewModal({
   const spotifyUrl = card.spotifyUrl
 
   // Effective embed URL: user selected track or profile URL
-  const embedTargetUrl = activeEmbedUrl || (soundCloudTracks[0]?.soundcloudLink || (hasSoundCloudUrl ? scUrl : null))
+  const embedTargetUrl = activeEmbedUrl || (linkedSoundCloudTracks[0]?.soundcloudLink || (hasSoundCloudUrl ? scUrl : null))
 
   const handleSelectTrack = (track: SoundCloudTrack) => {
     setActiveTrackId(track.id || null)
@@ -497,13 +504,15 @@ export default function SoundCloudPreviewModal({
                   color: '#c084fc',
                   border: '1px solid rgba(168, 85, 247, 0.35)',
                   maxWidth: '100%',
-                  wordBreak: 'break-word',
-                  overflowWrap: 'anywhere',
+                  minWidth: 0,
+                  overflow: 'hidden',
                 }}
                 title={`Organizado por: ${card.owner || card.ownerNickname || 'Organizador'}`}
               >
                 <PiUserCircleBold style={{ fontSize: '0.95rem', flexShrink: 0, color: '#c084fc' }} />
-                <span>Creado por: <strong>{card.owner || card.ownerNickname || 'Organizador'}</strong></span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', minWidth: 0 }}>
+                  Creado por: <strong>{card.owner || card.ownerNickname || 'Organizador'}</strong>
+                </span>
               </span>
             </div>
 
@@ -587,7 +596,7 @@ export default function SoundCloudPreviewModal({
 
             <div className="ls-notice-tags">
               {(card.interestGenres ?? card.tags ?? []).map((tag) => (
-                <span key={tag}>{tag}</span>
+                <span key={tag} title={tag}>{tag}</span>
               ))}
             </div>
 
@@ -789,7 +798,12 @@ export default function SoundCloudPreviewModal({
             {/* Header / Profile info */}
             <div className="ls-sc-header">
               <div className="ls-sc-avatar-wrap">
-                <img src={card.profileImage} alt={profileName} className="ls-sc-avatar" />
+                <img
+                  src={getProfileAvatarUrl(card.profileImage)}
+                  alt={profileName}
+                  onError={handleAvatarError}
+                  className="ls-sc-avatar"
+                />
               </div>
               <div className="ls-sc-user-info">
                 <div className="ls-sc-title-row">

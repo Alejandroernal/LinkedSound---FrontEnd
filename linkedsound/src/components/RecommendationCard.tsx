@@ -1,10 +1,15 @@
 import type { ProfileCard } from '../data/mockData'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 export default function RecommendationCard({ item }: { item: ProfileCard }) {
   return (
     <article className="ls-recommend-card">
       <div className="ls-card-visual">
-        <img src={item.profileImage} alt={item.nickname || (item as any).name || ''} />
+        <img
+          src={getProfileAvatarUrl(item.profileImage)}
+          alt={item.nickname || (item as any).name || ''}
+          onError={handleAvatarError}
+        />
         <span className="ls-card-badge">{item.match}</span>
       </div>
       <div className="ls-card-body">

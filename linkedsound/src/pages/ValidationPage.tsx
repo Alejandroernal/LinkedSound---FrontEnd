@@ -11,7 +11,7 @@ type ValidationPageProps = {
   onNavigate?: (page: AppPage) => void
   profile?: Profile
   onProfileChange?: (field: keyof Profile, value: any) => void
-  onRegisterComplete?: () => Promise<{ success: boolean; message?: string } | void> | void
+  onRegisterComplete?: (overrides?: Partial<Profile>) => Promise<{ success: boolean; message?: string } | void> | void
 }
 
 type LocationSuggestion = {
@@ -19,25 +19,36 @@ type LocationSuggestion = {
   lat: number
   lon: number
   full: string
+  country?: string
+  province?: string
+  city?: string
 }
 
 const PRESET_LOCATIONS: LocationSuggestion[] = [
-  { label: 'Berlin, Germany', lat: 52.520, lon: 13.405, full: 'Berlin, Germany' },
-  { label: 'London, United Kingdom', lat: 51.507, lon: -0.127, full: 'London, England, United Kingdom' },
-  { label: 'New York, USA', lat: 40.712, lon: -74.006, full: 'New York, NY, United States' },
-  { label: 'Los Angeles, USA', lat: 34.052, lon: -118.243, full: 'Los Angeles, CA, United States' },
-  { label: 'Paris, France', lat: 48.856, lon: 2.352, full: 'Paris, Île-de-France, France' },
-  { label: 'Madrid, Spain', lat: 40.416, lon: -3.703, full: 'Madrid, Community of Madrid, Spain' },
-  { label: 'Buenos Aires, Argentina', lat: -34.603, lon: -58.381, full: 'Buenos Aires, Argentina' },
-  { label: 'Tokyo, Japan', lat: 35.676, lon: 139.650, full: 'Tokyo, Japan' },
-  { label: 'Amsterdam, Netherlands', lat: 52.367, lon: 4.904, full: 'Amsterdam, Netherlands' },
-  { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico' },
+  { label: 'Berlin, Germany', lat: 52.520, lon: 13.405, full: 'Berlin, Germany', country: 'Germany', province: 'Berlin', city: 'Berlin' },
+  { label: 'London, United Kingdom', lat: 51.507, lon: -0.127, full: 'London, England, United Kingdom', country: 'United Kingdom', province: 'England', city: 'London' },
+  { label: 'New York, USA', lat: 40.712, lon: -74.006, full: 'New York, NY, United States', country: 'United States', province: 'New York', city: 'New York' },
+  { label: 'Los Angeles, USA', lat: 34.052, lon: -118.243, full: 'Los Angeles, CA, United States', country: 'United States', province: 'California', city: 'Los Angeles' },
+  { label: 'Paris, France', lat: 48.856, lon: 2.352, full: 'Paris, Île-de-France, France', country: 'France', province: 'Île-de-France', city: 'Paris' },
+  { label: 'Madrid, Spain', lat: 40.416, lon: -3.703, full: 'Madrid, Community of Madrid, Spain', country: 'Spain', province: 'Madrid', city: 'Madrid' },
+  { label: 'Buenos Aires, Argentina', lat: -34.603, lon: -58.381, full: 'Buenos Aires, Argentina', country: 'Argentina', province: 'Buenos Aires', city: 'Buenos Aires' },
+  { label: 'Tokyo, Japan', lat: 35.676, lon: 139.650, full: 'Tokyo, Japan', country: 'Japan', province: 'Tokyo', city: 'Tokyo' },
+  { label: 'Amsterdam, Netherlands', lat: 52.367, lon: 4.904, full: 'Amsterdam, Netherlands', country: 'Netherlands', province: 'North Holland', city: 'Amsterdam' },
+  { label: 'Mexico City, Mexico', lat: 19.432, lon: -99.133, full: 'Mexico City, Mexico', country: 'Mexico', province: 'CDMX', city: 'Mexico City' },
 ]
 
 export default function ValidationPage({ onNavigate, profile, onProfileChange, onRegisterComplete }: ValidationPageProps) {
   const [soundcloud, setSoundcloud] = useState(profile?.soundcloudUrl || profile?.soundcloud || '')
+  const [featuredTrackUrl, setFeaturedTrackUrl] = useState(
+    () => (profile?.tracks || []).find((t) => t.soundcloudLink)?.soundcloudLink || ''
+  )
   const [spotify, setSpotify] = useState(profile?.spotifyUrl || profile?.spotify || '')
   const [location, setLocation] = useState(profile?.location || '')
+  const [latitude, setLatitude] = useState<number | undefined>(profile?.latitude)
+  const [longitude, setLongitude] = useState<number | undefined>(profile?.longitude)
+  const [country, setCountry] = useState<string>(profile?.country || '')
+  const [province, setProvince] = useState<string>(profile?.province || '')
+  const [city, setCity] = useState<string>(profile?.city || '')
   const [verifiedLocation, setVerifiedLocation] = useState(profile?.location || '')
   const [isLocationVerified, setIsLocationVerified] = useState(Boolean(profile?.location && profile.location.trim()))
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -60,24 +71,36 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
 
   const reverseGeocode = async (lat: number, lon: number) => {
     setIsLocating(true)
+    setLatitude(lat)
+    setLongitude(lon)
+    onProfileChange?.('latitude', lat)
+    onProfileChange?.('longitude', lon)
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`
       )
       const data = await response.json()
-      const city =
-        data.address?.city ||
-        data.address?.town ||
-        data.address?.village ||
-        data.address?.municipality ||
+      const addr = data.address || {}
+      const foundCity =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
         ''
-      const country = data.address?.country || ''
-      const label = [city, country].filter(Boolean).join(', ')
+      const foundProvince = addr.state || addr.province || addr.region || ''
+      const foundCountry = addr.country || ''
+      const label = [foundCity, foundCountry].filter(Boolean).join(', ')
       const finalLoc = label || `${lat.toFixed(3)}, ${lon.toFixed(3)}`
       setLocation(finalLoc)
       setVerifiedLocation(finalLoc)
       setIsLocationVerified(true)
+      setCity(foundCity)
+      setProvince(foundProvince)
+      setCountry(foundCountry)
       onProfileChange?.('location', finalLoc)
+      onProfileChange?.('city', foundCity)
+      onProfileChange?.('province', foundProvince)
+      onProfileChange?.('country', foundCountry)
       if (validationError && invalidFields.location) {
         setInvalidFields(prev => ({ ...prev, location: false }))
         setValidationError(null)
@@ -113,20 +136,25 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
       const data = await response.json()
       if (Array.isArray(data) && data.length > 0) {
         const results: LocationSuggestion[] = data.map((item: any) => {
-          const city =
-            item.address?.city ||
-            item.address?.town ||
-            item.address?.village ||
-            item.address?.municipality ||
+          const addr = item.address || {}
+          const foundCity =
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.municipality ||
             item.name ||
             ''
-          const country = item.address?.country || ''
-          const label = [city, country].filter(Boolean).join(', ') || item.display_name.split(',').slice(0, 2).join(',')
+          const foundProvince = addr.state || addr.province || addr.region || ''
+          const foundCountry = addr.country || ''
+          const label = [foundCity, foundCountry].filter(Boolean).join(', ') || item.display_name.split(',').slice(0, 2).join(',')
           return {
             label,
             lat: parseFloat(item.lat),
             lon: parseFloat(item.lon),
             full: item.display_name,
+            country: foundCountry,
+            province: foundProvince,
+            city: foundCity,
           }
         })
         setSuggestions(results)
@@ -169,7 +197,17 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     setLocation(item.label)
     setVerifiedLocation(item.label)
     setIsLocationVerified(true)
+    setLatitude(item.lat)
+    setLongitude(item.lon)
+    if (item.country !== undefined) setCountry(item.country)
+    if (item.province !== undefined) setProvince(item.province)
+    if (item.city !== undefined) setCity(item.city)
     onProfileChange?.('location', item.label)
+    onProfileChange?.('latitude', item.lat)
+    onProfileChange?.('longitude', item.lon)
+    if (item.country !== undefined) onProfileChange?.('country', item.country)
+    if (item.province !== undefined) onProfileChange?.('province', item.province)
+    if (item.city !== undefined) onProfileChange?.('city', item.city)
     setShowSuggestions(false)
 
     if (validationError && invalidFields.location) {
@@ -266,8 +304,12 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     mapContainerRef.current.innerHTML = ''
 
     const initialPreset = PRESET_LOCATIONS.find((p) => p.label.toLowerCase() === location.toLowerCase())
-    const centerLon = initialPreset ? initialPreset.lon : 13.405
-    const centerLat = initialPreset ? initialPreset.lat : 52.520
+    const centerLon = typeof longitude === 'number' && Number.isFinite(longitude)
+      ? longitude
+      : (initialPreset ? initialPreset.lon : -58.3816)
+    const centerLat = typeof latitude === 'number' && Number.isFinite(latitude)
+      ? latitude
+      : (initialPreset ? initialPreset.lat : -34.6037)
 
     let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -321,8 +363,48 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
     }
   }, [showMap])
 
+  const normalizeOptionalUrl = (val: string): string => {
+    const trimmed = val.trim()
+    if (!trimmed) return ''
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+  }
+
+  const buildMergedTracks = (scProfileUrl: string): SoundCloudTrack[] => {
+    const baseTracks: SoundCloudTrack[] = (profile?.tracks || []).map((t) => ({
+      ...t,
+      ...(t.soundcloudLink?.trim() ? { soundcloudLink: normalizeOptionalUrl(t.soundcloudLink) } : {}),
+    }))
+
+    const normFeatured = normalizeOptionalUrl(featuredTrackUrl)
+    const normProfileSc = normalizeOptionalUrl(scProfileUrl)
+
+    if (normFeatured && !baseTracks.some((t) => (t.soundcloudLink || '').trim() === normFeatured)) {
+      if (baseTracks.length > 0 && !baseTracks[0].soundcloudLink?.trim()) {
+        baseTracks[0] = { ...baseTracks[0], soundcloudLink: normFeatured }
+      } else {
+        baseTracks.push({
+          id: `sc_featured_${Date.now()}`,
+          title: 'Track Destacado',
+          plays: 0,
+          duration: 'SoundCloud',
+          genre: 'SoundCloud',
+          soundcloudLink: normFeatured,
+          order: baseTracks.length,
+        })
+      }
+    } else if (
+      normProfileSc &&
+      !baseTracks.some((t) => (t.soundcloudLink || '').trim().length > 0) &&
+      baseTracks.length > 0
+    ) {
+      baseTracks[0] = { ...baseTracks[0], soundcloudLink: normProfileSc }
+    }
+
+    return baseTracks
+  }
+
   const handleValidate = async () => {
-    const sc = soundcloud.trim()
+    const sc = normalizeOptionalUrl(soundcloud)
     const loc = location.trim()
 
     const errors: Record<string, boolean> = {}
@@ -349,28 +431,45 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
       return
     }
 
-    const currentTracks = profile?.tracks || []
-    if (currentTracks.length < 1) {
+    const mergedTracks = buildMergedTracks(sc)
+    if (mergedTracks.length < 1) {
       errors.tracks = true
       setInvalidFields(errors)
-      setValidationError('Es obligatorio subir al menos 1 pista de muestra de audio (.WAV, .MP3, .FLAC, .OGG) para completar tu perfil.')
+      setValidationError('Es obligatorio subir al menos 1 pista de muestra de audio (.WAV, .MP3, .FLAC, .OGG) o enlace de SoundCloud para completar tu perfil.')
       return
     }
 
     setInvalidFields({})
     setValidationError(null)
 
+    const normSpot = normalizeOptionalUrl(spotify)
+    const overrides: Partial<Profile> = {
+      soundcloudUrl: sc,
+      soundcloud: sc,
+      ...(normSpot ? { spotifyUrl: normSpot, spotify: normSpot } : {}),
+      location: loc,
+      country: country || undefined,
+      province: province || undefined,
+      city: city || undefined,
+      latitude,
+      longitude,
+      tracks: mergedTracks,
+    }
+
     onProfileChange?.('soundcloudUrl', sc)
     onProfileChange?.('soundcloud', sc)
-    if (spotify.trim()) {
-      onProfileChange?.('spotifyUrl', spotify.trim())
-      onProfileChange?.('spotify', spotify.trim())
+    if (normSpot) {
+      onProfileChange?.('spotifyUrl', normSpot)
+      onProfileChange?.('spotify', normSpot)
     }
     onProfileChange?.('location', loc)
+    if (latitude !== undefined) onProfileChange?.('latitude', latitude)
+    if (longitude !== undefined) onProfileChange?.('longitude', longitude)
+    onProfileChange?.('tracks', mergedTracks)
 
     setIsSubmitting(true)
     try {
-      const result = await onRegisterComplete?.()
+      const result = await onRegisterComplete?.(overrides)
       if (result && typeof result === 'object' && 'success' in result && !result.success) {
         setValidationError(result.message || 'Error al completar el registro con el servidor.')
         return
@@ -384,34 +483,51 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
   }
 
   const handleSkip = async () => {
-    const currentTracks = profile?.tracks || []
-    if (currentTracks.length < 1) {
-      setValidationError('Es obligatorio subir al menos 1 pista de muestra de audio (.WAV, .MP3, .FLAC, .OGG) para poder continuar.')
+    const normSc = normalizeOptionalUrl(soundcloud)
+    const mergedTracks = buildMergedTracks(normSc)
+    if (mergedTracks.length < 1) {
+      setValidationError('Es obligatorio subir al menos 1 pista de muestra de audio (.WAV, .MP3, .FLAC, .OGG) o enlace de SoundCloud para poder continuar.')
       return
     }
 
-    if (soundcloud.trim()) {
-      onProfileChange?.('soundcloudUrl', soundcloud.trim())
-      onProfileChange?.('soundcloud', soundcloud.trim())
-    }
-    if (spotify.trim()) {
-      onProfileChange?.('spotifyUrl', spotify.trim())
-      onProfileChange?.('spotify', spotify.trim())
-    }
+    const normSpot = normalizeOptionalUrl(spotify)
     const loc = location.trim()
     const isLocValid = isLocationVerified && loc.length > 0 && loc.toLowerCase() === verifiedLocation.trim().toLowerCase()
-    if (isLocValid) {
-      onProfileChange?.('location', loc)
-    } else {
-      onProfileChange?.('location', 'No especificada')
+    const finalLoc = isLocValid ? loc : 'No especificada'
+
+    const overrides: Partial<Profile> = {
+      ...(normSc ? { soundcloudUrl: normSc, soundcloud: normSc } : {}),
+      ...(normSpot ? { spotifyUrl: normSpot, spotify: normSpot } : {}),
+      location: finalLoc,
+      country: isLocValid ? (country || undefined) : undefined,
+      province: isLocValid ? (province || undefined) : undefined,
+      city: isLocValid ? (city || undefined) : undefined,
+      latitude: isLocValid ? latitude : undefined,
+      longitude: isLocValid ? longitude : undefined,
+      tracks: mergedTracks,
     }
+
+    if (normSc) {
+      onProfileChange?.('soundcloudUrl', normSc)
+      onProfileChange?.('soundcloud', normSc)
+    }
+    if (normSpot) {
+      onProfileChange?.('spotifyUrl', normSpot)
+      onProfileChange?.('spotify', normSpot)
+    }
+    onProfileChange?.('location', finalLoc)
+    onProfileChange?.('tracks', mergedTracks)
 
     setIsSubmitting(true)
     try {
-      await onRegisterComplete?.()
+      const result = await onRegisterComplete?.(overrides)
+      if (result && typeof result === 'object' && 'success' in result && !result.success) {
+        setValidationError(result.message || 'Error al completar el registro con el servidor.')
+        return
+      }
       onNavigate?.('Discovery')
-    } catch {
-      onNavigate?.('Discovery')
+    } catch (err: any) {
+      setValidationError(err?.message || 'Error al procesar el registro con el servidor.')
     } finally {
       setIsSubmitting(false)
     }
@@ -473,28 +589,13 @@ export default function ValidationPage({ onNavigate, profile, onProfileChange, o
             <input
               type="url"
               placeholder="https://soundcloud.com/tu-usuario/tu-cancion-destacada"
-              value={(profile?.tracks && profile.tracks[1]?.soundcloudLink) || ''}
+              value={featuredTrackUrl}
               onChange={(e) => {
-                const val = e.target.value
-                const currentTracks = profile?.tracks || [
-                  { id: 't0', title: 'Último tema subido', plays: '0', duration: '--:--', genre: 'Principal' }
-                ]
-                const updatedTracks = [
-                  currentTracks[0],
-                  {
-                    id: 't_custom',
-                    title: 'Track Destacado',
-                    plays: 'Muestra',
-                    duration: 'SoundCloud',
-                    genre: 'Destacado',
-                    soundcloudLink: val
-                  }
-                ]
-                onProfileChange?.('tracks', updatedTracks)
+                setFeaturedTrackUrl(e.target.value)
               }}
             />
             <small style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: '2px', display: 'block' }}>
-              * Se mostrará automáticamente tu último tema de SoundCloud y opcionalmente este track destacado en tu perfil.
+              Se asociará automáticamente como enlace de SoundCloud en tu perfil para habilitar la visibilidad en Discovery.
             </small>
           </label>
 

@@ -102,7 +102,7 @@ export default function ReportModal({
 
             <div className="ls-form-group">
               <label htmlFor="report-reason" className="ls-form-label">
-                Motivo principal del reporte
+                Motivo principal del reporte <span className="ls-required-asterisk">*</span>
               </label>
               <select
                 id="report-reason"
@@ -124,7 +124,7 @@ export default function ReportModal({
             {isOtherReason && (
               <div className="ls-form-group">
                 <label htmlFor="custom-reason" className="ls-form-label">
-                  Especifica el otro motivo <small>(Obligatorio)</small>
+                  Especifica el otro motivo <span className="ls-required-asterisk">*</span> <small>(Obligatorio)</small>
                 </label>
                 <input
                   type="text"
@@ -146,7 +146,7 @@ export default function ReportModal({
 
             <div className="ls-form-group">
               <label htmlFor="report-details" className="ls-form-label">
-                Detalles del reporte <small>(Obligatorio/Detallar lo que sucede)</small>
+                Detalles del reporte <span className="ls-required-asterisk">*</span> <small>(Obligatorio/Detallar lo que sucede)</small>
               </label>
               <textarea
                 id="report-details"

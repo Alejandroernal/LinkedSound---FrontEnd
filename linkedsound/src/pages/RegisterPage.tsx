@@ -509,7 +509,7 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
             </label>
 
             <label>
-              Rol en la Plataforma
+              Rol en la Plataforma <span className="ls-required-asterisk">*</span>
               <div style={{ position: 'relative', width: '100%' }}>
                 <select
                   className="ls-auth-select"

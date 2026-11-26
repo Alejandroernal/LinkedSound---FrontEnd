@@ -95,6 +95,8 @@ export default function CreateEventModal({
   const [province, setProvince] = useState('')
   const [city, setCity] = useState('')
   const [streetAddress, setStreetAddress] = useState('')
+  const [latitude, setLatitude] = useState<number | undefined>(undefined)
+  const [longitude, setLongitude] = useState<number | undefined>(undefined)
 
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -154,6 +156,8 @@ export default function CreateEventModal({
       setProvince(ev.province || '')
       setCity(ev.city || '')
       setStreetAddress(ev.streetAddress || '')
+      setLatitude(typeof ev.latitude === 'number' && Number.isFinite(ev.latitude) ? ev.latitude : undefined)
+      setLongitude(typeof ev.longitude === 'number' && Number.isFinite(ev.longitude) ? ev.longitude : undefined)
       setVenue(ev.venue || '')
       setEventDate(ev.eventDate || '')
       setEventTime(ev.eventTime || '22:00')
@@ -176,6 +180,8 @@ export default function CreateEventModal({
       setProvince('')
       setCity('')
       setStreetAddress('')
+      setLatitude(undefined)
+      setLongitude(undefined)
       setVenue('')
       setEventDate('')
       setEventTime('22:00')
@@ -191,6 +197,8 @@ export default function CreateEventModal({
 
   const reverseGeocode = async (lat: number, lon: number) => {
     setIsLocating(true)
+    setLatitude(lat)
+    setLongitude(lon)
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`
@@ -291,6 +299,8 @@ export default function CreateEventModal({
     setLocation(loc.label)
     setVerifiedLocation(loc.label)
     setIsLocationVerified(true)
+    setLatitude(loc.lat)
+    setLongitude(loc.lon)
     setShowSuggestions(false)
     if (validationError) setValidationError(null)
 
@@ -473,13 +483,28 @@ export default function CreateEventModal({
     let timer: ReturnType<typeof setTimeout> | null = null
 
     try {
+      const hasCoords =
+        typeof longitude === 'number' &&
+        typeof latitude === 'number' &&
+        Number.isFinite(longitude) &&
+        Number.isFinite(latitude)
+      const initialCenter: [number, number] = hasCoords
+        ? [longitude as number, latitude as number]
+        : [-58.3816, -34.6037]
+
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
         style: CARTO_DARK_MAP_STYLE,
-        center: [13.405, 52.52],
-        zoom: 10,
+        center: initialCenter,
+        zoom: hasCoords ? 12 : 10,
         renderWorldCopies: false,
       })
+
+      if (hasCoords) {
+        markerRef.current = new maplibregl.Marker({ color: '#00e5ff' })
+          .setLngLat(initialCenter)
+          .addTo(map)
+      }
 
       map.addControl(new maplibregl.FullscreenControl())
       timer = setTimeout(() => map.resize(), 150)
@@ -626,6 +651,8 @@ export default function CreateEventModal({
         province: province.trim() || undefined,
         city: city.trim() || undefined,
         streetAddress: streetAddress.trim().slice(0, 50) || undefined,
+        latitude,
+        longitude,
         interestGenres: selectedGenres,
         profileImage: images[0] || undefined,
         images,
@@ -648,6 +675,8 @@ export default function CreateEventModal({
         province: province.trim(),
         city: city.trim(),
         streetAddress: streetAddress.trim().slice(0, 50),
+        latitude,
+        longitude,
         interestGenres: selectedGenres,
         profileImage: images[0] || undefined,
         images,
@@ -1248,7 +1277,7 @@ export default function CreateEventModal({
           <div className="ls-form-group">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
               <label className="ls-form-label" style={{ margin: 0 }}>
-                Flyers e Imagenes del Evento <PiImageBold style={{ color: '#c084fc' }} />
+                Flyers e Imagenes del Evento <span className="ls-required-asterisk">*</span> <PiImageBold style={{ color: '#c084fc' }} />
               </label>
               <span
                 style={{

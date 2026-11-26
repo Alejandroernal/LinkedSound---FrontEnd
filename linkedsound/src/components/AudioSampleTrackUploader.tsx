@@ -8,6 +8,9 @@ import {
   PiClockBold,
   PiWarningOctagonBold,
   PiCheckBold,
+  PiLinkBold,
+  PiSoundcloudLogoFill,
+  PiPlusBold,
 } from 'react-icons/pi'
 import type { SoundCloudTrack, SnippetTypeItem, MusicalKeyItem } from '../types'
 import { api } from '../services/api'
@@ -35,6 +38,8 @@ export default function AudioSampleTrackUploader({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null)
+  const [newScTitle, setNewScTitle] = useState('')
+  const [newScLink, setNewScLink] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null)
 
@@ -183,6 +188,41 @@ export default function AudioSampleTrackUploader({
     onChange(updated)
   }
 
+  const handleAddSoundCloudTrack = () => {
+    setUploadError(null)
+    if (tracks.length >= maxTracks) {
+      setUploadError(`Has alcanzado el límite máximo de ${maxTracks} pistas.`)
+      return
+    }
+    const trimmedLink = newScLink.trim()
+    if (!trimmedLink) {
+      setUploadError('Ingresa una URL de SoundCloud válida para agregar el track.')
+      return
+    }
+    if (!trimmedLink.toLowerCase().includes('soundcloud.com')) {
+      setUploadError('El enlace debe pertenecer a SoundCloud (ejemplo: https://soundcloud.com/usuario/tema).')
+      return
+    }
+    const normalizedLink = /^https?:\/\//i.test(trimmedLink) ? trimmedLink : `https://${trimmedLink}`
+    const fallbackTitle = newScTitle.trim() || 'Track de SoundCloud'
+
+    const newTracks: SoundCloudTrack[] = [
+      ...tracks,
+      {
+        id: `sc_track_${Date.now()}`,
+        title: fallbackTitle.slice(0, 60),
+        soundcloudLink: normalizedLink,
+        duration: 'SoundCloud',
+        genre: 'SoundCloud',
+        plays: 0,
+        order: tracks.length,
+      },
+    ]
+    onChange(newTracks)
+    setNewScTitle('')
+    setNewScLink('')
+  }
+
   const togglePreview = (track: SoundCloudTrack) => {
     if (!track.audioUrl) return
 
@@ -216,13 +256,16 @@ export default function AudioSampleTrackUploader({
       <div className="ls-uploader-header">
         <div className="ls-uploader-title-row">
           <PiMusicNotesFill className="ls-cyan-icon" />
-          <h4>Pistas de Muestra de Audio (.WAV | .MP3 | .FLAC | .OGG)</h4>
+          <h4>
+            Pistas de Muestra y SoundCloud (.WAV | .MP3 | .FLAC | .OGG)
+            {isRequired && <span className="ls-required-asterisk">*</span>}
+          </h4>
           <span className={`ls-uploader-count-tag ${isValidCount ? 'is-valid' : 'is-pending'}`}>
             {tracks.length} / {maxTracks} {tracks.length >= minTracks ? 'Requerido completado' : 'Requerido'}
           </span>
         </div>
         <p className="ls-uploader-desc">
-          Sube entre <strong>{minTracks}</strong> y <strong>{maxTracks}</strong> fragmentos o stems de audio de alta calidad para que productores y colaboradores escuchen tu sonido en el radar de Discovery.
+          Sube entre <strong>{minTracks}</strong> y <strong>{maxTracks}</strong> pistas de muestra o enlaza tus temas de SoundCloud para aparecer en el radar de Discovery y matching.
         </p>
       </div>
 
@@ -270,12 +313,33 @@ export default function AudioSampleTrackUploader({
                     <span className="ls-track-title-text">{track.title}</span>
                   )}
                   <div className="ls-track-meta-chips">
-                    <span className="ls-meta-chip format">{track.format || 'WAV'}</span>
+                    <span className="ls-meta-chip format">
+                      {track.audioUrl ? (track.format || 'WAV') : 'SoundCloud'}
+                    </span>
                     <span className="ls-meta-chip duration">
                       <PiClockBold /> {track.duration || '0:30'}
                     </span>
                     {track.fileSize && (
                       <span className="ls-meta-chip size">{track.fileSize}</span>
+                    )}
+                    {!isEditable && track.soundcloudLink && (
+                      <a
+                        href={track.soundcloudLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ls-meta-chip"
+                        style={{
+                          color: '#ff8a47',
+                          borderColor: 'rgba(255, 85, 0, 0.35)',
+                          background: 'rgba(255, 85, 0, 0.12)',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <PiSoundcloudLogoFill /> SoundCloud
+                      </a>
                     )}
                   </div>
                 </div>
@@ -338,6 +402,18 @@ export default function AudioSampleTrackUploader({
                       ))}
                     </datalist>
                   </div>
+
+                  <div className="ls-track-detail-field" style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <PiLinkBold style={{ color: '#ff7700' }} /> Enlace SoundCloud del Track (habilita visibilidad en Discovery)
+                    </label>
+                    <input
+                      type="url"
+                      value={track.soundcloudLink || ''}
+                      placeholder="https://soundcloud.com/tu-usuario/tu-track"
+                      onChange={(e) => handleUpdateTrackField(idx, 'soundcloudLink', e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -345,9 +421,9 @@ export default function AudioSampleTrackUploader({
         })}
       </div>
 
-      {/* Zona de subida */}
+      {/* Zona de subida de audio local + agregado rápido de enlace SoundCloud */}
       {isEditable && tracks.length < maxTracks && (
-        <div className="ls-upload-dropzone">
+        <div className="ls-upload-dropzone" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <input
             ref={fileInputRef}
             type="file"
@@ -376,6 +452,60 @@ export default function AudioSampleTrackUploader({
               </>
             )}
           </button>
+
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '8px',
+              alignItems: 'center',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              background: 'rgba(255, 85, 0, 0.06)',
+              border: '1px solid rgba(255, 85, 0, 0.24)',
+            }}
+          >
+            <PiSoundcloudLogoFill style={{ color: '#ff5500', fontSize: '1.15rem', flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder="Título del track (opcional)"
+              value={newScTitle}
+              maxLength={60}
+              onChange={(e) => setNewScTitle(e.target.value)}
+              style={{ flex: '1 1 140px', minWidth: '130px' }}
+            />
+            <input
+              type="url"
+              placeholder="https://soundcloud.com/usuario/tema"
+              value={newScLink}
+              onChange={(e) => {
+                setNewScLink(e.target.value)
+                if (uploadError) setUploadError(null)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleAddSoundCloudTrack()
+                }
+              }}
+              style={{ flex: '2 1 200px', minWidth: '180px' }}
+            />
+            <button
+              type="button"
+              className="ls-secondary-button"
+              onClick={handleAddSoundCloudTrack}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '8px 12px',
+                fontSize: '0.8rem',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <PiPlusBold /> Agregar link SoundCloud
+            </button>
+          </div>
         </div>
       )}
 

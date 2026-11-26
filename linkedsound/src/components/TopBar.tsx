@@ -16,6 +16,7 @@ import {
 } from 'react-icons/pi'
 import type { AppPage, Profile, NotificationItem } from '../types'
 import { navItems } from '../types'
+import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 type TopBarProps = {
   activePage?: AppPage
@@ -86,15 +87,6 @@ export default function TopBar({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  // Generar iniciales dinámicas
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(' ').filter(Boolean)
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-    }
-    return name.slice(0, 2).toUpperCase()
-  }
 
   const handleConfirmSignOut = () => {
     setShowSignOutConfirm(false)
@@ -341,25 +333,13 @@ export default function TopBar({
                 <span className="ls-mini-name">{userName}</span>
                 <span className="ls-mini-role">{userRole}</span>
               </div>
-              {userProfileImage ? (
-                <img
-                  src={userProfileImage}
-                  alt={userName}
-                  className="ls-avatar small"
-                  style={{ objectFit: 'cover', borderRadius: '50%' }}
-                />
-              ) : (
-                <div
-                  className="ls-avatar small"
-                  style={{
-                    background: isAdminSession ? '#ff3c6e' : 'linear-gradient(135deg, #b44dff, #8b5cf6)',
-                    color: '#fff',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {getInitials(userName)}
-                </div>
-              )}
+              <img
+                src={getProfileAvatarUrl(userProfileImage)}
+                alt={userName}
+                onError={handleAvatarError}
+                className="ls-avatar small"
+                style={{ objectFit: 'cover', borderRadius: '50%' }}
+              />
             </div>
 
             {/* Menú Desplegable de Perfil */}
