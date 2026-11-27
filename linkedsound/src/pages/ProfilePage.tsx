@@ -179,12 +179,9 @@ export default function ProfilePage({
   const handleSaveEdit = async () => {
     const errors: Record<string, boolean> = {}
 
-    const trimmedEmail = profile.email?.trim().toLowerCase() || ''
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!profile.firstName?.trim()) errors.firstName = true
     if (!profile.lastName?.trim()) errors.lastName = true
     if (!profile.nickname?.trim()) errors.nickname = true
-    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) errors.email = true
 
     const locTrim = profile.location?.trim() || ''
     if (!locTrim) {
@@ -226,7 +223,6 @@ export default function ProfilePage({
         firstName: 'Nombre (First Name)',
         lastName: 'Apellido (Last Name)',
         nickname: 'NickName / Nombre Artistico',
-        email: 'Correo electronico valido',
         location: 'Ubicacion',
         description: 'Descripcion (maximo 150 caracteres)',
         spotifyUrl: 'Enlace de Spotify (debe contener spotify.com)',
@@ -246,7 +242,6 @@ export default function ProfilePage({
         firstName: profile.firstName?.trim(),
         lastName: profile.lastName?.trim(),
         nickname: profile.nickname?.trim(),
-        email: trimmedEmail,
         role: profile.role || profile.category || 'Artista',
         accountRole: profile.accountRole || 'Usuario',
         location: locTrim,
@@ -301,7 +296,6 @@ export default function ProfilePage({
         onProfileChange('soundcloudUrl', u.soundcloudUrl ?? normSoundcloud)
         onProfileChange('soundcloud', u.soundcloudUrl ?? normSoundcloud)
       } else {
-        onProfileChange('email', trimmedEmail)
         onProfileChange('password', '')
         onProfileChange('spotifyUrl', normSpotify)
         onProfileChange('spotify', normSpotify)
@@ -367,13 +361,6 @@ export default function ProfilePage({
         </small>
       )
     }
-    if (fieldName === 'email') {
-      return (
-        <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
-          Ingresa un correo electrónico válido (ejemplo: usuario@dominio.com).
-        </small>
-      )
-    }
     if (fieldName === 'trackDestacado') {
       return (
         <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
@@ -398,7 +385,6 @@ export default function ProfilePage({
       profile.firstName !== initialProfileSnapshot.firstName ||
       profile.lastName !== initialProfileSnapshot.lastName ||
       profile.nickname !== initialProfileSnapshot.nickname ||
-      profile.email !== initialProfileSnapshot.email ||
       profile.category !== initialProfileSnapshot.category ||
       profile.role !== initialProfileSnapshot.role ||
       profile.accountRole !== initialProfileSnapshot.accountRole ||
@@ -1332,20 +1318,15 @@ export default function ProfilePage({
 
             {/* 6. Email | Password */}
             <div className="ls-profile-field">
-              <label>Email <span className="ls-required-asterisk">*</span></label>
-              {isEditing ? (
-                <>
-                  <input
-                    type="email"
-                    value={profile.email ?? ''}
-                    onChange={(event) => handleChange('email', event.target.value)}
-                    style={getInputStyle('email')}
-                  />
-                  {renderFieldError('email')}
-                </>
-              ) : (
+              <label>Email</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span>{profile.email || 'Sin correo'}</span>
-              )}
+                {isEditing && (
+                  <small style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '0.76rem' }}>
+                    El correo electrónico de tu cuenta no puede modificarse.
+                  </small>
+                )}
+              </div>
             </div>
 
             <div className="ls-profile-field">
