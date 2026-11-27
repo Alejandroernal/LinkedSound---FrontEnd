@@ -10,6 +10,7 @@ import {
   PiCropBold,
   PiCameraBold,
   PiEyeBold,
+  PiLockKeyBold,
 } from 'react-icons/pi'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -21,6 +22,7 @@ import type { AppPage, Profile, NotificationItem, SoundCloudTrack, ProfileCard }
 import { api } from '../services/api'
 import AudioSampleTrackUploader from '../components/AudioSampleTrackUploader'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
+import ChangePasswordModal from '../components/ChangePasswordModal'
 import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
 type ProfilePageProps = {
@@ -113,6 +115,8 @@ export default function ProfilePage({
 
   // Modal de Vista Externa (como ven tu perfil los demas usuarios)
   const [isExternalPreviewOpen, setIsExternalPreviewOpen] = useState(false)
+  // Modal dedicado e independiente para cambio de contrasena
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
 
   const previewProfileCard: ProfileCard = {
     ...profile,
@@ -182,11 +186,6 @@ export default function ProfilePage({
     if (!profile.nickname?.trim()) errors.nickname = true
     if (!trimmedEmail || !emailRegex.test(trimmedEmail)) errors.email = true
 
-    // La contraseña solo es requerida si el usuario ingresa una nueva para modificarla
-    if (profile.password && profile.password.trim().length > 0 && profile.password.trim().length < 6) {
-      errors.password = true
-    }
-
     const locTrim = profile.location?.trim() || ''
     if (!locTrim) {
       errors.location = true
@@ -228,7 +227,6 @@ export default function ProfilePage({
         lastName: 'Apellido (Last Name)',
         nickname: 'NickName / Nombre Artistico',
         email: 'Correo electronico valido',
-        password: 'Contrasena (minimo 6 caracteres)',
         location: 'Ubicacion',
         description: 'Descripcion (maximo 150 caracteres)',
         spotifyUrl: 'Enlace de Spotify (debe contener spotify.com)',
@@ -249,7 +247,6 @@ export default function ProfilePage({
         lastName: profile.lastName?.trim(),
         nickname: profile.nickname?.trim(),
         email: trimmedEmail,
-        ...(profile.password?.trim() ? { password: profile.password.trim() } : {}),
         role: profile.role || profile.category || 'Artista',
         accountRole: profile.accountRole || 'Usuario',
         location: locTrim,
@@ -377,13 +374,6 @@ export default function ProfilePage({
         </small>
       )
     }
-    if (fieldName === 'password') {
-      return (
-        <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
-          La contraseña debe tener como mínimo 6 caracteres.
-        </small>
-      )
-    }
     if (fieldName === 'trackDestacado') {
       return (
         <small style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', display: 'block', fontWeight: 500 }}>
@@ -409,7 +399,6 @@ export default function ProfilePage({
       profile.lastName !== initialProfileSnapshot.lastName ||
       profile.nickname !== initialProfileSnapshot.nickname ||
       profile.email !== initialProfileSnapshot.email ||
-      (Boolean(profile.password?.trim()) && profile.password !== initialProfileSnapshot.password) ||
       profile.category !== initialProfileSnapshot.category ||
       profile.role !== initialProfileSnapshot.role ||
       profile.accountRole !== initialProfileSnapshot.accountRole ||
@@ -913,6 +902,15 @@ export default function ProfilePage({
                 </button>
                 <button
                   type="button"
+                  className="ls-secondary-button"
+                  onClick={() => setIsChangePasswordOpen(true)}
+                  title="Cambiar tu contraseña de acceso"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <PiLockKeyBold /> Cambiar contraseña
+                </button>
+                <button
+                  type="button"
                   className="ls-secondary-button ls-btn-external-view"
                   onClick={() => setIsExternalPreviewOpen(true)}
                   title="Ver como ven tu perfil los demas usuarios"
@@ -1352,20 +1350,23 @@ export default function ProfilePage({
 
             <div className="ls-profile-field">
               <label>Contraseña</label>
-              {isEditing ? (
-                <>
-                  <input
-                    type="password"
-                    placeholder="•••••••• (dejar en blanco para conservar)"
-                    value={profile.password ?? ''}
-                    onChange={(event) => handleChange('password', event.target.value)}
-                    style={getInputStyle('password')}
-                  />
-                  {renderFieldError('password')}
-                </>
-              ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                 <span>••••••••</span>
-              )}
+                {!isEditing ? (
+                  <button
+                    type="button"
+                    className="ls-secondary-button"
+                    onClick={() => setIsChangePasswordOpen(true)}
+                    style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <PiLockKeyBold /> Cambiar contraseña
+                  </button>
+                ) : (
+                  <small style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '0.76rem' }}>
+                    Se gestiona por separado desde el botón Cambiar contraseña.
+                  </small>
+                )}
+              </div>
             </div>
 
             {/* 7. Enlaces sociales */}
@@ -1533,6 +1534,12 @@ export default function ProfilePage({
         card={previewProfileCard}
         onClose={() => setIsExternalPreviewOpen(false)}
         isExternalPreview={true}
+      />
+
+      {/* Modal dedicado para Cambio de Contraseña */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
       />
 
       <Footer />

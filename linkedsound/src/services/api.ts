@@ -121,6 +121,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
+    changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword?: string }) =>
+      request<{ success: boolean; message: string }>('/auth/change-password', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }),
   },
   genres: {
     getAll: () => request<{ genres: string[] }>('/perfiles/genres', { method: 'GET' }),
@@ -209,7 +214,8 @@ export const api = {
     },
   },
   events: {
-    getAll: () => request<{ events: any[] }>('/events', { method: 'GET' }),
+    getAll: (params?: { onlyActive?: boolean }) =>
+      request<{ events: any[] }>(params?.onlyActive ? '/events?onlyActive=true' : '/events', { method: 'GET' }),
     create: (payload: Record<string, any>) =>
       request('/events', {
         method: 'POST',

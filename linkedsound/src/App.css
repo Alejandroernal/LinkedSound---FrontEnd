@@ -6843,12 +6843,17 @@ button {
 }
 
 .ls-admin-status-pill {
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 4px 10px;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.2;
   letter-spacing: 0.02em;
-  text-transform: capitalize;
 }
 
 .ls-admin-status-pill.status-pending {
@@ -6945,6 +6950,8 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
@@ -6966,6 +6973,8 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
@@ -6984,6 +6993,8 @@ button {
   cursor: pointer;
   font-size: 11px;
   font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
@@ -7397,12 +7408,22 @@ button {
   font-weight: 500;
 }
 
+.ls-admin-table-status-cell {
+  white-space: nowrap;
+  width: 1%;
+}
+
 .ls-admin-user-status-pill {
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .ls-admin-user-status-pill.status-active {

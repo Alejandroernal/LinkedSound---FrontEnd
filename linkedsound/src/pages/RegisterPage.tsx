@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { AppPage, Profile } from '../types'
 import { api } from '../services/api'
+import { getPasswordRequirements, validatePasswordStrength } from '../utils/passwordValidation'
 import {
   PiWarningOctagonBold,
   PiEyeBold,
@@ -300,7 +301,8 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
       return
     }
 
-    if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw)) {
+    const passwordError = validatePasswordStrength(pw)
+    if (passwordError) {
       setInvalidFields({ password: true })
       setErrorMsg('La contraseña no cumple con los requisitos de seguridad: Mínimo 8 caracteres, incluir al menos 1 letra mayúscula, 1 minúscula y 1 número.')
       return
@@ -321,10 +323,8 @@ export default function RegisterPage({ onNavigate, profile, onProfileChange }: R
 
   // Requisitos de contraseña para indicadores dinámicos
   const currentPw = profile?.password ?? ''
-  const pwHasMinLen = currentPw.length >= 8
-  const pwHasUpper = /[A-Z]/.test(currentPw)
-  const pwHasLower = /[a-z]/.test(currentPw)
-  const pwHasNum = /[0-9]/.test(currentPw)
+  const { hasMinLen: pwHasMinLen, hasUpper: pwHasUpper, hasLower: pwHasLower, hasNumber: pwHasNum } =
+    getPasswordRequirements(currentPw)
 
   return (
     <>

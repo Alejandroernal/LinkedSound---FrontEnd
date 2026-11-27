@@ -878,7 +878,7 @@ export default function AdminPage({
                       <th>Email</th>
                       <th>Rol</th>
                       <th>Ubicación</th>
-                      <th>Estado</th>
+                      <th className="ls-admin-table-status-cell">Estado</th>
                       <th>Reportes</th>
                       <th className="ls-admin-table-align-right">Acciones Administrador</th>
                     </tr>
@@ -895,7 +895,7 @@ export default function AdminPage({
                         <td className="ls-admin-table-secondary-cell">{u.email}</td>
                         <td>{u.role}</td>
                         <td className="ls-admin-table-muted-cell">{u.location}</td>
-                        <td>
+                        <td className="ls-admin-table-status-cell">
                           <span className={`ls-admin-user-status-pill status-${(u.status ?? 'active').toLowerCase()}`}>
                             {getNormalizedStatusText(u.status)}
                           </span>
@@ -1000,7 +1000,7 @@ export default function AdminPage({
                       <th>Organizador / Creador</th>
                       <th>Ubicación</th>
                       <th>Vistas</th>
-                      <th>Estado</th>
+                      <th className="ls-admin-table-status-cell">Estado</th>
                       <th className="ls-admin-table-align-right">Acciones Administrador</th>
                     </tr>
                   </thead>
@@ -1027,7 +1027,7 @@ export default function AdminPage({
                         <td className="ls-admin-table-owner-cell">{item.owner}</td>
                         <td className="ls-admin-table-muted-cell">{item.location}</td>
                         <td className="ls-admin-table-views-cell">{item.views}</td>
-                        <td>
+                        <td className="ls-admin-table-status-cell">
                           <span className={`ls-admin-status-pill status-${item.status === 'Active' ? 'resolved' : item.status === 'Under Review' ? 'pending' : 'dismissed'}`}>
                             {getNormalizedStatusText(item.status)}
                           </span>
@@ -1037,9 +1037,15 @@ export default function AdminPage({
                             <button
                               onClick={() => handleToggleExplorerStatus(item.id)}
                               className="ls-admin-table-btn-toggle"
-                              title="Cambiar visibilidad entre Activo y Oculto"
+                              title={
+                                item.status === 'Active'
+                                  ? 'Ocultar evento de Explorer'
+                                  : item.status === 'Under Review'
+                                    ? 'Aprobar y publicar evento en Explorer'
+                                    : 'Activar evento en Explorer'
+                              }
                             >
-                              {item.status === 'Active' ? 'Ocultar' : 'Activar'}
+                              {item.status === 'Active' ? 'Ocultar' : item.status === 'Under Review' ? 'Aprobar' : 'Activar'}
                             </button>
                             <button
                               onClick={() => setEditingExplorerItem(item)}

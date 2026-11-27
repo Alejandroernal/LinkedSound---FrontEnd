@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
+import { validatePasswordStrength } from '../utils/passwordValidation'
 import {
   PiXBold,
   PiKeyBold,
@@ -146,24 +147,9 @@ export default function ForgotPasswordModal({
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newPassword) {
-      setError('Por favor, ingresa la nueva contraseña.')
-      return
-    }
-    if (newPassword.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.')
-      return
-    }
-    if (!/[A-Z]/.test(newPassword)) {
-      setError('La contraseña debe incluir al menos una letra mayúscula.')
-      return
-    }
-    if (!/[a-z]/.test(newPassword)) {
-      setError('La contraseña debe incluir al menos una letra minúscula.')
-      return
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      setError('La contraseña debe incluir al menos un número.')
+    const passwordError = validatePasswordStrength(newPassword)
+    if (passwordError) {
+      setError(passwordError)
       return
     }
     if (newPassword !== confirmPassword) {

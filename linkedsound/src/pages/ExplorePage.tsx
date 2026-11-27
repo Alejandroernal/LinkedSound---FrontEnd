@@ -28,6 +28,8 @@ import {
   PiPencilSimpleBold,
   PiUserCircleBold,
   PiCaretDownBold,
+  PiCheckCircleBold,
+  PiWarningOctagonBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
 import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
@@ -66,7 +68,7 @@ export default function ExplorePage({
 
   const loadData = () => {
     setIsLoading(true)
-    Promise.all([api.auth.getUsers(), api.events.getAll()]).then(([usersRes, eventsRes]) => {
+    Promise.all([api.auth.getUsers(), api.events.getAll({ onlyActive: true })]).then(([usersRes, eventsRes]) => {
       const combinedCards: ProfileCard[] = []
 
       // 1. Cargar usuarios de la base de datos
@@ -107,9 +109,11 @@ export default function ExplorePage({
         combinedCards.push(...userCards)
       }
 
-      // 2. Cargar eventos de la base de datos
+      // 2. Cargar solo eventos activos de la base de datos (excluir En revision y Ocultos)
       if (eventsRes.success && Array.isArray(eventsRes.events)) {
-        const eventCards: ProfileCard[] = eventsRes.events.map((ev: any) => ({
+        const eventCards: ProfileCard[] = eventsRes.events
+          .filter((ev: any) => ev.status === 'Active')
+          .map((ev: any) => ({
           id: ev.id,
           nickname: ev.nickname || ev.title,
           role: ev.role || 'Evento Live',
@@ -171,6 +175,11 @@ export default function ExplorePage({
   const [showCreateEventModal, setShowCreateEventModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<ProfileCard | null>(null)
   const [deletingEvent, setDeletingEvent] = useState<ProfileCard | null>(null)
+  const [eventFeedbackModal, setEventFeedbackModal] = useState<{
+    title: string
+    message: string
+    variant: 'info' | 'error'
+  } | null>(null)
 
   const handleCreateEvent = async (newEvent: ProfileCard) => {
     try {
@@ -208,80 +217,57 @@ export default function ExplorePage({
       })
 
       if (res.success && res.event) {
-        const ownerName = res.event.owner
-          ? (typeof res.event.owner === 'string'
-              ? res.event.owner
-              : `${res.event.owner.firstName || ''} ${res.event.owner.lastName || ''}`.trim() || res.event.owner.nickname)
-          : fallbackOwner
-        const created: ProfileCard = {
-          ...newEvent,
-          id: res.event.id,
-          createdAt: res.event.createdAt,
-          ownerId: res.event.ownerId || profile?.id,
-          owner: ownerName,
-          ownerNickname: res.event.ownerNickname || res.event.owner?.nickname || profile?.nickname || '',
-          profileImage: res.event.profileImage || newEvent.profileImage,
-          images: res.event.images || eventImages,
-          role: res.event.role || newEvent.role || 'Evento Live',
-          eventDate: res.event.eventDate || eventItem.eventDate || '',
-          eventTime: res.event.eventTime || eventItem.eventTime || '22:00',
-          interestGenres: res.event.interestGenres || newEvent.interestGenres || [],
-          location: res.event.location || newEvent.location || '',
-          country: res.event.country ?? newEvent.country,
-          province: res.event.province ?? newEvent.province,
-          city: res.event.city ?? newEvent.city,
-          streetAddress: res.event.streetAddress ?? newEvent.streetAddress,
-          latitude: res.event.latitude ?? newEvent.latitude,
-          longitude: res.event.longitude ?? newEvent.longitude,
-          nickname: res.event.nickname || newEvent.nickname || '',
-          itemRole: 'Evento',
-          isProfile: false,
-        }
-        setCardsList((prev) => [created, ...prev])
-      } else {
-        setCardsList((prev) => [
-          {
+        if (res.event.status === 'Active') {
+          const ownerName = res.event.owner
+            ? (typeof res.event.owner === 'string'
+                ? res.event.owner
+                : `${res.event.owner.firstName || ''} ${res.event.owner.lastName || ''}`.trim() || res.event.owner.nickname)
+            : fallbackOwner
+          const created: ProfileCard = {
             ...newEvent,
-            owner: fallbackOwner,
-            ownerId: profile?.id,
-            ownerNickname: profile?.nickname || '',
-            images: eventImages,
-            role: newEvent.role || 'Evento Live',
-            eventDate: eventItem.eventDate || '',
-            interestGenres: newEvent.interestGenres || [],
-            location: newEvent.location || '',
-            nickname: newEvent.nickname || '',
+            id: res.event.id,
+            createdAt: res.event.createdAt,
+            ownerId: res.event.ownerId || profile?.id,
+            owner: ownerName,
+            ownerNickname: res.event.ownerNickname || res.event.owner?.nickname || profile?.nickname || '',
+            profileImage: res.event.profileImage || newEvent.profileImage,
+            images: res.event.images || eventImages,
+            role: res.event.role || newEvent.role || 'Evento Live',
+            eventDate: res.event.eventDate || eventItem.eventDate || '',
+            eventTime: res.event.eventTime || eventItem.eventTime || '22:00',
+            interestGenres: res.event.interestGenres || newEvent.interestGenres || [],
+            location: res.event.location || newEvent.location || '',
+            country: res.event.country ?? newEvent.country,
+            province: res.event.province ?? newEvent.province,
+            city: res.event.city ?? newEvent.city,
+            streetAddress: res.event.streetAddress ?? newEvent.streetAddress,
+            latitude: res.event.latitude ?? newEvent.latitude,
+            longitude: res.event.longitude ?? newEvent.longitude,
+            nickname: res.event.nickname || newEvent.nickname || '',
             itemRole: 'Evento',
             isProfile: false,
-          },
-          ...prev,
-        ])
+          }
+          setCardsList((prev) => [created, ...prev])
+        } else {
+          setEventFeedbackModal({
+            title: 'Evento enviado a revisión',
+            message: `Tu evento "${res.event.title || newEvent.nickname}" fue registrado en estado "En revisión". Será visible en Explorer una vez que un administrador lo apruebe.`,
+            variant: 'info',
+          })
+        }
+      } else {
+        setEventFeedbackModal({
+          title: 'No se pudo publicar el evento',
+          message: res.message || 'Ocurrió un error al registrar el evento en el servidor.',
+          variant: 'error',
+        })
       }
-    } catch {
-      const eventItem = newEvent as Partial<EventItem>
-      const eventImages = Array.isArray(eventItem.images) && eventItem.images.length > 0
-        ? eventItem.images
-        : (newEvent.profileImage ? [newEvent.profileImage] : [])
-      const fallbackOwner = profile
-        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.nickname || 'Organizador'
-        : 'Organizador'
-      setCardsList((prev) => [
-        {
-          ...newEvent,
-          owner: fallbackOwner,
-          ownerId: profile?.id,
-          ownerNickname: profile?.nickname || '',
-          images: eventImages,
-          role: newEvent.role || 'Evento Live',
-          eventDate: eventItem.eventDate || '',
-          interestGenres: newEvent.interestGenres || [],
-          location: newEvent.location || '',
-          nickname: newEvent.nickname || '',
-          itemRole: 'Evento',
-          isProfile: false,
-        },
-        ...prev,
-      ])
+    } catch (err: any) {
+      setEventFeedbackModal({
+        title: 'Error de conexión',
+        message: err?.message || 'No se pudo conectar con el servidor para publicar el evento.',
+        variant: 'error',
+      })
     }
   }
 
@@ -926,6 +912,63 @@ export default function ExplorePage({
           }
         }}
       />
+
+      {/* Modal informativo de estado al publicar evento */}
+      {eventFeedbackModal && (
+        <div className="ls-modal-overlay" onClick={() => setEventFeedbackModal(null)}>
+          <div
+            className="ls-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '440px', width: '92%', textAlign: 'center', padding: '26px 22px' }}
+          >
+            <button
+              type="button"
+              className="ls-modal-close"
+              onClick={() => setEventFeedbackModal(null)}
+              aria-label="Cerrar ventana"
+            >
+              <PiXBold />
+            </button>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background:
+                  eventFeedbackModal.variant === 'error'
+                    ? 'rgba(239, 68, 68, 0.15)'
+                    : 'rgba(0, 229, 255, 0.15)',
+                border:
+                  eventFeedbackModal.variant === 'error'
+                    ? '1px solid rgba(239, 68, 68, 0.35)'
+                    : '1px solid rgba(0, 229, 255, 0.35)',
+                color: eventFeedbackModal.variant === 'error' ? '#f87171' : '#00e5ff',
+                fontSize: '1.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 14px',
+              }}
+            >
+              {eventFeedbackModal.variant === 'error' ? <PiWarningOctagonBold /> : <PiCheckCircleBold />}
+            </div>
+            <h3 style={{ margin: '0 0 10px', color: '#ffffff', fontSize: '1.15rem' }}>
+              {eventFeedbackModal.title}
+            </h3>
+            <p style={{ margin: '0 0 20px', color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              {eventFeedbackModal.message}
+            </p>
+            <button
+              type="button"
+              className="ls-primary-button"
+              onClick={() => setEventFeedbackModal(null)}
+              style={{ width: '100%' }}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
