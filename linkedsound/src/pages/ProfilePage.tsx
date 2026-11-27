@@ -249,7 +249,6 @@ export default function ProfilePage({
         lastName: profile.lastName?.trim(),
         nickname: profile.nickname?.trim(),
         role: profile.role || profile.category || 'Artista',
-        accountRole: profile.accountRole || 'Usuario',
         location: locTrim,
         country: profile.country || undefined,
         province: profile.province || undefined,
@@ -393,7 +392,6 @@ export default function ProfilePage({
       profile.nickname !== initialProfileSnapshot.nickname ||
       profile.category !== initialProfileSnapshot.category ||
       profile.role !== initialProfileSnapshot.role ||
-      profile.accountRole !== initialProfileSnapshot.accountRole ||
       profile.location !== initialProfileSnapshot.location ||
       profile.latitude !== initialProfileSnapshot.latitude ||
       profile.longitude !== initialProfileSnapshot.longitude ||
@@ -989,19 +987,9 @@ export default function ProfilePage({
             {isAdminSession && (
               <div className="ls-profile-field">
                 <label>Tipo de cuenta</label>
-                {isEditing ? (
-                  <select
-                    value={profile.accountRole ?? 'Usuario'}
-                    onChange={(event) => handleChange('accountRole', event.target.value)}
-                  >
-                    <option value="Usuario">Usuario</option>
-                    <option value="Administrador">Administrador</option>
-                  </select>
-                ) : (
-                  <span className={`ls-role-pill-badge ${profile.accountRole === 'Administrador' ? 'admin' : 'user'}`}>
-                    {profile.accountRole || 'Usuario'}
-                  </span>
-                )}
+                <span className={`ls-role-pill-badge ${profile.accountRole === 'Administrador' ? 'admin' : 'user'}`}>
+                  {profile.accountRole || 'Usuario'}
+                </span>
               </div>
             )}
 

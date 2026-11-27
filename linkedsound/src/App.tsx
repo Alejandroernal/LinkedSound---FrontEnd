@@ -141,7 +141,7 @@ function App() {
           allowEdit: true,
           allowPostRegister: true,
         }
-        if (u.role === 'Administrador' || u.role === 'Admin') {
+        if (u.accountRole === 'Administrador') {
           setAdminProfile(loaded)
           setProfile(loaded)
           setAuthSession({ isLoggedIn: true, role: 'admin' })
