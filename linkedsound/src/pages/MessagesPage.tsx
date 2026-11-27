@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import TopBar from '../components/TopBar'
 import Footer from '../components/Footer'
 import ConversationSidebar from '../components/ConversationSidebar'
@@ -7,8 +7,8 @@ import UnmatchModal from '../components/UnmatchModal'
 import SpamReportModal from '../components/SpamReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import type { Message, Conversation, ProfileCard, NewMatchItem } from '../data/mockData'
-import type { AppPage, Profile, NotificationItem } from '../types'
-import { api } from '../services/api'
+import { type AppPage, type Profile, type NotificationItem, normalizeMusicalRole } from '../types'
+import { api, getToken } from '../services/api'
 import { formatUserLocalTime } from '../utils/formatTime'
 import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 import {
@@ -82,57 +82,103 @@ export default function MessagesPage({
   const [unmatchingTarget, setUnmatchingTarget] = useState<Conversation | null>(null)
   const [inspectedProfileCard, setInspectedProfileCard] = useState<ProfileCard | null>(null)
 
-  useEffect(() => {
-    // Cargar conversaciones reales de la base de datos sin forzar la apertura automatica de ningun chat
-    api.conversations.getAll().then((res) => {
-      if (res.success && Array.isArray(res.conversations)) {
-        const mappedConvs = res.conversations.map((c: any) => ({
+  const activeIdRef = useRef<string>(activeId)
+  activeIdRef.current = activeId
+  const isFetchingMessagesRef = useRef(false)
+  const isFetchingConvsRef = useRef(false)
+
+  const syncConversationMessages = useCallback(async (conversationId: string) => {
+    if (!conversationId || !getToken() || isFetchingMessagesRef.current) return
+    isFetchingMessagesRef.current = true
+    try {
+      const mRes = await api.conversations.getMessages(conversationId)
+      if (mRes.success && Array.isArray(mRes.messages)) {
+        const fetchedMessages: Message[] = mRes.messages.map((m: any) => ({
+          ...m,
+          time: formatUserLocalTime(m.createdAt, m.time),
+        }))
+
+        setMessagesMap((prev) => {
+          const existing = prev[conversationId] || []
+          // Preservar mensajes optimistas aun en vuelo (prefijo temp-)
+          const pendingOptimistic = existing.filter((m) => String(m.id).startsWith('temp-'))
+          const merged = pendingOptimistic.length > 0
+            ? [...fetchedMessages, ...pendingOptimistic]
+            : fetchedMessages
+
+          const isUnchanged =
+            existing.length === merged.length &&
+            existing.every(
+              (item, idx) =>
+                item.id === merged[idx].id &&
+                item.text === merged[idx].text &&
+                item.attachment?.url === merged[idx].attachment?.url
+            )
+
+          if (isUnchanged) return prev
+          return {
+            ...prev,
+            [conversationId]: merged,
+          }
+        })
+
+        // Como getMessages marca como leidos los mensajes entrantes en backend, reflejar unread = 0 localmente
+        setConversationsList((prev) => {
+          const hasUnread = prev.some((c) => c.id === conversationId && c.unread > 0)
+          if (!hasUnread) return prev
+          return prev.map((c) => (c.id === conversationId ? { ...c, unread: 0 } : c))
+        })
+      }
+    } catch {
+      // Silenciar errores transitorios de polling
+    } finally {
+      isFetchingMessagesRef.current = false
+    }
+  }, [setMessagesMap, setConversationsList])
+
+  const syncConversationsAndMatches = useCallback(async () => {
+    if (!getToken() || isFetchingConvsRef.current) return
+    isFetchingConvsRef.current = true
+    try {
+      const [convRes, matchesRes] = await Promise.all([
+        api.conversations.getAll().catch(() => ({ success: false, conversations: undefined })),
+        api.interactions.getMatches().catch(() => ({ success: false, matches: undefined })),
+      ])
+
+      if (convRes.success && Array.isArray(convRes.conversations)) {
+        const currentOpenId = activeIdRef.current
+        const mappedConvs: Conversation[] = convRes.conversations.map((c: any) => ({
           ...c,
+          role: normalizeMusicalRole(c.role),
           time: formatUserLocalTime(c.lastMessageCreatedAt || c.updatedAt, c.time),
+          unread: currentOpenId && c.id === currentOpenId ? 0 : c.unread,
         }))
         setConversationsList(mappedConvs)
-
-        // Si ya habia un chat seleccionado previamente por el usuario, cargar sus mensajes y marcarlo leido
-        if (activeId) {
-          const updatedConvs = mappedConvs.map((c: any) =>
-            c.id === activeId ? { ...c, unread: 0 } : c
-          )
-          setConversationsList(updatedConvs)
-
-          api.conversations.getMessages(activeId).then((mRes) => {
-            if (mRes.success && Array.isArray(mRes.messages)) {
-              setMessagesMap((prev) => ({
-                ...prev,
-                [activeId]: mRes.messages.map((m: any) => ({
-                  ...m,
-                  time: formatUserLocalTime(m.createdAt, m.time),
-                })),
-              }))
-            }
-          }).catch(() => {})
-        }
-      } else {
-        setConversationsList([])
-        setMessagesMap({})
       }
-    }).catch(() => {})
 
-    // Cargar matches mutuos reales para la seccion de Nuevos Matches
-    api.interactions.getMatches().then((res) => {
-      if (res.success && Array.isArray(res.matches)) {
-        const mappedMatches: NewMatchItem[] = res.matches.map((m: any) => ({
+      if (matchesRes.success && Array.isArray(matchesRes.matches)) {
+        const mappedMatches: NewMatchItem[] = matchesRes.matches.map((m: any) => ({
           id: m.partnerId,
           name: m.name,
-          role: m.role || 'Artista',
+          role: normalizeMusicalRole(m.role),
           location: m.location || 'No especificada',
-          match: m.affinityPercent || '95%',
-          profileImage: getProfileAvatarUrl(m.profileImage),
+          match: m.affinityPercent || m.affinity || '95%',
+          profileImage: getProfileAvatarUrl(m.profileImage || m.avatar),
           accent: 'purple' as const,
           date: m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'Hoy',
         }))
         setNewMatchesList(mappedMatches)
       }
-    }).catch(() => {})
+    } finally {
+      isFetchingConvsRef.current = false
+    }
+  }, [setConversationsList])
+
+  useEffect(() => {
+    syncConversationsAndMatches()
+    if (activeIdRef.current) {
+      syncConversationMessages(activeIdRef.current)
+    }
 
     // Cargar usuarios para perfil inspeccionado
     api.auth.getUsers().then((res) => {
@@ -142,7 +188,7 @@ export default function MessagesPage({
           firstName: u.firstName || '',
           lastName: u.lastName || '',
           nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
-          role: u.role || 'Artista',
+          role: normalizeMusicalRole(u.role),
           location: u.location || 'No especificada',
           description: u.description || '',
           interestGenres: u.interestGenres || [],
@@ -158,24 +204,57 @@ export default function MessagesPage({
         setDbUsersList(mapped)
       }
     }).catch(() => {})
-  }, [])
+  }, [syncConversationsAndMatches, syncConversationMessages])
 
   // Cargar mensajes automaticamente cuando cambia activeId (por ejemplo al abrir un chat desde notificaciones)
   useEffect(() => {
     if (!activeId) return
     setSelectedNewMatchId(null)
-    api.conversations.getMessages(activeId).then((mRes) => {
-      if (mRes.success && Array.isArray(mRes.messages)) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [activeId]: mRes.messages.map((m: any) => ({
-            ...m,
-            time: formatUserLocalTime(m.createdAt, m.time),
-          })),
-        }))
+    syncConversationMessages(activeId)
+  }, [activeId, syncConversationMessages])
+
+  // Polling en tiempo real para el chat activo, lista de conversaciones y nuevos matches
+  useEffect(() => {
+    if (!getToken()) return
+
+    const pollTick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      if (activeIdRef.current) {
+        syncConversationMessages(activeIdRef.current)
       }
-    }).catch(() => {})
-  }, [activeId])
+      syncConversationsAndMatches()
+    }
+
+    const interval = setInterval(pollTick, 3500)
+
+    const handleVisibilityOrFocus = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        pollTick()
+      }
+    }
+
+    const handleIncomingPushMessage = (event: Event) => {
+      const customEvent = event as CustomEvent<{ conversationId?: string | null }>
+      const targetConvId = customEvent.detail?.conversationId
+      if (targetConvId && targetConvId === activeIdRef.current) {
+        syncConversationMessages(targetConvId)
+      } else if (activeIdRef.current) {
+        syncConversationMessages(activeIdRef.current)
+      }
+      syncConversationsAndMatches()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+    window.addEventListener('focus', handleVisibilityOrFocus)
+    window.addEventListener('linkedsound:new-message', handleIncomingPushMessage)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+      window.removeEventListener('focus', handleVisibilityOrFocus)
+      window.removeEventListener('linkedsound:new-message', handleIncomingPushMessage)
+    }
+  }, [syncConversationMessages, syncConversationsAndMatches])
 
   const activeConversation = conversationsList.find((item) => item.id === activeId) ?? null
   const selectedNewMatch = newMatchesList.find((m) => m.id === selectedNewMatchId) ?? null
@@ -186,18 +265,7 @@ export default function MessagesPage({
     setConversationsList((prev) =>
       prev.map((c) => (c.id === id ? { ...c, unread: 0 } : c))
     )
-
-    api.conversations.getMessages(id).then((res) => {
-      if (res.success && Array.isArray(res.messages)) {
-        setMessagesMap((prev) => ({
-          ...prev,
-          [id]: res.messages.map((m: any) => ({
-            ...m,
-            time: formatUserLocalTime(m.createdAt, m.time),
-          })),
-        }))
-      }
-    }).catch(() => {})
+    syncConversationMessages(id)
   }
 
   const handleSelectNewMatch = (id: string) => {
@@ -207,10 +275,12 @@ export default function MessagesPage({
   }
 
   const handleSendFirstMessage = (match: NewMatchItem) => {
-    if (!firstMessageText.trim()) return
+    const trimmedText = firstMessageText.trim()
+    if (!trimmedText) return
 
     const now = new Date()
     const timeStr = formatUserLocalTime(now)
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
     const existingConv = conversationsList.find(
       (c) => c.name.toLowerCase() === match.name.toLowerCase() || c.id === match.id
@@ -220,11 +290,11 @@ export default function MessagesPage({
     const newConv: Conversation = existingConv || {
       id: convId,
       name: match.name,
-      role: match.role,
+      role: normalizeMusicalRole(match.role),
       avatar: match.name.substring(0, 2).toUpperCase(),
       accent: match.accent,
       status: 'Online',
-      preview: firstMessageText.trim(),
+      preview: trimmedText,
       time: timeStr,
       lastMessageCreatedAt: now.toISOString(),
       unread: 0,
@@ -233,9 +303,9 @@ export default function MessagesPage({
     }
 
     const initialMsg: Message = {
-      id: String(Date.now()),
+      id: tempId,
       sender: 'me',
-      text: firstMessageText.trim(),
+      text: trimmedText,
       time: timeStr,
       createdAt: now.toISOString(),
     }
@@ -252,8 +322,31 @@ export default function MessagesPage({
     setFirstMessageText('')
     handleSelectConversation(convId)
 
-    // Enviar mensaje persistente a la base de datos
-    api.conversations.sendMessage(convId, { text: firstMessageText.trim() }).catch(() => {})
+    // Enviar mensaje persistente a la base de datos y reconciliar el ID temporal
+    api.conversations.sendMessage(convId, { text: trimmedText }).then((res) => {
+      if (res.success) {
+        const savedMsg = res.formattedMessage || res.data
+        setMessagesMap((prev) => {
+          const currentList = prev[convId] || []
+          if (savedMsg?.id && currentList.some((m) => m.id === savedMsg.id)) {
+            return { ...prev, [convId]: currentList.filter((m) => m.id !== tempId) }
+          }
+          return {
+            ...prev,
+            [convId]: currentList.map((m) =>
+              m.id === tempId
+                ? {
+                    ...m,
+                    id: savedMsg?.id || m.id,
+                    createdAt: savedMsg?.createdAt || m.createdAt,
+                    time: formatUserLocalTime(savedMsg?.createdAt, timeStr),
+                  }
+                : m
+            ),
+          }
+        })
+      }
+    }).catch(() => {})
   }
 
   const handleConfirmReportSpam = () => {
@@ -282,7 +375,7 @@ export default function MessagesPage({
         firstName,
         lastName,
         nickname: activeConversation.name,
-        role: activeConversation.role || 'Artista',
+        role: normalizeMusicalRole(activeConversation.role),
         location: activeConversation.location || 'No especificada',
         profileImage: getProfileAvatarUrl(activeConversation.profileImage),
         isProfile: true,
@@ -338,10 +431,12 @@ export default function MessagesPage({
 
   const handleSendMessage = (text: string, attachment?: Message['attachment']) => {
     if (!activeId) return
+    const targetConvId = activeId
     const now = new Date()
     const timeStr = formatUserLocalTime(now)
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     const newMessage: Message = {
-      id: String(Date.now()),
+      id: tempId,
       sender: 'me',
       text,
       time: timeStr,
@@ -353,18 +448,18 @@ export default function MessagesPage({
 
     setMessagesMap((prev) => ({
       ...prev,
-      [activeId]: [...(prev[activeId] ?? []), newMessage],
+      [targetConvId]: [...(prev[targetConvId] ?? []), newMessage],
     }))
 
     setConversationsList((prev) =>
       prev.map((c) =>
-        c.id === activeId
+        c.id === targetConvId
           ? { ...c, preview: previewText, time: timeStr, lastMessageCreatedAt: now.toISOString(), unread: 0 }
           : c
       )
     )
 
-    api.conversations.sendMessage(activeId, {
+    api.conversations.sendMessage(targetConvId, {
       text,
       attachmentUrl: attachment?.url,
       attachmentName: attachment?.name,
@@ -376,11 +471,18 @@ export default function MessagesPage({
         if (savedMsg) {
           const finalTime = formatUserLocalTime(savedMsg.createdAt, timeStr)
           setMessagesMap((prev) => {
-            const currentList = prev[activeId] || []
+            const currentList = prev[targetConvId] || []
+            const alreadyPersisted = Boolean(savedMsg.id && currentList.some((m) => m.id === savedMsg.id))
+            if (alreadyPersisted) {
+              return {
+                ...prev,
+                [targetConvId]: currentList.filter((m) => m.id !== tempId),
+              }
+            }
             return {
               ...prev,
-              [activeId]: currentList.map((m) =>
-                m.id === newMessage.id
+              [targetConvId]: currentList.map((m) =>
+                m.id === tempId
                   ? {
                       ...m,
                       id: savedMsg.id || m.id,

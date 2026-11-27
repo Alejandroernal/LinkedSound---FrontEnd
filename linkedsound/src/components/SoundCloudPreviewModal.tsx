@@ -28,7 +28,7 @@ import {
 } from 'react-icons/pi'
 import { FaSpotify } from 'react-icons/fa6'
 import type { ProfileCard, SoundCloudTrack } from '../data/mockData'
-import { formatEventDate, isUserProfile, isLocalAudioTrack, isSoundCloudTrack, type EventCommentItem } from '../types'
+import { formatEventDate, isUserProfile, isLocalAudioTrack, isSoundCloudTrack, normalizeMusicalRole, type EventCommentItem } from '../types'
 import { api } from '../services/api'
 import LocalDemosPlayer from './LocalDemosPlayer'
 import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
@@ -820,7 +820,7 @@ export default function SoundCloudPreviewModal({
                   </span>
                 </div>
                 <p className="ls-sc-role">
-                  {card.role} {card.location && `• ${card.location}`}
+                  {normalizeMusicalRole(card.role)} {card.location && `• ${card.location}`}
                 </p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '6px' }}>
                   {handleUrl && (
@@ -898,7 +898,7 @@ export default function SoundCloudPreviewModal({
                 <div className="ls-sc-section-title">
                   <div className="ls-sc-title-left">
                     <PiMusicNotesFill className="ls-sc-orange-icon" />
-                    <h3>Ultimas Actividades Musicales</h3>
+                    <h3>Últimas Actividades Musicales</h3>
                   </div>
                   <span className="ls-sc-track-count">
                     {visibleSoundCloudTracks.length > 0
@@ -918,60 +918,67 @@ export default function SoundCloudPreviewModal({
                           className={`ls-sc-track-card ${isSelected ? 'is-playing' : ''}`}
                           onClick={() => handleSelectTrack(track)}
                         >
-                          <button
-                            type="button"
-                            className="ls-sc-play-btn"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleSelectTrack(track)
-                            }}
-                            title="Cargar y reproducir en SoundCloud"
-                          >
-                            <PiPlayFill />
-                          </button>
+                          <div className="ls-sc-track-top">
+                            <button
+                              type="button"
+                              className="ls-sc-play-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSelectTrack(track)
+                              }}
+                              title="Cargar y reproducir en SoundCloud"
+                              aria-label={`Reproducir ${track.title}`}
+                            >
+                              <PiPlayFill />
+                            </button>
 
-                          <div className="ls-sc-track-info">
-                            <div className="ls-sc-track-main">
-                              <span className="ls-sc-track-title">{track.title}</span>
-                              <span className="ls-sc-genre-tag">{track.genre || 'SoundCloud'}</span>
+                            <div className="ls-sc-track-title-wrap">
+                              <span className="ls-sc-track-title" title={track.title}>
+                                {track.title}
+                              </span>
                             </div>
 
-                            <div className="ls-sc-track-meta">
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <PiPlayFill style={{ fontSize: '0.72rem', color: '#ffaa71' }} />{' '}
+                            <a
+                              href={track.soundcloudLink ?? handleUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ls-sc-listen-btn"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Abrir tema en SoundCloud"
+                            >
+                              <PiSoundcloudLogoFill />
+                              <span>Abrir</span>
+                            </a>
+                          </div>
+
+                          <div className="ls-sc-track-meta">
+                            <span className="ls-sc-genre-tag">{track.genre || 'SoundCloud'}</span>
+                            <span className="ls-sc-meta-item">
+                              <PiPlayFill className="ls-sc-meta-icon" />
+                              <span>
                                 {String(track.plays).includes('reproducciones')
                                   ? track.plays
                                   : `${track.plays || '0'} reproducciones`}
                               </span>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <PiTimerBold style={{ fontSize: '0.75rem', color: '#ffaa71' }} />{' '}
-                                {track.duration || 'SoundCloud'}
+                            </span>
+                            <span className="ls-sc-meta-item">
+                              <PiTimerBold className="ls-sc-meta-icon" />
+                              <span>{track.duration || 'SoundCloud'}</span>
+                            </span>
+                            {isSelected && (
+                              <span className="ls-sc-playing-pill">
+                                <PiSpeakerHighBold />
+                                <span>En reproductor</span>
                               </span>
-                              {isSelected && (
-                                <span style={{ color: '#ff5500', fontWeight: 'bold' }}>
-                                  ● CARGADO EN REPRODUCTOR
-                                </span>
-                              )}
-                            </div>
+                            )}
                           </div>
-
-                          <a
-                            href={track.soundcloudLink ?? handleUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ls-sc-listen-btn"
-                            onClick={(e) => e.stopPropagation()}
-                            title="Abrir tema en SoundCloud"
-                          >
-                            <PiSoundcloudLogoFill /> Abrir
-                          </a>
                         </div>
                       )
                     })}
                   </div>
                 ) : (
                   <div className="ls-sc-empty-tracks">
-                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', padding: '12px 0' }}>
+                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', padding: '12px 0', margin: 0 }}>
                       No tiene trabajos realizados de momento
                     </p>
                   </div>

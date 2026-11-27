@@ -7,7 +7,7 @@ import ReportModal from '../components/ReportModal'
 import SoundCloudPreviewModal from '../components/SoundCloudPreviewModal'
 import SwipeCardStack from '../components/SwipeCardStack'
 import type { ProfileCard } from '../data/mockData'
-import type { AppPage, Profile, NotificationItem } from '../types'
+import { type AppPage, type Profile, type NotificationItem, normalizeMusicalRole } from '../types'
 import { api } from '../services/api'
 import { computeUserAffinity } from '../utils/affinity'
 import { getProfileAvatarUrl } from '../utils/avatar'
@@ -189,7 +189,7 @@ export default function DashboardPage({
           if (currentId && u.id === currentId) return false
           if (currentEmail && u.email === currentEmail) return false
           if (currentNick && u.nickname === currentNick) return false
-          if (u.role === 'Administrador' || u.role === 'Admin') return false
+          if (u.accountRole === 'Administrador' || u.role === 'Administrador' || u.role === 'Admin') return false
           // Excluir perfiles con los que ya existe un Match mutuo activo
           if (matchedUserIds.has(u.id)) return false
           // Excluir perfiles con interaccion previa (like o descarte), salvo que nos hayan dado like recientemente
@@ -202,7 +202,7 @@ export default function DashboardPage({
         if (
           isInitialOrNav &&
           candidateUsers.length === 0 &&
-          res.users.some((u: any) => u.id !== currentId && u.role !== 'Administrador' && u.role !== 'Admin' && !matchedUserIds.has(u.id))
+          res.users.some((u: any) => u.id !== currentId && u.accountRole !== 'Administrador' && u.role !== 'Administrador' && u.role !== 'Admin' && !matchedUserIds.has(u.id))
         ) {
           await api.interactions.reset().catch(() => {})
           const updatedInterRes = await api.interactions.getUserInteractions().catch(() => ({ success: false, interactions: [] }))
@@ -211,7 +211,7 @@ export default function DashboardPage({
             if (currentId && u.id === currentId) return false
             if (currentEmail && u.email === currentEmail) return false
             if (currentNick && u.nickname === currentNick) return false
-            if (u.role === 'Administrador' || u.role === 'Admin') return false
+            if (u.accountRole === 'Administrador' || u.role === 'Administrador' || u.role === 'Admin') return false
             if (matchedUserIds.has(u.id)) return false
             if (updatedInteractedIds.has(u.id) && !incomingLikesSet.has(u.id)) return false
             return true
@@ -231,13 +231,14 @@ export default function DashboardPage({
             : getCoordinatesForLocation(u.location)
 
           const affinity = computeUserAffinity(profile, u)
+          const musicalRole = normalizeMusicalRole(u.role)
 
           return {
             id: u.id,
             firstName: u.firstName || '',
             lastName: u.lastName || '',
             nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
-            role: u.role || 'Artista',
+            role: musicalRole,
             location: u.location || 'No especificada',
             latitude: coords?.lat,
             longitude: coords?.lon,
@@ -253,7 +254,7 @@ export default function DashboardPage({
             affinityReason: affinity.summary,
             isProfile: true,
             itemRole: 'Perfil',
-            badge: u.role === 'Productor' ? 'Producer' : 'Artist',
+            badge: musicalRole,
             tracks: Array.isArray(u.tracks) ? u.tracks : [],
           }
         })

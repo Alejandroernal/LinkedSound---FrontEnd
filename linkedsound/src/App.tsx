@@ -14,6 +14,7 @@ import type { AppPage, Profile, NotificationItem } from './types'
 import { api, getToken, setToken, clearToken } from './services/api'
 import { initializeFCM, resetFCMState } from './services/fcm'
 import { getProfileAvatarUrl } from './utils/avatar'
+import { formatUserLocalTime } from './utils/formatTime'
 import { PiHandshakeBold, PiXBold } from 'react-icons/pi'
 import type {
   ProfileCard,
@@ -240,6 +241,27 @@ function App() {
           setToastMatchRequest((curr) => (curr?.id === incomingItem.id ? null : curr))
         }, 7000)
       }
+
+      // Si llega un mensaje en primer plano via FCM, refrescar conversaciones y avisar al chat activo
+      if (payload.data?.conversationId || payload.data?.linkPage === 'Messages') {
+        window.dispatchEvent(
+          new CustomEvent('linkedsound:new-message', {
+            detail: { conversationId: payload.data?.conversationId || null },
+          })
+        )
+        api.conversations.getAll().then((cRes) => {
+          if (cRes.success && Array.isArray(cRes.conversations)) {
+            const isMessagesRoute = window.location.pathname === '/messages'
+            setConversationsList(
+              cRes.conversations.map((c: any) => ({
+                ...c,
+                time: formatUserLocalTime(c.lastMessageCreatedAt || c.updatedAt, c.time),
+                unread: isMessagesRoute && activeChatIdRef.current && c.id === activeChatIdRef.current ? 0 : c.unread,
+              }))
+            )
+          }
+        }).catch(() => {})
+      }
     })
   }, [authSession.isLoggedIn, authSession.role, profile.id])
 
@@ -247,6 +269,8 @@ function App() {
   const [conversationsList, setConversationsList] = useState<Conversation[]>([])
   const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>({})
   const [activeChatId, setActiveChatId] = useState<string>('')
+  const activeChatIdRef = useRef<string>('')
+  activeChatIdRef.current = activeChatId
   const [matchedCard, setMatchedCard] = useState<ProfileCard | null>(null)
 
   // Sincronizar conversaciones y calcular contador no leídos para la campana y la pestaña Messages en tiempo real
@@ -257,13 +281,21 @@ function App() {
 
     const fetchConversations = () => {
       if (!getToken() || !isSubscribed) return
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       api.conversations.getAll().then((res) => {
         if (!isSubscribed) return
         if (res.status === 401) {
           return
         }
         if (res.success && Array.isArray(res.conversations)) {
-          setConversationsList(res.conversations)
+          const isMessagesRoute = typeof window !== 'undefined' && window.location.pathname === '/messages'
+          setConversationsList(
+            res.conversations.map((c: any) => ({
+              ...c,
+              time: formatUserLocalTime(c.lastMessageCreatedAt || c.updatedAt, c.time),
+              unread: isMessagesRoute && activeChatIdRef.current && c.id === activeChatIdRef.current ? 0 : c.unread,
+            }))
+          )
         }
       }).catch(() => {})
     }

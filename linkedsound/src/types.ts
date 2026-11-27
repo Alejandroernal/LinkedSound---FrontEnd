@@ -385,6 +385,28 @@ export function formatEventDate(dateStr?: string): string {
   return dateStr
 }
 
+export type MusicalRole = 'Artista' | 'Productor' | 'Productor y Artista'
+
+/**
+ * Normaliza el rol musical de un perfil para garantizar que nunca se muestre
+ * un rol de cuenta generico ('Usuario', 'Perfil', etc.) en badges o fichas.
+ */
+export function normalizeMusicalRole(role?: string | null): MusicalRole {
+  const cleaned = (role || '').trim().toLowerCase()
+  if (
+    cleaned === 'productor y artista' ||
+    cleaned === 'artista y productor' ||
+    cleaned === 'ambos' ||
+    (cleaned.includes('productor') && cleaned.includes('artista'))
+  ) {
+    return 'Productor y Artista'
+  }
+  if (cleaned === 'productor' || cleaned === 'producer') {
+    return 'Productor'
+  }
+  return 'Artista'
+}
+
 export type ProfileCard = ExplorerItemCard
 
 export type NavItem = {

@@ -121,11 +121,36 @@ export default function ChatThread({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const threadContainerRef = useRef<HTMLDivElement | null>(null)
   const threadEndRef = useRef<HTMLDivElement | null>(null)
+  const prevConvIdRef = useRef<string | null>(null)
+  const prevLastMsgIdRef = useRef<string | null>(null)
+  const prevMsgCountRef = useRef<number>(0)
 
   useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null
+    const lastMsgId = lastMsg?.id ?? null
+    const isConversationChanged = prevConvIdRef.current !== conversation.id
+    const hasNewMessage =
+      messages.length > prevMsgCountRef.current ||
+      (lastMsgId !== null && lastMsgId !== prevLastMsgIdRef.current && prevLastMsgIdRef.current !== null)
+
+    if (isConversationChanged) {
+      threadEndRef.current?.scrollIntoView({ behavior: 'auto' })
+    } else if (hasNewMessage) {
+      const container = threadContainerRef.current
+      const isNearBottom = container
+        ? container.scrollHeight - container.scrollTop - container.clientHeight < 180
+        : true
+      if (lastMsg?.sender === 'me' || isNearBottom) {
+        threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+
+    prevConvIdRef.current = conversation.id
+    prevLastMsgIdRef.current = lastMsgId
+    prevMsgCountRef.current = messages.length
+  }, [conversation.id, messages])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -419,7 +444,7 @@ export default function ChatThread({
         </div>
       </header>
 
-      <div className="ls-chat-thread">
+      <div className="ls-chat-thread" ref={threadContainerRef}>
         {messages.map((message) => (
           <div
             key={message.id}

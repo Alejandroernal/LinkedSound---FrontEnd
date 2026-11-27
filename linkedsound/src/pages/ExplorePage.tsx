@@ -33,7 +33,7 @@ import {
   PiWarningOctagonBold,
 } from 'react-icons/pi'
 import type { ProfileCard } from '../data/mockData'
-import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile } from '../types'
+import { type AppPage, type Profile, type UserProfile, type EventItem, type NotificationItem, formatEventDate, isUserProfile, normalizeMusicalRole } from '../types'
 import { computeUserAffinity } from '../utils/affinity'
 import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
@@ -112,15 +112,16 @@ export default function ExplorePage({
       // 1. Cargar usuarios de la base de datos
       if (usersRes.success && Array.isArray(usersRes.users)) {
         const userCards: ProfileCard[] = usersRes.users
-          .filter((u: any) => u.role !== 'Administrador')
+          .filter((u: any) => u.accountRole !== 'Administrador' && u.role !== 'Administrador')
           .map((u: any) => {
             const affinity = computeUserAffinity(profile, u)
+            const musicalRole = normalizeMusicalRole(u.role)
             return {
               id: u.id,
               firstName: u.firstName || '',
               lastName: u.lastName || '',
               nickname: u.nickname || `${u.firstName} ${u.lastName}`.trim(),
-              role: u.role || 'Artista',
+              role: musicalRole,
               location: u.location || 'No especificada',
               country: u.country || '',
               province: u.province || '',
@@ -140,7 +141,7 @@ export default function ExplorePage({
               affinityReason: affinity.summary,
               isProfile: true,
               itemRole: 'Perfil',
-              badge: u.role === 'Productor' ? 'Producer' : 'Artist',
+              badge: musicalRole,
               tracks: Array.isArray(u.tracks) ? u.tracks : [],
             }
           })
@@ -780,8 +781,11 @@ export default function ExplorePage({
                         alt={cardDisplayTitle}
                         onError={isProfile ? handleAvatarError : undefined}
                       />
-                      <span className="ls-card-badge" title={isProfile ? (card.role ?? 'Perfil').toUpperCase() : 'EVENTO'}>
-                        {isProfile ? (card.role ?? 'Perfil').toUpperCase() : 'EVENTO'}
+                      <span
+                        className="ls-card-badge"
+                        title={isProfile ? normalizeMusicalRole(card.role).toUpperCase() : 'EVENTO'}
+                      >
+                        {isProfile ? normalizeMusicalRole(card.role).toUpperCase() : 'EVENTO'}
                       </span>
                       {isProfile ? (
                         hasSoundCloud && (
