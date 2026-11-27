@@ -31,6 +31,7 @@ type TopBarProps = {
   unreadMessagesCount?: number
   onAcceptMatch?: (notification: NotificationItem) => void
   onOpenMatchChat?: (notification: NotificationItem) => void
+  onNotificationClick?: (notification: NotificationItem) => void
 }
 
 const navIcons: Record<string, React.ReactNode> = {
@@ -54,6 +55,7 @@ export default function TopBar({
   unreadMessagesCount,
   onAcceptMatch,
   onOpenMatchChat,
+  onNotificationClick,
 }: TopBarProps) {
   const userName = profile?.nickname || (profile?.firstName ? `${profile.firstName} ${profile.lastName ?? ''}`.trim() : (isAdminSession ? 'Administrador' : 'Mi Perfil'))
   const userRole = isAdminSession || profile?.accountRole === 'Administrador'
@@ -186,23 +188,36 @@ export default function TopBar({
                       <p>No tienes notificaciones pendientes</p>
                     </div>
                   ) : (
-                    notifications.map((item) => (
+                    notifications.map((item) => {
+                      const triggerNotificationAction = () => {
+                        setShowNotifications(false)
+                        if (onNotificationClick) {
+                          onNotificationClick(item)
+                          return
+                        }
+                        onMarkNotificationAsRead?.(item.id)
+                        if (item.type === 'match_request' && onAcceptMatch) {
+                          onAcceptMatch(item)
+                        } else if ((item.type === 'match' || item.type === 'message') && onOpenMatchChat) {
+                          onOpenMatchChat(item)
+                        } else if (item.linkPage) {
+                          onNavigate?.(item.linkPage)
+                        } else {
+                          onNavigate?.(isAdminSession ? 'Admin' : 'Discovery')
+                        }
+                      }
+
+                      return (
                       <div
                         key={item.id}
                         className={`ls-notif-item ${!item.read ? 'unread' : ''}`}
-                        onClick={() => {
-                          if (item.type === 'match_request') {
-                            setShowNotifications(false)
-                            onAcceptMatch?.(item)
-                          } else if (item.type === 'match') {
-                            setShowNotifications(false)
-                            onOpenMatchChat?.(item)
-                          } else {
-                            onMarkNotificationAsRead?.(item.id)
-                            if (item.linkPage) {
-                              onNavigate?.(item.linkPage)
-                              setShowNotifications(false)
-                            }
+                        role="button"
+                        tabIndex={0}
+                        onClick={triggerNotificationAction}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            triggerNotificationAction()
                           }
                         }}
                       >
@@ -265,14 +280,16 @@ export default function TopBar({
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  onMarkNotificationAsRead?.(item.id)
-                                  if (item.linkPage) {
-                                    onNavigate?.(item.linkPage)
-                                    setShowNotifications(false)
+                                  setShowNotifications(false)
+                                  if (onNotificationClick) {
+                                    onNotificationClick(item)
+                                  } else {
+                                    onMarkNotificationAsRead?.(item.id)
+                                    onNavigate?.(item.linkPage || 'Discovery')
                                   }
                                 }}
                               >
-                                Explorar
+                                Ver perfil
                               </button>
                             </div>
                           )}
@@ -308,7 +325,7 @@ export default function TopBar({
                         </div>
                         {!item.read && <span className="ls-notif-unread-dot" />}
                       </div>
-                    ))
+                    )})
                   )}
                 </div>
               </div>

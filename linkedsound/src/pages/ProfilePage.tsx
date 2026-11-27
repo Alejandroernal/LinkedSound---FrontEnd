@@ -37,6 +37,9 @@ type ProfilePageProps = {
   onClearNotifications?: () => void
   onSignOut?: () => void
   unreadMessagesCount?: number
+  onAcceptMatch?: (notification: NotificationItem) => void
+  onOpenMatchChat?: (notification: NotificationItem) => void
+  onNotificationClick?: (notification: NotificationItem) => void
 }
 
 type LocationSuggestion = {
@@ -92,6 +95,9 @@ export default function ProfilePage({
   onClearNotifications,
   onSignOut,
   unreadMessagesCount,
+  onAcceptMatch,
+  onOpenMatchChat,
+  onNotificationClick,
 }: ProfilePageProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [initialProfileSnapshot, setInitialProfileSnapshot] = useState<Profile | null>(null)
@@ -750,6 +756,9 @@ export default function ProfilePage({
         onClearNotifications={onClearNotifications}
         onSignOut={onSignOut}
         unreadMessagesCount={unreadMessagesCount}
+        onAcceptMatch={onAcceptMatch}
+        onOpenMatchChat={onOpenMatchChat}
+        onNotificationClick={onNotificationClick}
       />
 
       <main className="ls-page-content">
@@ -1316,35 +1325,14 @@ export default function ProfilePage({
               )}
             </div>
 
-            {/* 6. Email | Password */}
-            <div className="ls-profile-field">
+            {/* 6. Email (solo lectura; la contraseña se gestiona desde el botón superior) */}
+            <div className="ls-profile-field wide-field">
               <label>Email</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span>{profile.email || 'Sin correo'}</span>
                 {isEditing && (
                   <small style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '0.76rem' }}>
                     El correo electrónico de tu cuenta no puede modificarse.
-                  </small>
-                )}
-              </div>
-            </div>
-
-            <div className="ls-profile-field">
-              <label>Contraseña</label>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                <span>••••••••</span>
-                {!isEditing ? (
-                  <button
-                    type="button"
-                    className="ls-secondary-button"
-                    onClick={() => setIsChangePasswordOpen(true)}
-                    style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <PiLockKeyBold /> Cambiar contraseña
-                  </button>
-                ) : (
-                  <small style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '0.76rem' }}>
-                    Se gestiona por separado desde el botón Cambiar contraseña.
                   </small>
                 )}
               </div>

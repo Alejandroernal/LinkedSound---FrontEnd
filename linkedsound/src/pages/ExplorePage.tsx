@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useDebounce } from '../hooks/useDebounce'
 import { api } from '../services/api'
 import TopBar from '../components/TopBar'
@@ -36,6 +37,35 @@ import { type AppPage, type Profile, type UserProfile, type EventItem, type Noti
 import { computeUserAffinity } from '../utils/affinity'
 import { getProfileAvatarUrl, handleAvatarError } from '../utils/avatar'
 
+type ExploreSortBy = 'match' | 'name' | 'role' | 'dateAsc' | 'dateDesc' | 'recent'
+
+function getEventTimestamp(eventDate?: string, eventTime?: string): number {
+  if (!eventDate) return Number.MAX_SAFE_INTEGER
+  const dateParts = String(eventDate).trim().split('T')[0].split('-').map(Number)
+  if (dateParts.length !== 3 || dateParts.some((n) => Number.isNaN(n))) {
+    const parsed = Date.parse(eventDate)
+    return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed
+  }
+  const [year, month, day] = dateParts
+  const timeParts = String(eventTime || '00:00').trim().split(':').map(Number)
+  const hours = Number.isFinite(timeParts[0]) ? timeParts[0] : 0
+  const minutes = Number.isFinite(timeParts[1]) ? timeParts[1] : 0
+  return new Date(year, month - 1, day, hours, minutes, 0, 0).getTime()
+}
+
+function isEventPast(eventDate?: string, eventTime?: string, isFinished?: boolean): boolean {
+  if (isFinished) return true
+  if (!eventDate) return false
+  const dateParts = String(eventDate).trim().split('T')[0].split('-').map(Number)
+  if (dateParts.length !== 3 || dateParts.some((n) => Number.isNaN(n))) return false
+  const [year, month, day] = dateParts
+  const timeParts = String(eventTime || '23:59').trim().split(':').map(Number)
+  const hours = Number.isFinite(timeParts[0]) ? timeParts[0] : 23
+  const minutes = Number.isFinite(timeParts[1]) ? timeParts[1] : 59
+  const eventEnd = new Date(year, month - 1, day, hours, minutes, 59, 999).getTime()
+  return eventEnd < Date.now()
+}
+
 type ExplorePageProps = {
   activePage?: AppPage
   onNavigate?: (page: AppPage) => void
@@ -48,6 +78,9 @@ type ExplorePageProps = {
   onSignOut?: () => void
   onConnectProfile?: (card: ProfileCard) => void
   unreadMessagesCount?: number
+  onAcceptMatch?: (notification: NotificationItem) => void
+  onOpenMatchChat?: (notification: NotificationItem) => void
+  onNotificationClick?: (notification: NotificationItem) => void
 }
 
 export default function ExplorePage({
@@ -62,7 +95,12 @@ export default function ExplorePage({
   onSignOut,
   onConnectProfile,
   unreadMessagesCount,
+  onAcceptMatch,
+  onOpenMatchChat,
+  onNotificationClick,
 }: ExplorePageProps) {
+  const location = useLocation()
+  const handledNotifTsRef = useRef<number | null>(null)
   const [cardsList, setCardsList] = useState<ProfileCard[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -109,12 +147,13 @@ export default function ExplorePage({
         combinedCards.push(...userCards)
       }
 
-      // 2. Cargar solo eventos activos de la base de datos (excluir En revision y Ocultos)
+      // 2. Cargar solo eventos vigentes y activos de la base de datos (excluir pasados, En revision y Ocultos)
       if (eventsRes.success && Array.isArray(eventsRes.events)) {
         const eventCards: ProfileCard[] = eventsRes.events
-          .filter((ev: any) => ev.status === 'Active')
+          .filter((ev: any) => ev.status === 'Active' && !isEventPast(ev.eventDate, ev.eventTime, ev.isFinished))
           .map((ev: any) => ({
           id: ev.id,
+          title: ev.title || ev.nickname,
           nickname: ev.nickname || ev.title,
           role: ev.role || 'Evento Live',
           location: ev.location || 'No especificada',
@@ -167,8 +206,50 @@ export default function ExplorePage({
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const [activeGenre, setActiveGenre] = useState('')
   const [itemRoleFilter, setItemRoleFilter] = useState<'Todos' | 'Perfil' | 'Evento'>('Todos')
-  const [sortBy, setSortBy] = useState<'match' | 'name' | 'role'>('match')
+  const [sortBy, setSortBy] = useState<ExploreSortBy>('match')
   const [isGenreFilterOpen, setIsGenreFilterOpen] = useState(false)
+
+  const handleItemRoleFilterChange = (nextFilter: 'Todos' | 'Perfil' | 'Evento') => {
+    setItemRoleFilter(nextFilter)
+    if (nextFilter === 'Evento') {
+      setSortBy((prev) => (['dateAsc', 'dateDesc', 'recent', 'name'].includes(prev) ? prev : 'dateAsc'))
+    } else if (nextFilter === 'Perfil') {
+      setSortBy((prev) => (['match', 'name', 'role'].includes(prev) ? prev : 'match'))
+    } else {
+      setSortBy((prev) => (['match', 'name'].includes(prev) ? prev : 'match'))
+    }
+  }
+
+  // Deep-link desde notificaciones de eventos
+  useEffect(() => {
+    const state = location.state as { filterTab?: 'Todos' | 'Perfil' | 'Evento'; focusEventTitle?: string; notifTs?: number } | null
+    if (!state || !state.notifTs || handledNotifTsRef.current === state.notifTs) return
+
+    if (state.filterTab) {
+      handleItemRoleFilterChange(state.filterTab)
+    }
+
+    if (!isLoading) {
+      handledNotifTsRef.current = state.notifTs
+      if (state.focusEventTitle) {
+        const needle = state.focusEventTitle.toLowerCase().trim()
+        const target = cardsList.find((c) => {
+          if (isUserProfile(c)) return false
+          const t1 = (c.nickname || '').toLowerCase()
+          const t2 = (c.title || '').toLowerCase()
+          return (
+            t1 === needle ||
+            t2 === needle ||
+            (t1 && (t1.includes(needle) || needle.includes(t1))) ||
+            (t2 && (t2.includes(needle) || needle.includes(t2)))
+          )
+        })
+        if (target) {
+          setSelectedPreviewCard(target)
+        }
+      }
+    }
+  }, [location.state, isLoading, cardsList])
   const [reportingTarget, setReportingTarget] = useState<string | null>(null)
   const [rejectingTarget, setRejectingTarget] = useState<ProfileCard | null>(null)
   const [selectedPreviewCard, setSelectedPreviewCard] = useState<ProfileCard | null>(null)
@@ -393,7 +474,28 @@ export default function ExplorePage({
       return inName || inRole || inLocation || inDesc || inBadge || inTags || inVenue || inCity || inAddress
     })
 
-    if (sortBy === 'name') {
+    if (sortBy === 'dateAsc') {
+      result = [...result].sort((a, b) => {
+        const tsA = !isUserProfile(a) ? getEventTimestamp(a.eventDate, a.eventTime) : Number.MAX_SAFE_INTEGER
+        const tsB = !isUserProfile(b) ? getEventTimestamp(b.eventDate, b.eventTime) : Number.MAX_SAFE_INTEGER
+        return tsA - tsB
+      })
+    } else if (sortBy === 'dateDesc') {
+      result = [...result].sort((a, b) => {
+        const tsA = !isUserProfile(a) ? getEventTimestamp(a.eventDate, a.eventTime) : 0
+        const tsB = !isUserProfile(b) ? getEventTimestamp(b.eventDate, b.eventTime) : 0
+        return tsB - tsA
+      })
+    } else if (sortBy === 'recent') {
+      result = [...result].sort((a, b) => {
+        const cA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const cB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        if (cB !== cA) return cB - cA
+        const tsA = !isUserProfile(a) ? getEventTimestamp(a.eventDate, a.eventTime) : Number.MAX_SAFE_INTEGER
+        const tsB = !isUserProfile(b) ? getEventTimestamp(b.eventDate, b.eventTime) : Number.MAX_SAFE_INTEGER
+        return tsA - tsB
+      })
+    } else if (sortBy === 'name') {
       result = [...result].sort((a, b) => (a.nickname ?? '').localeCompare(b.nickname ?? ''))
     } else if (sortBy === 'role') {
       result = [...result].sort((a, b) => (a.role ?? '').localeCompare(b.role ?? ''))
@@ -401,7 +503,11 @@ export default function ExplorePage({
       result = [...result].sort((a, b) => {
         const matchA = parseInt(a.match?.replace('%', '') || '0', 10)
         const matchB = parseInt(b.match?.replace('%', '') || '0', 10)
-        return matchB - matchA
+        if (matchB !== matchA) return matchB - matchA
+        if (!isUserProfile(a) && !isUserProfile(b)) {
+          return getEventTimestamp(a.eventDate, a.eventTime) - getEventTimestamp(b.eventDate, b.eventTime)
+        }
+        return 0
       })
     }
 
@@ -421,6 +527,9 @@ export default function ExplorePage({
         onClearNotifications={onClearNotifications}
         onSignOut={onSignOut}
         unreadMessagesCount={unreadMessagesCount}
+        onAcceptMatch={onAcceptMatch}
+        onOpenMatchChat={onOpenMatchChat}
+        onNotificationClick={onNotificationClick}
       />
 
       <main className="ls-page-content">
@@ -479,7 +588,7 @@ export default function ExplorePage({
                       <button
                         type="button"
                         className={`ls-icon-tab-btn ${itemRoleFilter === 'Todos' ? 'is-active' : ''}`}
-                        onClick={() => setItemRoleFilter('Todos')}
+                        onClick={() => handleItemRoleFilterChange('Todos')}
                         title="Todos los contenidos"
                       >
                         <PiSquaresFourBold />
@@ -487,7 +596,7 @@ export default function ExplorePage({
                       <button
                         type="button"
                         className={`ls-icon-tab-btn ${itemRoleFilter === 'Perfil' ? 'is-active' : ''}`}
-                        onClick={() => setItemRoleFilter('Perfil')}
+                        onClick={() => handleItemRoleFilterChange('Perfil')}
                         title="Solo Perfiles"
                       >
                         <PiUsersBold />
@@ -495,7 +604,7 @@ export default function ExplorePage({
                       <button
                         type="button"
                         className={`ls-icon-tab-btn ${itemRoleFilter === 'Evento' ? 'is-active' : ''}`}
-                        onClick={() => setItemRoleFilter('Evento')}
+                        onClick={() => handleItemRoleFilterChange('Evento')}
                         title="Solo Eventos"
                       >
                         <PiTicketBold />
@@ -507,7 +616,7 @@ export default function ExplorePage({
                   <div className="ls-explore-mobile-type-select-wrap">
                     <select
                       value={itemRoleFilter}
-                      onChange={(e) => setItemRoleFilter(e.target.value as 'Todos' | 'Perfil' | 'Evento')}
+                      onChange={(e) => handleItemRoleFilterChange(e.target.value as 'Todos' | 'Perfil' | 'Evento')}
                       className="ls-explore-mobile-type-select"
                       title="Filtrar tipo de contenido"
                     >
@@ -526,7 +635,7 @@ export default function ExplorePage({
                       onClick={() => {
                         setSearchQuery('')
                         setActiveGenre('')
-                        setItemRoleFilter('Todos')
+                        handleItemRoleFilterChange('Todos')
                       }}
                       title="Limpiar filtros y búsqueda"
                     >
@@ -548,17 +657,33 @@ export default function ExplorePage({
                     {activeGenre && <span className="ls-icon-active-dot" />}
                   </button>
 
-                  {/* 3. Selector de Ordenamiento por Icono */}
+                  {/* 3. Selector de Ordenamiento Contextual segun filtro activo */}
                   <div className="ls-sort-icon-select-wrap">
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'match' | 'name' | 'role')}
+                      onChange={(e) => setSortBy(e.target.value as ExploreSortBy)}
                       className="ls-explore-sort-select-icononly"
                       title="Ordenar publicaciones"
                     >
-                      <option value="match">Mayor Match %</option>
-                      <option value="name">Nombre (A - Z)</option>
-                      <option value="role">Rol / Tipo</option>
+                      {itemRoleFilter === 'Evento' ? (
+                        <>
+                          <option value="dateAsc">Fecha: Más próximos primero</option>
+                          <option value="dateDesc">Fecha: Más lejanos primero</option>
+                          <option value="recent">Más recientes (publicación)</option>
+                          <option value="name">Nombre (A - Z)</option>
+                        </>
+                      ) : itemRoleFilter === 'Perfil' ? (
+                        <>
+                          <option value="match">Mayor Match %</option>
+                          <option value="name">Nombre (A - Z)</option>
+                          <option value="role">Rol / Tipo</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="match">Mayor Match %</option>
+                          <option value="name">Nombre (A - Z)</option>
+                        </>
+                      )}
                     </select>
                     <PiArrowsDownUpBold className="ls-sort-select-icon" />
                   </div>

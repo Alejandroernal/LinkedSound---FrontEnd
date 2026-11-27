@@ -35,6 +35,9 @@ type MessagesPageProps = {
   setMessagesMap?: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>
   activeId?: string
   setActiveId?: (id: string) => void
+  onAcceptMatch?: (notification: NotificationItem) => void
+  onOpenMatchChat?: (notification: NotificationItem) => void
+  onNotificationClick?: (notification: NotificationItem) => void
 }
 
 export default function MessagesPage({
@@ -53,6 +56,9 @@ export default function MessagesPage({
   setMessagesMap: propSetMessagesMap,
   activeId: propActiveId,
   setActiveId: propSetActiveId,
+  onAcceptMatch,
+  onOpenMatchChat,
+  onNotificationClick,
 }: MessagesPageProps) {
   const [localConversationsList, setLocalConversationsList] = useState<Conversation[]>([])
   const [localMessagesMap, setLocalMessagesMap] = useState<Record<string, Message[]>>({})
@@ -153,6 +159,23 @@ export default function MessagesPage({
       }
     }).catch(() => {})
   }, [])
+
+  // Cargar mensajes automaticamente cuando cambia activeId (por ejemplo al abrir un chat desde notificaciones)
+  useEffect(() => {
+    if (!activeId) return
+    setSelectedNewMatchId(null)
+    api.conversations.getMessages(activeId).then((mRes) => {
+      if (mRes.success && Array.isArray(mRes.messages)) {
+        setMessagesMap((prev) => ({
+          ...prev,
+          [activeId]: mRes.messages.map((m: any) => ({
+            ...m,
+            time: formatUserLocalTime(m.createdAt, m.time),
+          })),
+        }))
+      }
+    }).catch(() => {})
+  }, [activeId])
 
   const activeConversation = conversationsList.find((item) => item.id === activeId) ?? null
   const selectedNewMatch = newMatchesList.find((m) => m.id === selectedNewMatchId) ?? null
@@ -458,6 +481,9 @@ export default function MessagesPage({
         onClearNotifications={onClearNotifications}
         onSignOut={onSignOut}
         unreadMessagesCount={unreadMessagesCount}
+        onAcceptMatch={onAcceptMatch}
+        onOpenMatchChat={onOpenMatchChat}
+        onNotificationClick={onNotificationClick}
       />
 
       <div className={`ls-messages-layout ${hasActiveChat ? 'has-active-chat' : 'no-active-chat'}`}>

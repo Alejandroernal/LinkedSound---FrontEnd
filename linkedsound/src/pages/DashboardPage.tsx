@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import { RadarFilters, type RadarFilterState } from '../components/SidebarPanels'
 import Footer from '../components/Footer'
@@ -34,6 +35,9 @@ type DashboardPageProps = {
   onSignOut?: () => void
   onConnectProfile?: (card: ProfileCard) => void
   unreadMessagesCount?: number
+  onAcceptMatch?: (notification: NotificationItem) => void
+  onOpenMatchChat?: (notification: NotificationItem) => void
+  onNotificationClick?: (notification: NotificationItem) => void
 }
 
 const LOCATION_COORDINATES: Record<string, { lat: number; lon: number }> = {
@@ -102,7 +106,12 @@ export default function DashboardPage({
   onSignOut,
   onConnectProfile,
   unreadMessagesCount,
+  onAcceptMatch,
+  onOpenMatchChat,
+  onNotificationClick,
 }: DashboardPageProps) {
+  const location = useLocation()
+  const handledNotifTsRef = useRef<number | null>(null)
   const [cardsList, setCardsList] = useState<ProfileCard[]>([])
   const EMPTY_RESET_SECONDS = 300 // Tiempo para recargar cuando se consumen todos los perfiles
   const [autoResetCountdown, setAutoResetCountdown] = useState<number>(EMPTY_RESET_SECONDS)
@@ -393,6 +402,27 @@ export default function DashboardPage({
     return () => clearInterval(timer)
   }, [hasExhaustedCards, performAutoReset])
 
+  // Deep-link desde notificaciones de solicitud de match o perfil en Discovery
+  useEffect(() => {
+    const state = location.state as { focusUserId?: string; focusText?: string; notifTs?: number } | null
+    if (!state || !state.notifTs || handledNotifTsRef.current === state.notifTs || isLoadingCards) return
+    handledNotifTsRef.current = state.notifTs
+
+    const matchIndex = filteredRecommendations.findIndex((card) => {
+      if (state.focusUserId && card.id === state.focusUserId) return true
+      if (state.focusText && card.nickname && state.focusText.toLowerCase().includes(card.nickname.toLowerCase())) {
+        return true
+      }
+      return false
+    })
+
+    if (matchIndex >= 0) {
+      setCurrentIndex(matchIndex)
+      setHasExhaustedCards(false)
+      setPreviewProfile(filteredRecommendations[matchIndex])
+    }
+  }, [location.state, isLoadingCards, filteredRecommendations])
+
   const handleDecision = (liked: boolean) => {
     if (filteredRecommendations.length === 0) return
     const currentCard = filteredRecommendations[currentIndex % filteredRecommendations.length]
@@ -446,6 +476,9 @@ export default function DashboardPage({
         onClearNotifications={onClearNotifications}
         onSignOut={onSignOut}
         unreadMessagesCount={unreadMessagesCount}
+        onAcceptMatch={onAcceptMatch}
+        onOpenMatchChat={onOpenMatchChat}
+        onNotificationClick={onNotificationClick}
       />
 
       <main className={`ls-layout ls-discovery-swipe-layout ${!showFilters ? 'filters-hidden' : ''}`}>

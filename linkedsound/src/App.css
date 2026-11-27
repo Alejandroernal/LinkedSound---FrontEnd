@@ -1197,10 +1197,14 @@ button {
   width: 100%;
   max-width: 640px;
   margin: 0 auto;
-  min-height: 530px;
+  height: 580px;
+  min-height: 580px;
 }
 
 .ls-swipe-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1212,6 +1216,7 @@ button {
 .ls-swipe-card-active {
   position: relative;
   z-index: 3;
+  height: 100%;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
@@ -1226,6 +1231,9 @@ button {
   position: absolute;
   inset: 0;
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   pointer-events: none;
   overflow: hidden;
   border-radius: 20px;
@@ -1299,7 +1307,8 @@ button {
 
 .ls-swipe-image-wrap {
   position: relative;
-  height: 360px;
+  height: 350px;
+  flex-shrink: 0;
 }
 
 .ls-swipe-image-wrap img {
@@ -1352,6 +1361,25 @@ button {
 
 .ls-swipe-body {
   padding: 18px 18px 20px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ls-swipe-body .ls-card-desc {
+  margin: 0;
+  line-height: 1.48;
+  min-height: 4.44em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ls-swipe-body .ls-card-desc.is-empty-desc {
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .ls-swipe-head {
@@ -1359,10 +1387,13 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .ls-profile-interest-block {
-  margin-top: 14px;
+  margin-top: auto;
+  padding-top: 12px;
+  flex-shrink: 0;
 }
 
 .ls-interest-label {
@@ -6683,7 +6714,8 @@ button {
 .ls-profile-interest-block .ls-mini-tags {
   display: flex;
   flex-wrap: wrap;
-  overflow: visible;
+  max-height: 62px;
+  overflow: hidden;
   gap: 6px;
   margin-top: 6px;
 }

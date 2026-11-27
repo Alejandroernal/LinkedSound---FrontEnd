@@ -612,7 +612,7 @@ function App() {
     }
   }
 
-  // Abrir chat directamente desde una notificacion de match confirmado
+  // Abrir chat directamente desde una notificacion de match confirmado o mensaje
   const handleOpenMatchChat = async (item: NotificationItem) => {
     try {
       handleMarkNotificationAsRead(item.id)
@@ -622,8 +622,8 @@ function App() {
         const usersRes = await api.auth.getUsers().catch(() => ({ success: false, users: [] }))
         if (usersRes.success && Array.isArray(usersRes.users)) {
           const matchedUser = usersRes.users.find((u: any) =>
-            (u.nickname && item.message.includes(u.nickname)) ||
-            (u.firstName && item.message.includes(u.firstName))
+            (u.nickname && (item.message.includes(u.nickname) || item.title.includes(u.nickname))) ||
+            (u.firstName && (item.message.includes(u.firstName) || item.title.includes(u.firstName)))
           )
           if (matchedUser) targetUserId = matchedUser.id
         }
@@ -633,9 +633,8 @@ function App() {
       if (convRes.success && Array.isArray(convRes.conversations)) {
         setConversationsList(convRes.conversations)
         const targetConv = convRes.conversations.find((c: any) =>
-          c.partnerId === targetUserId ||
-          (targetUserId && (c.user1Id === targetUserId || c.user2Id === targetUserId)) ||
-          item.message.includes(c.name)
+          (targetUserId && (c.partnerId === targetUserId || c.user1Id === targetUserId || c.user2Id === targetUserId)) ||
+          (c.name && (item.message.includes(c.name) || item.title.includes(c.name)))
         )
         if (targetConv) {
           setActiveChatId(targetConv.id)
@@ -647,6 +646,59 @@ function App() {
       console.error('Error al abrir chat de match:', err)
       handleNavigate('Messages')
     }
+  }
+
+  // Navegacion contextual al hacer clic en cualquier notificacion del dropdown
+  const handleNotificationClick = (item: NotificationItem) => {
+    handleMarkNotificationAsRead(item.id)
+
+    const combinedText = `${item.title || ''} ${item.message || ''}`.toLowerCase()
+
+    // 1. Matches confirmados o mensajes -> ir directamente a la conversacion en Messages
+    if (item.type === 'match' || item.type === 'message' || item.linkPage === 'Messages') {
+      handleOpenMatchChat(item)
+      return
+    }
+
+    // 2. Solicitud de match o like -> ir a Discovery enfocando al remitente
+    if (item.type === 'match_request' || item.type === 'like') {
+      navigate(pagePaths.Discovery, {
+        state: {
+          focusUserId: item.senderId || undefined,
+          focusText: `${item.title || ''} ${item.message || ''}`,
+          notifTs: Date.now(),
+        },
+      })
+      return
+    }
+
+    // 3. Notificaciones relacionadas a eventos -> ir a Explorer (filtro Eventos + abrir evento si coincide)
+    if (item.linkPage === 'Explorer' || combinedText.includes('evento')) {
+      const quotedMatch = item.message?.match(/"([^"]+)"/)
+      const focusEventTitle = quotedMatch ? quotedMatch[1] : undefined
+      navigate(pagePaths.Explorer, {
+        state: {
+          filterTab: 'Evento',
+          focusEventTitle,
+          notifTs: Date.now(),
+        },
+      })
+      return
+    }
+
+    // 4. Reportes / administracion
+    if (item.type === 'report' || item.linkPage === 'Admin') {
+      handleNavigate(isAdminLoggedIn ? 'Admin' : 'Profile')
+      return
+    }
+
+    // 5. Pagina destino declarada o fallback seguro
+    if (item.linkPage && pagePaths[item.linkPage]) {
+      handleNavigate(item.linkPage)
+      return
+    }
+
+    handleNavigate(isAdminLoggedIn ? 'Admin' : 'Discovery')
   }
 
   const unreadMessagesCount = conversationsList.reduce((acc, c) => acc + (c.unread || 0), 0)
@@ -661,6 +713,7 @@ function App() {
     unreadMessagesCount,
     onAcceptMatch: handleAcceptMatchRequest,
     onOpenMatchChat: handleOpenMatchChat,
+    onNotificationClick: handleNotificationClick,
   }
 
   return (
@@ -856,12 +909,12 @@ function App() {
               type="button"
               className="ls-corner-toast-action"
               onClick={() => {
-                handleMarkNotificationAsRead(toastMatchRequest.id)
+                const target = toastMatchRequest
                 setToastMatchRequest(null)
-                handleNavigate('Discovery')
+                handleNotificationClick(target)
               }}
             >
-              Explorar en Radar
+              Ver en Radar
             </button>
           </div>
           <button

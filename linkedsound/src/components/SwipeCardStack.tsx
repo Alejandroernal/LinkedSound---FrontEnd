@@ -422,14 +422,20 @@ export default function SwipeCardStack({
             </div>
           </div>
 
-          <p className="ls-card-desc">{currentCard.description ?? ''}</p>
+          <p className={`ls-card-desc ${!(currentCard.description ?? '').trim() ? 'is-empty-desc' : ''}`}>
+            {(currentCard.description ?? '').trim() || 'Sin descripción cargada.'}
+          </p>
 
           <div className="ls-profile-interest-block">
             <span className="ls-interest-label">Intereses de género</span>
             <div className="ls-mini-tags">
-              {(currentCard.interestGenres ?? currentCard.tags ?? []).map((genre) => (
-                <span key={genre} title={genre}>{genre}</span>
-              ))}
+              {(currentCard.interestGenres ?? currentCard.tags ?? []).length > 0 ? (
+                (currentCard.interestGenres ?? currentCard.tags ?? []).map((genre) => (
+                  <span key={genre} title={genre}>{genre}</span>
+                ))
+              ) : (
+                <span>Sin géneros especificados</span>
+              )}
             </div>
           </div>
         </div>

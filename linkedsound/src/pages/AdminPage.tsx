@@ -30,6 +30,9 @@ type AdminPageProps = {
   onMarkAllNotificationsAsRead?: () => void
   onClearNotifications?: () => void
   onSignOut?: () => void
+  onAcceptMatch?: (notification: NotificationItem) => void
+  onOpenMatchChat?: (notification: NotificationItem) => void
+  onNotificationClick?: (notification: NotificationItem) => void
 }
 
 export default function AdminPage({
@@ -41,6 +44,9 @@ export default function AdminPage({
   onMarkAllNotificationsAsRead,
   onClearNotifications,
   onSignOut,
+  onAcceptMatch,
+  onOpenMatchChat,
+  onNotificationClick,
 }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState<'reports' | 'users' | 'events' | 'activity'>('reports')
 
@@ -607,6 +613,9 @@ export default function AdminPage({
         onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
         onClearNotifications={onClearNotifications}
         onSignOut={handleSignOut}
+        onAcceptMatch={onAcceptMatch}
+        onOpenMatchChat={onOpenMatchChat}
+        onNotificationClick={onNotificationClick}
       />
 
       <main className="ls-admin-main-content">
